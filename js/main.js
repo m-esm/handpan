@@ -22,10 +22,10 @@ try {
 const caption = () => document.getElementById("caption");
 const KIND_ORDER = ["Hands", "Chords", "Grooves", "Pieces"];
 const KIND_NOTE = {
-  Hands: "Where a note sits, and which hand plays it.",
-  Chords: "Notes that belong together. Shared hands take turns.",
-  Grooves: "A rhythm you can keep going.",
-  Pieces: "A longer melody. It arrives, and it can come home.",
+  Hands: "Two hands trading, which is how this pan is played.",
+  Chords: "Two notes at once. One hand each.",
+  Grooves: "A short loop you can keep going.",
+  Pieces: "A phrase that leaves the ding and comes back.",
 };
 let query = "";
 let kindFilter = "All";
