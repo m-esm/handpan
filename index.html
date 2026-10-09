@@ -12,20 +12,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body class="is-list">
+<body>
   <div class="wrap">
     <header class="top">
       <a class="brand" href="#/">DISC</a>
       <p class="scale">D Kurd, 10 notes, 440 Hz</p>
     </header>
-    <section class="stage">
-      <div class="stage-tools">
-        <p id="caption" class="caption">Tap a dimple to hear it.</p>
-        <button id="mirror" type="button" aria-pressed="false">Mirror</button>
+    <div class="split">
+      <section id="dock"></section>
+      <div class="pan-stick">
+        <div class="stage-tools">
+          <p id="caption" class="caption">Tap a dimple to hear it.</p>
+          <button id="mirror" type="button" aria-pressed="false">Mirror</button>
+        </div>
+        <div id="pan"></div>
       </div>
-      <div id="pan"></div>
-    </section>
-    <section id="dock"></section>
+      <div id="learn"></div>
+    </div>
   </div>
   <script type="module" src="js/main.js"></script>
   <script src="js/live.js" defer></script>

@@ -21,7 +21,17 @@ try {
 }
 
 const caption = () => document.getElementById("caption");
+const KIND_ORDER = ["Hands", "Chords", "Grooves", "Pieces"];
+const KIND_NOTE = {
+  Hands: "Where a note sits, and which hand plays it.",
+  Chords: "Notes that belong together. Shared hands take turns.",
+  Grooves: "A rhythm you can keep going.",
+  Pieces: "A longer melody. It arrives, and it can come home.",
+};
+let query = "";
+let kindFilter = "All";
 let lastScroll = -2;
+let lastListed = "";
 
 const player = createPlayer(audio, paint);
 
@@ -170,37 +180,143 @@ function handLine(hands) {
   return `${names[0]} and ${names[1]}`;
 }
 
-function renderList() {
-  document.title = "DISC D Kurd";
-  const groups = [];
+function kindList() {
+  const found = [];
   for (const pattern of PATTERNS) {
-    let group = groups.find((item) => item.stage === pattern.stage);
-    if (!group) {
-      group = { stage: pattern.stage, items: [] };
-      groups.push(group);
-    }
-    group.items.push(pattern);
+    if (!found.includes(pattern.kind)) found.push(pattern.kind);
   }
+  return found.sort((a, b) => {
+    const ia = KIND_ORDER.indexOf(a);
+    const ib = KIND_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+}
+
+function fold(text) {
+  return text.toLowerCase().replace(/\u266d/g, "b").replace(/-/g, " ");
+}
+
+function wordsOf(text) {
+  return fold(text).split(/\s+/).filter(Boolean);
+}
+
+function noteWords(id) {
+  const note = NOTES[id];
+  const letter = fold(note.letter);
+  const spoken = letter.length > 1 ? `${letter[0]} flat` : letter;
+  const ding = note.ding ? " ding" : "";
+  return `${spoken} ${letter}${note.octave}${ding}`;
+}
+
+function haystack(pattern) {
+  const notes = pattern.steps.map((step) => `${noteWords(step.note)} ${step.note}`).join(" ");
+  return fold(`${pattern.title} ${pattern.blurb} ${pattern.about} ${pattern.kind} ${notes}`);
+}
+
+function wordHit(word, token) {
+  if (word === token) return true;
+  if (token.length >= 3 && word.includes(token)) return true;
+  return /^[a-g]b?$/.test(token) && word.startsWith(token) && /^\d*$/.test(word.slice(token.length));
+}
+
+function hitsQuery(pattern) {
+  const words = wordsOf(query);
+  if (!words.length) return true;
+  const hay = haystack(pattern).split(/\s+/);
+  return words.every((token) => hay.some((word) => wordHit(word, token)));
+}
+
+function matches(pattern) {
+  if (kindFilter !== "All" && pattern.kind !== kindFilter) return false;
+  return hitsQuery(pattern);
+}
+
+function chipCount(kind) {
+  const hits = PATTERNS.filter(hitsQuery);
+  if (kind === "All") return hits.length;
+  return hits.filter((pattern) => pattern.kind === kind).length;
+}
+
+function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
   const heading = document.createElement("h1");
   heading.textContent = "Patterns";
-  dock.append(heading);
   const lead = document.createElement("p");
   lead.className = "lead";
-  lead.textContent = "Play a pattern against the pan. Open it when you want the notes written out.";
-  dock.append(lead);
-  for (const group of groups) {
+  lead.textContent = "Search or pick a kind. The pan plays along.";
+  const find = document.createElement("input");
+  find.id = "find";
+  find.className = "find";
+  find.type = "search";
+  find.placeholder = "Search notes, titles, chords";
+  find.setAttribute("aria-label", "Search patterns");
+  find.value = query;
+  find.addEventListener("input", () => {
+    query = find.value;
+    fillRows();
+    paint(player.snapshot());
+  });
+  const chips = document.createElement("div");
+  chips.className = "chips";
+  chips.setAttribute("role", "group");
+  chips.setAttribute("aria-label", "Pattern kinds");
+  const kinds = ["All", ...kindList()];
+  for (const kind of kinds) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.dataset.kind = kind;
+    chip.textContent = `${kind} ${chipCount(kind)}`;
+    chip.setAttribute("aria-pressed", kind === kindFilter ? "true" : "false");
+    chip.addEventListener("click", () => {
+      kindFilter = kind;
+      for (const button of chips.querySelectorAll(".chip")) {
+        button.setAttribute("aria-pressed", button.dataset.kind === kind ? "true" : "false");
+      }
+      fillRows();
+      paint(player.snapshot());
+    });
+    chips.append(chip);
+  }
+  const rows = document.createElement("div");
+  rows.id = "rows";
+  dock.append(heading, lead, find, chips, rows);
+  fillRows();
+}
+
+function fillRows() {
+  const rows = document.getElementById("rows");
+  if (!rows) return;
+  for (const chip of document.querySelectorAll("#dock .chip")) {
+    chip.textContent = `${chip.dataset.kind} ${chipCount(chip.dataset.kind)}`;
+  }
+  rows.innerHTML = "";
+  const visible = PATTERNS.filter(matches);
+  if (visible.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = kindFilter === "All" ? "Nothing matches." : `Nothing in ${kindFilter}.`;
+    rows.append(empty);
+    return;
+  }
+  for (const kind of kindList()) {
+    const items = visible.filter((pattern) => pattern.kind === kind);
+    if (items.length === 0) continue;
     const section = document.createElement("section");
     section.className = "group";
-    const stage = document.createElement("h2");
-    stage.className = "stage";
-    stage.textContent = group.stage;
-    section.append(stage);
-    for (const pattern of group.items) {
-      section.append(rowFor(pattern));
+    const heading = document.createElement("h2");
+    heading.className = "kind";
+    heading.textContent = kind;
+    section.append(heading);
+    if (KIND_NOTE[kind]) {
+      const note = document.createElement("p");
+      note.className = "kind-note";
+      note.textContent = KIND_NOTE[kind];
+      section.append(note);
     }
-    dock.append(section);
+    for (const pattern of items) section.append(rowFor(pattern));
+    rows.append(section);
   }
 }
 
@@ -243,7 +359,8 @@ function rowFor(pattern) {
   }
   const meta = document.createElement("p");
   meta.className = "meta";
-  meta.textContent = `${eventsOf(pattern).length} hits at ${pattern.bpm}`;
+  const bars = Math.ceil(pattern.loopBeats / 4);
+  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"} · ${pattern.bpm}`;
   body.append(title, blurb, mini, meta);
 
   const open = document.createElement("a");
@@ -257,7 +374,7 @@ function rowFor(pattern) {
 
 function renderLearn(pattern) {
   document.title = `${pattern.title} - DISC D Kurd`;
-  const dock = document.getElementById("dock");
+  const dock = document.getElementById("learn");
   dock.innerHTML = "";
 
   const head = document.createElement("div");
@@ -450,13 +567,20 @@ function route() {
     return;
   }
   document.body.classList.toggle("is-learn", !!pattern);
-  document.body.classList.toggle("is-list", !pattern);
+  if (!document.getElementById("find")) renderList();
+  const learn = document.getElementById("learn");
   if (!pattern) {
-    renderList();
+    document.title = "DISC D Kurd";
+    learn.innerHTML = "";
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = "Pick a pattern from the list. Tap the pan to hear a note.";
+    learn.append(hint);
     paint(player.snapshot());
     return;
   }
   renderLearn(pattern);
+  if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
   else paint(player.snapshot());
 }
@@ -536,6 +660,18 @@ function paint(snap) {
   document.querySelectorAll(".row").forEach((row) => {
     row.classList.toggle("is-current", !!snap.patternId && row.dataset.pattern === snap.patternId);
   });
+  if (snap.patternId && snap.patternId !== lastListed) {
+    lastListed = snap.patternId;
+    const dock = document.getElementById("dock");
+    const row = dock && dock.querySelector(`.row[data-pattern="${snap.patternId}"]`);
+    if (row && dock && dock.scrollHeight > dock.clientHeight + 4) {
+      const dr = dock.getBoundingClientRect();
+      const rr = row.getBoundingClientRect();
+      if (rr.top < dr.top || rr.bottom > dr.bottom) {
+        dock.scrollTop += rr.top - dr.top - 8;
+      }
+    }
+  }
 
   const play = document.getElementById("play");
   if (play) {
@@ -592,7 +728,7 @@ window.addEventListener("keydown", (event) => {
     location.hash = "#/";
     return;
   }
-  if (event.target.closest("input, textarea, .field")) return;
+  if (event.target.closest("input, textarea, .field, .chip")) return;
   if (event.code === "Space") {
     event.preventDefault();
     const play = document.getElementById("play");
