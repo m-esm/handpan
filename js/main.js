@@ -163,7 +163,7 @@ function soundNote(id) {
 function syncMirror() {
   const button = document.getElementById("mirror");
   button.setAttribute("aria-pressed", mirrored ? "true" : "false");
-  button.textContent = mirrored ? "Mirrored" : "Mirror";
+  button.textContent = mirrored ? "Mirror on" : "Mirror";
 }
 
 function patternFromHash() {
@@ -236,6 +236,16 @@ function chipCount(kind) {
   return hits.filter((pattern) => pattern.kind === kind).length;
 }
 
+function setChipLabel(chip) {
+  const name = document.createElement("span");
+  name.className = "chip-name";
+  name.textContent = chip.dataset.kind;
+  const count = document.createElement("span");
+  count.className = "chip-count";
+  count.textContent = String(chipCount(chip.dataset.kind));
+  chip.replaceChildren(name, document.createTextNode(" "), count);
+}
+
 function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
@@ -243,12 +253,12 @@ function renderList() {
   heading.textContent = "Patterns";
   const lead = document.createElement("p");
   lead.className = "lead";
-  lead.textContent = "Search or pick a kind. The pan plays along.";
+  lead.textContent = "Search by title or note, or choose a kind.";
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
   find.type = "search";
-  find.placeholder = "Search notes, titles, chords";
+  find.placeholder = "Title or note";
   find.setAttribute("aria-label", "Search patterns");
   find.value = query;
   find.addEventListener("input", () => {
@@ -266,7 +276,7 @@ function renderList() {
     chip.type = "button";
     chip.className = "chip";
     chip.dataset.kind = kind;
-    chip.textContent = `${kind} ${chipCount(kind)}`;
+    setChipLabel(chip);
     chip.setAttribute("aria-pressed", kind === kindFilter ? "true" : "false");
     chip.addEventListener("click", () => {
       kindFilter = kind;
@@ -287,15 +297,13 @@ function renderList() {
 function fillRows() {
   const rows = document.getElementById("rows");
   if (!rows) return;
-  for (const chip of document.querySelectorAll("#dock .chip")) {
-    chip.textContent = `${chip.dataset.kind} ${chipCount(chip.dataset.kind)}`;
-  }
+  for (const chip of document.querySelectorAll("#dock .chip")) setChipLabel(chip);
   rows.innerHTML = "";
   const visible = PATTERNS.filter(matches);
   if (visible.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = kindFilter === "All" ? "Nothing matches." : `Nothing in ${kindFilter}.`;
+    empty.textContent = kindFilter === "All" ? "No patterns match." : `No ${kindFilter} patterns match.`;
     rows.append(empty);
     return;
   }
@@ -359,7 +367,7 @@ function rowFor(pattern) {
   const meta = document.createElement("p");
   meta.className = "meta";
   const bars = Math.ceil(pattern.loopBeats / 4);
-  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"} · ${pattern.bpm}`;
+  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm`;
   body.append(title, blurb, mini, meta);
 
   const open = document.createElement("a");
@@ -437,6 +445,9 @@ function renderLearn(pattern) {
   const bpm = document.createElement("span");
   bpm.id = "bpm";
   bpm.textContent = String(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
+  const unit = document.createElement("span");
+  unit.className = "tempo-unit";
+  unit.textContent = "bpm";
   const range = document.createElement("input");
   range.id = "tempo";
   range.type = "range";
@@ -448,7 +459,7 @@ function renderLearn(pattern) {
     bpm.textContent = range.value;
     player.setTempo(Number(range.value));
   });
-  tempoLabel.append(bpm, range);
+  tempoLabel.append(bpm, unit, range);
 
   const loop = document.createElement("button");
   loop.type = "button";
@@ -461,7 +472,7 @@ function renderLearn(pattern) {
 
   const keys = document.createElement("p");
   keys.className = "keys";
-  keys.textContent = "Space plays and pauses. Arrow keys move one note.";
+  keys.textContent = "Space plays and pauses. Left and right arrows move one note.";
 
   transport.append(play, previous, next, tempoLabel, loop);
 
@@ -573,7 +584,7 @@ function route() {
     learn.innerHTML = "";
     const hint = document.createElement("p");
     hint.className = "hint";
-    hint.textContent = "Pick a pattern from the list. Tap the pan to hear a note.";
+    hint.textContent = "Choose a pattern. Tap a note on the pan to hear it.";
     learn.append(hint);
     paint(player.snapshot());
     return;
@@ -703,9 +714,9 @@ function scrollStrip(scroller, current) {
 
 function captionText(snap) {
   if (!snap.notes.length) {
-    if (!snap.patternId) return "Tap a dimple to hear it.";
+    if (!snap.patternId) return "Tap a note to hear it.";
     const pattern = PATTERNS.find((item) => item.id === snap.patternId);
-    return pattern ? pattern.title : "Tap a dimple to hear it.";
+    return pattern ? "Press Play, or tap a note." : "Tap a note to hear it.";
   }
   return snap.notes
     .map((id) => {
