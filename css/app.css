@@ -320,9 +320,10 @@ h1 {
 
 .mini {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 8px;
+  overflow-x: auto;
 }
 
 .mini-hit {

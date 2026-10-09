@@ -12,7 +12,6 @@ import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 
 const audio = createAudio();
-const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let mirrored = false;
 try {
   mirrored = localStorage.getItem("disc-kurd-mirror") === "1";
@@ -624,25 +623,12 @@ function paint(snap) {
   document.querySelectorAll("[data-loop-next]").forEach((node) => {
     node.classList.toggle("is-next", snap.nextIndex === 0 && snap.index > 0);
   });
-  if (snap.playing && snap.index !== lastScroll) {
+  if (snap.index >= 0 && snap.index !== lastScroll) {
     lastScroll = snap.index;
     const roll = document.getElementById("roll");
-    const current = roll && roll.querySelector(".step.is-on");
-    if (current && roll) {
-      const pad = 8;
-      const next = current.nextElementSibling;
-      let left = Math.max(0, current.offsetLeft - pad);
-      if (next) {
-        const end = next.offsetLeft + next.offsetWidth + pad;
-        const shifted = Math.max(0, end - roll.clientWidth);
-        if (end - left > roll.clientWidth && shifted <= current.offsetLeft) left = shifted;
-      }
-      const max = Math.max(0, roll.scrollWidth - roll.clientWidth);
-      roll.scrollTo({
-        left: Math.max(0, Math.min(left, max)),
-        behavior: reduce ? "auto" : "smooth",
-      });
-    }
+    scrollStrip(roll, roll && roll.querySelector(".step.is-on, .step.is-place"));
+    const chip = document.querySelector(".mini-hit.is-on, .mini-hit.is-place");
+    if (chip) scrollStrip(chip.parentElement, chip);
   }
   const node = caption();
   const text = captionText(snap);
@@ -693,6 +679,26 @@ function paint(snap) {
   }
   const warn = document.querySelector(".mirror-note");
   if (warn) warn.hidden = !mirrored;
+}
+
+function scrollStrip(scroller, current) {
+  if (!scroller || !current) return;
+  const pad = 8;
+  const host = scroller.getBoundingClientRect();
+  const box = current.getBoundingClientRect();
+  const origin = scroller.scrollLeft + (box.left - host.left);
+  let left = Math.max(0, origin - pad);
+  const next = current.nextElementSibling;
+  if (next) {
+    const nextBox = next.getBoundingClientRect();
+    const end = scroller.scrollLeft + (nextBox.right - host.left) + pad;
+    const shifted = Math.max(0, end - scroller.clientWidth);
+    if (end - left > scroller.clientWidth && shifted <= origin) left = shifted;
+  }
+  const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+  const target = Math.max(0, Math.min(left, max));
+  if (Math.abs(scroller.scrollLeft - target) < 2) return;
+  scroller.scrollTo({ left: target, behavior: "auto" });
 }
 
 function captionText(snap) {

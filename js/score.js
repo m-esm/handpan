@@ -713,7 +713,7 @@ export const PATTERNS = [
     loopBeats: 32,
     blurb: "The same eight-beat arch, once low, once on G, then home.",
     about:
-      "Phrase one is an arch on D. The ding and the low A together, then D, C, B-flat, low A, and back up B-flat, C, D. Phrase two is that arch moved onto G. Phrase three changes: three held pairs, then C, G, and F. Phrase four is the first arch again, and it ends on the ding.",
+      "Phrase one is an arch on D. The ding and the low A together, then D, C, B-flat, low A, and back up B-flat, C, D. Phrase two is that arch moved onto G. Phrase three is F with low A, C, B-flat with G, D, high A with E, then C, G, and F. Phrase four is the first arch again, and it ends on the ding.",
     steps: [
       step(0, "D3", L),
       step(0, "A3", R),
@@ -761,9 +761,9 @@ export const PATTERNS = [
     kind: "Pieces",
     bpm: 76,
     loopBeats: 32,
-    blurb: "Two questions that stop on C, and two answers that walk down to the ding.",
+    blurb: "Two questions that stop on C. The answers come back to the ding.",
     about:
-      "The first question runs low A, D, F, G on the and, and the high A, then G, F, a rest, E on the and, and C. The answer comes down to the ding. The next question sits higher and stops on the high C at the rim. The last phrase walks from the high A down to the ding, and the low A joins it.",
+      "The first question runs low A, D, F, G on the and, and the high A, then G, F, a rest, E on the and, and C. The answer rises through E and F, then comes down to the ding. The next question sits higher and stops on the high C at the rim. The last phrase walks from the high A down to the ding, and the low A joins it.",
     steps: [
       step(0, "A3", R),
       step(1, "D4", L),
@@ -817,7 +817,7 @@ export const PATTERNS = [
     loopBeats: 32,
     blurb: "D minor, C, B-flat, and G minor, then a higher middle, then home.",
     about:
-      "Four beats to a chord. D minor is the ding with low A, then C, D, and F with low A. C starts as B-flat with C, then E, G, and the high C, because those three sit on the right. B-flat, D, and F take turns on the left under a C. G minor is G with B-flat, then D, G with the ding, and low A. Eight beats leave that loop and climb. The opening D minor comes back, then D, low A, B-flat, and the ding.",
+      "Four beats to a chord. D minor is the ding with low A, then C, D, and F with low A. C starts as B-flat with C, then E, G, and the high C, because those three sit on the right. B-flat, D, and F take turns on the left under a C. G minor is G with B-flat, then D, G with the ding, and low A. Eight beats leave that loop, reach the high C, and come back down. The opening D minor comes back, then D, low A, B-flat, and the ding.",
     steps: [
       step(0, "D3", L),
       step(0, "A3", R),
@@ -924,7 +924,7 @@ export const PATTERNS = [
     loopBeats: 32,
     blurb: "Eight bars, none repeated, ending on the higher D.",
     about:
-      "Start on the higher D, not the ding. The ding comes once, on beat 8, and it is alone. No bar comes back. The last two notes are the high A and then the higher D, both in the left hand.",
+      "Start on the higher D, not the ding. The ding comes once, on 1 of bar 3, and it is alone. No bar comes back. The last two notes are the high A and then the higher D, both in the left hand.",
     steps: [
       step(0, "D4", L),
       step(1, "C4", R),
