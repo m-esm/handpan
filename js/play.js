@@ -15,6 +15,7 @@ export function createPlayer(audio, emit) {
     raf: 0,
     armed: [],
     token: 0,
+    ended: false,
   };
 
   function snapshot() {
@@ -56,11 +57,33 @@ export function createPlayer(audio, emit) {
     state.armed = state.armed.filter((item) => item.time <= now + 0.03);
   }
 
+  function dropArmed() {
+    if (audio.ready()) {
+      const now = audio.now();
+      for (const item of state.armed) {
+        if (item.time > now + 0.03) item.cancel();
+      }
+    }
+    state.armed = [];
+  }
+
   function halt() {
     state.playing = false;
     clearTimeout(state.timer);
     cancelAnimationFrame(state.raf);
-    clearFuture();
+    dropArmed();
+  }
+
+  function soundingOrdinal() {
+    if (audio.ready() && state.armed.length) {
+      const t = audio.now() + 0.04;
+      let current = null;
+      for (const item of state.armed) {
+        if (item.time <= t) current = item;
+      }
+      if (current) return current.ordinal;
+    }
+    return Math.max(state.cursor - 1, 0);
   }
 
   function limit() {
@@ -95,6 +118,7 @@ export function createPlayer(audio, emit) {
     }
     const last = state.armed[state.armed.length - 1];
     if (state.cursor >= maxOrdinal && (!last || last.time < now - 0.4)) {
+      state.ended = true;
       halt();
       emitNow();
       return;
@@ -122,6 +146,7 @@ export function createPlayer(audio, emit) {
     const keep = options.keepTempo && state.pattern && state.pattern.id === pattern.id;
     const bpm = keep ? state.bpm : pattern.bpm;
     halt();
+    state.ended = false;
     state.pattern = pattern;
     state.events = eventsOf(pattern);
     state.bpm = bpm;
@@ -132,7 +157,7 @@ export function createPlayer(audio, emit) {
     state.origin = now - event.beat * (60 / state.bpm);
     state.cursor = idx;
     state.startCursor = idx;
-    state.index = -1;
+    state.index = idx;
     state.playing = true;
     tick();
     frame();
@@ -140,6 +165,7 @@ export function createPlayer(audio, emit) {
 
   function load(pattern) {
     halt();
+    state.ended = false;
     state.pattern = pattern;
     state.events = eventsOf(pattern);
     state.bpm = pattern.bpm;
@@ -152,28 +178,19 @@ export function createPlayer(audio, emit) {
 
   function pause() {
     if (!state.playing) return;
+    state.ended = false;
     halt();
     emitNow();
   }
 
   async function resume() {
     if (state.playing || !state.pattern || state.events.length === 0) return;
-    if (!state.loop && state.cursor >= state.events.length) {
+    if (state.ended || state.index < 0) {
       await play(state.pattern, 0, { keepTempo: true });
       return;
     }
-    const token = ++state.token;
-    await audio.resume();
-    if (token !== state.token) return;
-    const event = state.events[state.cursor % state.events.length];
-    const loopN = Math.floor(state.cursor / state.events.length);
-    const beat = loopN * state.pattern.loopBeats + event.beat;
-    const now = audio.now() + 0.05;
-    state.origin = now - beat * (60 / state.bpm);
-    state.startCursor = state.cursor;
-    state.playing = true;
-    tick();
-    frame();
+    const event = state.events[state.index];
+    await play(state.pattern, event.beat, { keepTempo: true });
   }
 
   function seek(index, andPlay) {
@@ -184,6 +201,7 @@ export function createPlayer(audio, emit) {
       return;
     }
     halt();
+    state.ended = false;
     state.index = index;
     state.cursor = index;
     audio.resume().then(() => audio.strikeChord(event.notes, audio.now() + 0.02));
@@ -208,6 +226,10 @@ export function createPlayer(audio, emit) {
 
   function setLoop(loop) {
     state.loop = loop;
+    if (!loop && state.events.length > 0) {
+      const lap = Math.floor(soundingOrdinal() / state.events.length);
+      state.startCursor = lap * state.events.length;
+    }
     if (state.playing) {
       clearFuture();
       clearTimeout(state.timer);

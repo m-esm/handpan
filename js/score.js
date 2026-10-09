@@ -103,6 +103,42 @@ export const PATTERNS = [
     ],
   },
   {
+    id: "pass-across",
+    title: "Pass it across",
+    stage: "First notes",
+    bpm: 56,
+    loopBeats: 4,
+    blurb: "One dimple on each side, back and forth.",
+    about:
+      "C is on the right, just up from the low A. D is on the left, just up from the B-flat. Play C, D, C, D. Right, left, right, left. Keep every note the same length. Count 1 2 3 4 until the hand change is automatic.",
+    steps: [
+      step(0, "C4", R),
+      step(1, "D4", L),
+      step(2, "C4", R),
+      step(3, "D4", L),
+    ],
+  },
+  {
+    id: "one-stays",
+    title: "One hand stays",
+    stage: "First notes",
+    bpm: 64,
+    loopBeats: 8,
+    blurb: "Left hand holds B-flat. Right hand walks C, E, G, E.",
+    about:
+      "Leave the left hand on B-flat, the dimple by your left thigh. It plays on 1 and on 3. The right hand answers on 2 and on 4: C, then E, then G, then E again. The left hand is the clock. Only the right hand changes notes.",
+    steps: [
+      step(0, "Bb3", L),
+      step(1, "C4", R),
+      step(2, "Bb3", L),
+      step(3, "E4", R),
+      step(4, "Bb3", L),
+      step(5, "G4", R),
+      step(6, "Bb3", L),
+      step(7, "E4", R),
+    ],
+  },
+  {
     id: "two-places",
     title: "Two Ds, two As",
     stage: "Next",
@@ -110,7 +146,7 @@ export const PATTERNS = [
     loopBeats: 8,
     blurb: "Find the octave of D and the octave of A.",
     about:
-      "D is in the center and again on the left, one place up from B-flat. A is by your right thigh and again high on the left. Play the low one, move the hand, play the high one. Listen for the same note an octave up.",
+      "D is in the center and again on the left, one place up from B-flat. A is by your right thigh and again high on the left. Both Ds stay in the left hand. Low A is the right hand, and the high A is the left hand. Listen for the same note an octave up.",
     steps: [
       step(0, "D3", L),
       step(2, "D4", L),
@@ -148,7 +184,7 @@ export const PATTERNS = [
     loopBeats: 8,
     blurb: "A walk up the dimples on your left.",
     about:
-      "Right hand plays the low A at the start of each bar and lets it ring. Left hand walks B-flat, D, F, and the high A. Those four notes are a B-flat chord played one at a time.",
+      "Right hand plays the low A at the start of each bar and lets it ring. Left hand walks B-flat, D, F, and the high A, then comes back down. B-flat, D, and F are the B-flat chord. The high A is the seventh.",
     steps: [
       step(0, "A3", R),
       step(0, "Bb3", L),
@@ -204,7 +240,7 @@ export const PATTERNS = [
     id: "lap-groove",
     title: "Lap groove",
     stage: "Further",
-    bpm: 92,
+    bpm: 72,
     loopBeats: 4,
     blurb: "A four-beat pattern with quick notes on the ands.",
     about:
@@ -227,7 +263,7 @@ export const PATTERNS = [
     loopBeats: 16,
     blurb: "Climb one side, then the other, then come home.",
     about:
-      "The first eight notes climb the right side, then the left side. The next eight come back down the right side and close B-flat, A, ding. Learn the climb, then the return. Slow the tempo while the jumps are new.",
+      "Ding, then A, C, and E on the right. The left hand answers with the ding, then climbs B-flat, D, F, and the high A. The right hand walks down G, E, C, and low A. The phrase closes B-flat, A, ding. Slow the tempo while the jumps are new.",
     steps: [
       step(0, "D3", L),
       step(1, "A3", R),
@@ -245,6 +281,161 @@ export const PATTERNS = [
       step(13, "Bb3", L),
       step(14, "A3", R),
       step(15, "D3", L),
+    ],
+  },
+  {
+    id: "up-and-back",
+    title: "Up and back",
+    stage: "Next",
+    bpm: 66,
+    loopBeats: 8,
+    blurb: "Five steps up, then turn around before F.",
+    about:
+      "Start on low A with the right hand. Alternate hands up the scale: A, B-flat, C, D, E. Come back down D, C, B-flat. When the loop starts again, the right hand steps from B-flat to low A. This one stops at E on purpose.",
+    steps: [
+      step(0, "A3", R),
+      step(1, "Bb3", L),
+      step(2, "C4", R),
+      step(3, "D4", L),
+      step(4, "E4", R),
+      step(5, "D4", L),
+      step(6, "C4", R),
+      step(7, "Bb3", L),
+    ],
+  },
+  {
+    id: "minor-home",
+    title: "D minor",
+    stage: "Next",
+    bpm: 66,
+    loopBeats: 4,
+    blurb: "The home chord, rolled because D and F share a hand.",
+    about:
+      "D, F, and A are D minor, the chord this pan is built on. Ding and low A together, then F, then the higher D, then low A. D and F are both on your left, so they take turns.",
+    steps: [
+      step(0, "D3", L),
+      step(0, "A3", R),
+      step(1, "F4", L),
+      step(2, "D4", L),
+      step(3, "A3", R),
+    ],
+  },
+  {
+    id: "a-minor",
+    title: "A minor",
+    stage: "Next",
+    bpm: 72,
+    loopBeats: 4,
+    blurb: "High A under the left hand, high C and E under the right.",
+    about:
+      "A, C, and E are A minor. High A and high C can sound together: high C is the third above that A, and they sit on opposite hands. High A and E can sound together too. E sits below the high A, because this pan has no E above it.",
+    steps: [
+      step(0, "A4", L),
+      step(0, "C5", R),
+      step(1, "E4", R),
+      step(2, "A4", L),
+      step(2, "E4", R),
+      step(3, "C5", R),
+    ],
+  },
+  {
+    id: "f-under",
+    title: "F underneath",
+    stage: "Next",
+    bpm: 66,
+    loopBeats: 8,
+    blurb: "F stays on the left. The right hand answers with C, then A.",
+    about:
+      "F, A, and C are F major. F is on the left, so it can sound with the high C, and it can sound with the low A. Both of those are on the right. The high A is also on the left, so it cannot join the F. Play F with high C, rest, F with low A, rest, and the same again.",
+    steps: [
+      step(0, "F4", L),
+      step(0, "C5", R),
+      step(2, "F4", L),
+      step(2, "A3", R),
+      step(4, "F4", L),
+      step(4, "C5", R),
+      step(6, "F4", L),
+      step(6, "A3", R),
+    ],
+  },
+  {
+    id: "g-minor",
+    title: "G minor",
+    stage: "Next",
+    bpm: 66,
+    loopBeats: 8,
+    blurb: "G on the right, with D and then B-flat on the left.",
+    about:
+      "G, B-flat, and D are G minor. G is on the right. D and B-flat are both on the left, so they take turns under the G. Play the higher D with G, rest, then B-flat with G, and repeat.",
+    steps: [
+      step(0, "D4", L),
+      step(0, "G4", R),
+      step(2, "Bb3", L),
+      step(2, "G4", R),
+      step(4, "D4", L),
+      step(4, "G4", R),
+      step(6, "Bb3", L),
+      step(6, "G4", R),
+    ],
+  },
+  {
+    id: "three-and-two",
+    title: "Three, three, two",
+    stage: "Further",
+    bpm: 72,
+    loopBeats: 4,
+    blurb: "Eight quick notes, grouped three, three, and two.",
+    about:
+      "Play every half beat. The groups are ding, A, A, then ding, A, A, then ding, A. That is three notes, three notes, and two notes. Only the ding and the low A. The hands go left, right, right, left, right, right, left, right.",
+    steps: [
+      step(0, "D3", L),
+      step(0.5, "A3", R),
+      step(1, "A3", R),
+      step(1.5, "D3", L),
+      step(2, "A3", R),
+      step(2.5, "A3", R),
+      step(3, "D3", L),
+      step(3.5, "A3", R),
+    ],
+  },
+  {
+    id: "together-split",
+    title: "Together, then split",
+    stage: "Further",
+    bpm: 76,
+    loopBeats: 8,
+    blurb: "Both hands together, then one note each.",
+    about:
+      "Both hands play together, then they take turns. Ding and low A, then E on the right, B-flat on the left, C on the right. Same hand order from a new pair: ding with G, then E, F, and low A.",
+    steps: [
+      step(0, "D3", L),
+      step(0, "A3", R),
+      step(1, "E4", R),
+      step(2, "Bb3", L),
+      step(3, "C4", R),
+      step(4, "D3", L),
+      step(4, "G4", R),
+      step(5, "E4", R),
+      step(6, "F4", L),
+      step(7, "A3", R),
+    ],
+  },
+  {
+    id: "long-short-long",
+    title: "Long, short, long",
+    stage: "Further",
+    bpm: 76,
+    loopBeats: 4,
+    blurb: "One long note, three quick notes, then a note on 4.",
+    about:
+      'Count "1 and 2 and 3 and 4 and". On 1, F and G together, and let them hold through the and. Then three quick notes: D, E, B-flat. Those are 2, the and of 2, and 3. Leave the and of 3 empty. On 4, C. The hands go both, left, right, left, right.',
+    steps: [
+      step(0, "F4", L),
+      step(0, "G4", R),
+      step(1, "D4", L),
+      step(1.5, "E4", R),
+      step(2, "Bb3", L),
+      step(3, "C4", R),
     ],
   },
 ];
@@ -285,6 +476,6 @@ export function beatLabel(beat) {
   const inside = beat % 4;
   const count = Math.floor(inside) + 1;
   const fraction = Math.round((inside - Math.floor(inside)) * 2) / 2;
-  if (fraction === 0.5) return `${count} +`;
+  if (fraction === 0.5) return `${count} and`;
   return String(count);
 }

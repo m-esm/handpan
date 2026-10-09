@@ -47,14 +47,15 @@ function place(deg, orbit) {
 function fieldMarkup(id, x, y, radius, ding) {
   const note = NOTES[id];
   const wide = note.letter.length > 1;
-  const nameSize = ding ? 52 : wide ? 22 : 30;
-  const octX = ding ? 26 : wide ? 20 : 13;
-  const octY = ding ? -24 : -13;
+  const nameSize = ding ? 46 : wide ? 20 : 24;
+  const nameY = ding ? 6 : 8;
+  const octY = ding ? -22 : -12;
+  const octSize = ding ? 16 : 13;
   return `<g class="field${ding ? " ding" : ""}" data-note="${id}" role="button" tabindex="0" transform="translate(${x} ${y})" aria-label="${dimpleLabel(id)}">
     <circle class="field-shade" r="${radius}" fill="url(#dimple)"></circle>
     <circle class="field-face" r="${radius * 0.72}" fill="#4e3b2e"></circle>
-    <text class="field-name" style="font-size:${nameSize}px" y="${ding ? -6 : 1}">${note.letter}</text>
-    <text class="field-oct" x="${octX}" y="${octY}">${note.octave}</text>
+    <text class="field-name" style="font-size:${nameSize}px" y="${nameY}">${note.letter}</text>
+    <text class="field-oct" style="font-size:${octSize}px" y="${octY}">${note.octave}</text>
     ${ding ? '<text class="field-role" y="22">ding</text>' : ""}
   </g>`;
 }
@@ -113,6 +114,7 @@ function onPanHit(event) {
   const field = event.target.closest(".field");
   if (!field) return;
   soundNote(field.dataset.note);
+  field.blur();
 }
 
 function onPanKey(event) {
@@ -124,8 +126,29 @@ function onPanKey(event) {
   soundNote(field.dataset.note);
 }
 
+const tapTimers = new Map();
+
 function soundNote(id) {
   audio.resume().then(() => audio.strikeChord([id], audio.now() + 0.02));
+  const field = document.querySelector(`.field[data-note="${id}"]`);
+  if (field) {
+    field.classList.add("is-tap");
+    clearTimeout(tapTimers.get(id));
+    tapTimers.set(
+      id,
+      setTimeout(() => {
+        field.classList.remove("is-tap");
+        player.refresh();
+      }, 180),
+    );
+  }
+  player.refresh();
+  if (!player.playing) {
+    const hand = flipHand(SIDE[id]);
+    const name = id === "D3" ? "ding" : pretty(id);
+    const node = caption();
+    if (node) node.textContent = hand ? `${name}, ${hand} hand` : name;
+  }
 }
 
 function syncMirror() {
@@ -215,7 +238,7 @@ function rowFor(pattern) {
     const chip = document.createElement("span");
     chip.className = "mini-hit";
     chip.dataset.event = String(event.index);
-    chip.textContent = event.notes.map((id) => NOTES[id].letter).join(" ");
+    chip.textContent = event.notes.map((id) => pretty(id)).join(" ");
     mini.append(chip);
   }
   const meta = document.createElement("p");
@@ -376,6 +399,34 @@ function renderLearn(pattern) {
     roll.append(button);
   }
 
+  const firstEvent = eventsOf(pattern)[0];
+  if (firstEvent && eventsOf(pattern).length > 1) {
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "step";
+    preview.dataset.loopNext = "0";
+    preview.setAttribute("aria-label", "Back to the first note");
+    const count = document.createElement("span");
+    count.className = "step-count";
+    count.textContent = beatLabel(firstEvent.beat);
+    const notes = document.createElement("span");
+    notes.className = "step-notes";
+    for (const id of firstEvent.notes) {
+      const name = document.createElement("span");
+      name.className = "step-note";
+      name.textContent = pretty(id);
+      notes.append(name);
+    }
+    const hand = document.createElement("span");
+    hand.className = "step-hand";
+    hand.textContent = handLine(firstEvent.hands);
+    preview.append(count, notes, hand);
+    preview.addEventListener("click", () => {
+      player.seek(0, player.playing);
+    });
+    roll.append(preview);
+  }
+
   const brief = document.createElement("div");
   brief.className = "brief";
   brief.append(about, warn);
@@ -423,7 +474,7 @@ function paint(snap) {
     field.setAttribute("aria-pressed", on ? "true" : "false");
     const shade = field.querySelector(".field-shade");
     const face = field.querySelector(".field-face");
-    if (sounding) {
+    if (sounding || field.classList.contains("is-tap")) {
       shade.setAttribute("fill", "url(#dimple-on)");
       face.setAttribute("fill", "url(#dimple-on)");
       face.setAttribute("filter", "url(#glow)");
@@ -438,18 +489,35 @@ function paint(snap) {
     }
   });
   document.querySelectorAll("[data-event]").forEach((node) => {
+    const row = node.closest("[data-pattern]");
+    const inPattern = !row || row.dataset.pattern === snap.patternId;
     const index = Number(node.dataset.event);
-    node.classList.toggle("is-on", snap.playing && index === snap.index);
-    node.classList.toggle("is-place", !snap.playing && snap.index >= 0 && index === snap.index);
-    node.classList.toggle("is-next", index === snap.nextIndex && index !== snap.index);
+    const here = inPattern && snap.index >= 0 && index === snap.index;
+    node.classList.toggle("is-on", !!snap.playing && here);
+    node.classList.toggle("is-place", !snap.playing && here);
+    node.classList.toggle("is-next", inPattern && index === snap.nextIndex && index !== snap.index);
+  });
+  document.querySelectorAll("[data-loop-next]").forEach((node) => {
+    node.classList.toggle("is-next", snap.nextIndex === 0 && snap.index > 0);
   });
   if (snap.playing && snap.index !== lastScroll) {
     lastScroll = snap.index;
-    const current = document.querySelector(".step.is-on");
     const roll = document.getElementById("roll");
+    const current = roll && roll.querySelector(".step.is-on");
     if (current && roll) {
-      const left = current.offsetLeft - roll.clientWidth / 2 + current.clientWidth / 2;
-      roll.scrollTo({ left: Math.max(0, left), behavior: reduce ? "auto" : "smooth" });
+      const pad = 8;
+      const next = current.nextElementSibling;
+      let left = Math.max(0, current.offsetLeft - pad);
+      if (next) {
+        const end = next.offsetLeft + next.offsetWidth + pad;
+        const shifted = Math.max(0, end - roll.clientWidth);
+        if (end - left > roll.clientWidth && shifted <= current.offsetLeft) left = shifted;
+      }
+      const max = Math.max(0, roll.scrollWidth - roll.clientWidth);
+      roll.scrollTo({
+        left: Math.max(0, Math.min(left, max)),
+        behavior: reduce ? "auto" : "smooth",
+      });
     }
   }
   const node = caption();
@@ -519,6 +587,11 @@ document.getElementById("mirror").addEventListener("click", () => {
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
+  if (event.code === "Escape" && document.body.classList.contains("is-learn")) {
+    event.preventDefault();
+    location.hash = "#/";
+    return;
+  }
   if (event.target.closest("input, textarea, .field")) return;
   if (event.code === "Space") {
     event.preventDefault();
@@ -538,8 +611,6 @@ window.addEventListener("keydown", (event) => {
   } else if (event.code === "ArrowLeft") {
     event.preventDefault();
     nudge(-1);
-  } else if (event.code === "Escape") {
-    location.hash = "#/";
   }
 });
 

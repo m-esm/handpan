@@ -176,9 +176,9 @@ body.is-learn #dock {
 
 .field-oct {
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 13px;
   fill: var(--soft);
-  text-anchor: start;
+  text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
 }
@@ -198,7 +198,10 @@ body.is-learn #dock {
 
 .field.is-on .field-name,
 .field.is-on .field-oct,
-.field.is-on .field-role { fill: var(--ink); }
+.field.is-on .field-role,
+.field.is-tap .field-name,
+.field.is-tap .field-oct,
+.field.is-tap .field-role { fill: var(--ink); }
 
 .field.is-place .field-face,
 .field.is-next .field-face {
@@ -275,6 +278,7 @@ h1 {
   border: 1px solid var(--line);
   font-family: var(--serif);
   font-size: 18px;
+  white-space: nowrap;
   color: var(--mist);
 }
 
@@ -425,7 +429,7 @@ input[type="range"] {
 
 .step, .rest {
   flex: 0 0 auto;
-  scroll-snap-align: center;
+  scroll-snap-align: start;
   min-width: 84px;
   min-height: 108px;
   padding: 10px 8px 12px;
