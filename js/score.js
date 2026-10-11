@@ -457,15 +457,29 @@ export function eventsOf(pattern) {
     .map((event, index) => ({ ...event, index }));
 }
 
-export function cellsOf(pattern) {
-  const events = eventsOf(pattern);
-  const cells = [];
-  for (let beat = 0; beat < pattern.loopBeats; beat += 1) {
-    const group = events.filter((event) => event.beat >= beat && event.beat < beat + 1);
-    if (group.length === 0) cells.push({ rest: true, beat });
-    else cells.push(...group);
+export function sheetOf(pattern) {
+  const perBeat = pattern.slotsPerBeat || (pattern.steps.some((item) => item.beat % 1) ? 2 : 1);
+  const barBeats = pattern.beatsPerBar || 4;
+  const perBar = Math.round(perBeat * barBeats);
+  const total = Math.round(pattern.loopBeats / barBeats);
+  const bars = Array.from({ length: total }, (unused, bar) => ({ bar, slots: Array(perBar).fill(null) }));
+  for (const event of eventsOf(pattern)) {
+    const slot = Math.round(event.beat * perBeat);
+    bars[Math.floor(slot / perBar)].slots[slot % perBar] = event;
   }
-  return cells;
+  const marks = pattern.sections || [{ beat: 0, name: "" }];
+  const sections = marks.map((mark, i) => {
+    const first = Math.round(mark.beat / barBeats);
+    const end = i + 1 < marks.length ? Math.round(marks[i + 1].beat / barBeats) : total;
+    return { name: mark.name, first, end, bars: bars.slice(first, end) };
+  });
+  return {
+    perBeat,
+    perBar,
+    barBeats,
+    cols: perBar > 8 ? perBar / 2 : perBar,
+    sections,
+  };
 }
 
 const COUNT_WORDS = { 2: ["", " and"], 4: ["", " e", " and", " a"] };
@@ -473,7 +487,7 @@ const COUNT_WORDS = { 2: ["", " and"], 4: ["", " e", " and", " a"] };
 export function beatLabel(beat, pattern) {
   const perBeat = pattern.slotsPerBeat || 2;
   const perBar = (pattern.beatsPerBar || 4) * perBeat;
-  const slot = Math.round(beat * perBeat) % perBar;
+  const slot = Math.round(beat * perBeat) % Math.round(perBar);
   if (pattern.count === "slots") return String(slot + 1);
   return `${Math.floor(slot / perBeat) + 1}${COUNT_WORDS[perBeat][slot % perBeat]}`;
 }

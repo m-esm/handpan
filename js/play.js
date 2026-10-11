@@ -3,7 +3,11 @@ import { eventsOf } from "./score.js";
 export function createPlayer(audio, emit) {
   const state = {
     pattern: null,
+    all: [],
     events: [],
+    range: null,
+    from: 0,
+    span: 0,
     bpm: 72,
     loop: true,
     playing: false,
@@ -18,9 +22,36 @@ export function createPlayer(audio, emit) {
     ended: false,
   };
 
+  function posOf(index) {
+    return state.events.findIndex((event) => event.index === index);
+  }
+
+  function setWindow(range) {
+    const inside = range
+      ? state.all.filter((event) => event.beat >= range.from - 0.001 && event.beat < range.to - 0.001)
+      : [];
+    if (inside.length === 0) {
+      state.range = null;
+      state.events = state.all;
+      state.from = 0;
+      state.span = state.pattern.loopBeats;
+      return;
+    }
+    state.range = range;
+    state.events = inside;
+    state.from = range.from;
+    state.span = range.to - range.from;
+  }
+
+  function adopt(pattern) {
+    state.pattern = pattern;
+    state.all = eventsOf(pattern);
+    setWindow(null);
+  }
+
   function snapshot() {
-    const event = state.index >= 0 ? state.events[state.index] : null;
-    const following = state.index >= 0 ? state.index + 1 : 0;
+    const event = state.index >= 0 ? state.all[state.index] : null;
+    const following = posOf(state.index) + 1;
     const canShowNext = state.events.length > 0 && (state.loop || following < state.events.length);
     const next = canShowNext ? state.events[following % state.events.length] : null;
     return {
@@ -33,6 +64,7 @@ export function createPlayer(audio, emit) {
       nextNotes: next ? next.notes : [],
       bpm: state.bpm,
       loop: state.loop,
+      range: state.range,
     };
   }
 
@@ -101,7 +133,7 @@ export function createPlayer(audio, emit) {
     while (state.cursor < maxOrdinal) {
       const event = state.events[state.cursor % state.events.length];
       const loopN = Math.floor(state.cursor / state.events.length);
-      const beat = loopN * state.pattern.loopBeats + event.beat;
+      const beat = loopN * state.span + event.beat - state.from;
       const time = state.origin + beat * spb;
       if (time > ahead) break;
       if (time >= now - 0.05) {
@@ -147,17 +179,16 @@ export function createPlayer(audio, emit) {
     const bpm = keep ? state.bpm : pattern.bpm;
     halt();
     state.ended = false;
-    state.pattern = pattern;
-    state.events = eventsOf(pattern);
+    if (!state.pattern || state.pattern.id !== pattern.id) adopt(pattern);
     state.bpm = bpm;
     const found = state.events.findIndex((event) => event.beat >= fromBeat - 0.001);
     const idx = found < 0 ? 0 : found;
     const event = state.events[idx];
     const now = audio.now() + 0.05;
-    state.origin = now - event.beat * (60 / state.bpm);
+    state.origin = now - (event.beat - state.from) * (60 / state.bpm);
     state.cursor = idx;
     state.startCursor = idx;
-    state.index = idx;
+    state.index = event.index;
     state.playing = true;
     tick();
     frame();
@@ -166,8 +197,7 @@ export function createPlayer(audio, emit) {
   function load(pattern) {
     halt();
     state.ended = false;
-    state.pattern = pattern;
-    state.events = eventsOf(pattern);
+    adopt(pattern);
     state.bpm = pattern.bpm;
     state.loop = pattern.loop !== false;
     state.index = 0;
@@ -189,13 +219,17 @@ export function createPlayer(audio, emit) {
       await play(state.pattern, 0, { keepTempo: true });
       return;
     }
-    const event = state.events[state.index];
+    const event = state.all[state.index];
     await play(state.pattern, event.beat, { keepTempo: true });
   }
 
-  function seek(index, andPlay) {
-    const event = state.events[index];
+  function seek(index, andPlay, silent) {
+    const event = state.all[index];
     if (!event || !state.pattern) return;
+    if (posOf(index) < 0) {
+      setWindow(null);
+      state.loop = state.pattern.loop !== false;
+    }
     if (andPlay) {
       play(state.pattern, event.beat, { keepTempo: true });
       return;
@@ -203,8 +237,28 @@ export function createPlayer(audio, emit) {
     halt();
     state.ended = false;
     state.index = index;
-    state.cursor = index;
-    audio.resume().then(() => audio.strikeChord(event.notes, audio.now() + 0.02, event.amps));
+    state.cursor = posOf(index);
+    if (!silent) audio.resume().then(() => audio.strikeChord(event.notes, audio.now() + 0.02, event.amps));
+    emitNow();
+  }
+
+  function step(dir, silent) {
+    const total = state.events.length;
+    if (!total) return;
+    const at = posOf(state.index);
+    const next = at < 0 ? 0 : (at + dir + total) % total;
+    seek(state.events[next].index, state.playing, silent);
+  }
+
+  function setRange(range) {
+    if (!state.pattern) return;
+    halt();
+    state.ended = false;
+    setWindow(range);
+    state.loop = state.range ? true : state.pattern.loop !== false;
+    if (posOf(state.index) < 0) state.index = state.events[0].index;
+    state.cursor = posOf(state.index);
+    state.startCursor = state.cursor;
     emitNow();
   }
 
@@ -245,6 +299,8 @@ export function createPlayer(audio, emit) {
     pause,
     resume,
     seek,
+    step,
+    setRange,
     setTempo,
     setLoop,
     snapshot,
@@ -270,8 +326,8 @@ export function createPlayer(audio, emit) {
     get canResume() {
       return !!state.pattern && state.cursor > 0;
     },
-    get length() {
-      return state.events.length;
+    get range() {
+      return state.range;
     },
   };
 }
