@@ -485,6 +485,18 @@ function learnedLine(pattern) {
   return `, ${done} of ${names.length} parts learned`;
 }
 
+function thumbFor(pattern, size) {
+  const thumb = document.createElement("img");
+  thumb.className = "thumb";
+  thumb.src = `img/thumbs/${pattern.id}.webp`;
+  thumb.alt = "";
+  thumb.width = size;
+  thumb.height = size;
+  thumb.decoding = "async";
+  thumb.addEventListener("error", () => thumb.remove());
+  return thumb;
+}
+
 function rowFor(pattern) {
   const row = document.createElement("article");
   row.className = "row";
@@ -550,7 +562,10 @@ function rowFor(pattern) {
   open.href = `#/p/${pattern.id}`;
   open.textContent = "Learn";
 
-  row.append(play, body, open);
+  const side = document.createElement("div");
+  side.className = "row-side";
+  side.append(thumbFor(pattern, 56), play);
+  row.append(side, body, open);
   return row;
 }
 
@@ -570,7 +585,10 @@ function renderLearn(pattern) {
   const title = document.createElement("h1");
   title.tabIndex = -1;
   title.textContent = pattern.title;
-  head.append(back, title);
+  const name = document.createElement("div");
+  name.className = "learn-name";
+  name.append(thumbFor(pattern, 72), title);
+  head.append(back, name);
 
   const about = document.createElement("p");
   about.className = "about";
