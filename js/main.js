@@ -46,6 +46,7 @@ let settled = false;
 let lastListed = "";
 let routed = null;
 let stage = null;
+let worldInterface = null;
 let sceneLoadCancelled = false;
 let sceneChoice = "auto";
 let lastEnvironment = "";
@@ -83,7 +84,7 @@ function finishLoading(message = "") {
   const notice = document.getElementById("scene-notice");
   notice.textContent = message;
   notice.hidden = !message;
-  if (focusLoader) document.querySelector(".brand").focus();
+  if (focusLoader) (document.querySelector(".world-target") || document.querySelector(".brand")).focus({ preventScroll: true });
 }
 
 document.getElementById("simple-view").addEventListener("click", () => {
@@ -256,6 +257,18 @@ async function bootStage() {
     stage.layout(panLayout());
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
+    const { createWorldInterface } = await import("./world-interface.js");
+    worldInterface = createWorldInterface({ onAction: worldAction });
+    document.getElementById("learn").inert = true;
+    document.getElementById("dock").inert = true;
+    for (const node of document.querySelectorAll(".top, #learn, #dock, .scene-heading, .stage-tools, .stage-footer, .environment-picker, .motion-controls, #mic")) node.setAttribute("aria-hidden", "true");
+    for (const id of ["motion-status", "mic-text", "motion-toggle", "listen"]) {
+      const node = document.getElementById(id);
+      new MutationObserver(() => {
+        paint(player.snapshot());
+        if (["motion-status", "mic-text"].includes(id) && node.textContent) worldInterface.notice(node.textContent);
+      }).observe(node, { childList: true, characterData: true, subtree: true });
+    }
     paint(player.snapshot());
     requestAnimationFrame(() => finishLoading());
   } catch (err) {
@@ -272,6 +285,45 @@ function onPanHit(event) {
   if (!field) return;
   soundNote(field.dataset.note);
   field.blur();
+}
+
+function worldAction(action) {
+  const snap = player.snapshot();
+  const pattern = patternFromHash();
+  if (action.type === "song") {
+    sceneChoice = "auto";
+    player.pause();
+    location.hash = `#/p/${action.id}`;
+  } else if (action.type === "home") {
+    player.pause();
+    location.hash = "#/";
+  } else if (action.type === "environment") {
+    sceneChoice = action.id;
+    paint(snap);
+  } else if (action.type === "play") {
+    if (snap.playing) player.pause();
+    else player.resume();
+  } else if (action.type === "step") player.step(action.delta, listener.on);
+  else if (action.type === "tempo") player.setTempo(snap.bpm + action.delta);
+  else if (action.type === "loop") player.setLoop(!snap.loop);
+  else if (action.type === "listen") toggleListen();
+  else if (action.type === "mirror") {
+    mirrored = !mirrored;
+    try { localStorage.setItem("disc-kurd-mirror", mirrored ? "1" : "0"); } catch (err) { void err; }
+    drawPan();
+    paint(snap);
+  } else if (action.type === "motion") document.getElementById("motion-toggle").click();
+  else if (action.type === "center") document.getElementById("motion-center").click();
+  else if (action.type === "practice-exit" && pattern) { openStep(pattern, null); paint(player.snapshot()); }
+  else if (action.type === "practice-back" && pattern) { openStep(pattern, Math.max(0, stepAt[pattern.id] - 1)); paint(player.snapshot()); }
+  else if (action.type === "practice" && pattern) {
+    const steps = stepsOf(pattern);
+    const current = stepOf(pattern);
+    if (current) markLearned(pattern, current.key, true);
+    const at = current ? stepAt[pattern.id] + 1 : 0;
+    openStep(pattern, at >= steps.length ? null : at);
+    paint(player.snapshot());
+  }
 }
 
 function onPanKey(event) {
@@ -1162,7 +1214,7 @@ function route() {
     learn.append(hint, key);
     paint(player.snapshot());
     const left = routed ? document.querySelector(`.row[data-pattern="${routed}"]`) : null;
-    if (left) {
+    if (left && !worldInterface) {
       left.querySelector(".open").focus({ preventScroll: true });
       left.scrollIntoView({ block: "center" });
     }
@@ -1170,7 +1222,7 @@ function route() {
     return;
   }
   renderLearn(pattern);
-  if (routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
+  if (!worldInterface && routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
   routed = pattern.id;
   if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
@@ -1184,6 +1236,11 @@ function route() {
 }
 
 function paint(snap) {
+  if (worldInterface) {
+    const current = patternFromHash();
+    const step = current ? stepOf(current) : null;
+    worldInterface.update({ ...snap, practice: step ? step.label : "", hasPractice: !!current && stepsOf(current).length > 0, mirrored, listening: listener.on, motion: document.getElementById("motion-toggle").getAttribute("aria-pressed") === "true" });
+  }
   const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
   if (stage && environment !== lastEnvironment) {
     stage.environment(environment);
@@ -1242,7 +1299,7 @@ function paint(snap) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) {
-      if (settled) keepInView(slot.closest(".bar"));
+      if (settled && !worldInterface) keepInView(slot.closest(".bar"));
       settled = true;
       const part = slot.closest(".part").dataset.section;
       for (const chip of document.querySelectorAll(".part-chip")) {
