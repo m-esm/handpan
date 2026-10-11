@@ -16,6 +16,7 @@ import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
 import { VIEWS, viewFor } from "./environments.js";
 import { initExplore } from "./explore.js";
+import { initMotion } from "./motion.js";
 
 const audio = createAudio();
 document.querySelector(".browse-music").addEventListener("click", () => {
@@ -253,6 +254,8 @@ async function bootStage() {
     stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
     document.body.classList.add("has-3d");
     stage.layout(panLayout());
+    initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
+    document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());
     requestAnimationFrame(() => finishLoading());
   } catch (err) {
