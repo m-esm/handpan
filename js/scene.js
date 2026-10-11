@@ -499,6 +499,8 @@ function createDrum(host, onHit, onStrike) {
   const ray = new THREE.Raycaster();
   const point = new THREE.Vector2();
   const tilt = new THREE.Vector2();
+  const motionTarget = new THREE.Vector3();
+  let motionActive = false;
   const local = new THREE.Vector3();
 
   function noteAt(event) {
@@ -568,11 +570,14 @@ function createDrum(host, onHit, onStrike) {
       wave.material.opacity = (1 - waveAt) ** 2 * 0.9;
     }
     lip.material.emissiveIntensity += ((tak ? 2 : 0) - lip.material.emissiveIntensity) * 0.3;
-    if (!still) {
-      drum.rotation.z += (-tilt.x * 0.06 - drum.rotation.z) * 0.06;
-      drum.rotation.x += (tilt.y * 0.06 - drum.rotation.x) * 0.06;
-      halo.material.opacity = 0.28;
-    }
+    const targetX = motionActive ? motionTarget.x : still ? 0 : tilt.y * 0.06;
+    const targetY = motionActive ? motionTarget.y : 0;
+    const targetZ = motionActive ? motionTarget.z : still ? 0 : -tilt.x * 0.06;
+    drum.rotation.x += (targetX - drum.rotation.x) * 0.12;
+    drum.rotation.y += (targetY - drum.rotation.y) * 0.12;
+    drum.rotation.z += (targetZ - drum.rotation.z) * 0.12;
+    halo.material.opacity = 0.28;
+    if (profiling) host.dataset.rotation = JSON.stringify([drum.rotation.x, drum.rotation.y, drum.rotation.z]);
     renderer.render(scene, camera);
   }
 
@@ -583,6 +588,12 @@ function createDrum(host, onHit, onStrike) {
     layout,
     set,
     frame,
+    motion(value) {
+      const next = value ? new THREE.Vector3(value.x, value.y, value.z) : new THREE.Vector3();
+      if (motionActive !== !!value || motionTarget.distanceToSquared(next) > 0.000004) pendingFrames = 40;
+      motionActive = !!value;
+      motionTarget.copy(next);
+    },
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     setTak(on) {
       if (tak !== on) pendingFrames = 40;
@@ -1048,5 +1059,5 @@ export function createStage({ pan, onHit }) {
   requestAnimationFrame(loop);
   if (still) addEventListener("scroll", () => world.redraw(), { passive: true });
 
-  return { layout: drum.layout, set: drum.set, setTak: drum.setTak, environment: world.environment };
+  return { layout: drum.layout, set: drum.set, setTak: drum.setTak, environment: world.environment, motion: drum.motion };
 }
