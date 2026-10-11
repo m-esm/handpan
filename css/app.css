@@ -1673,3 +1673,19 @@ body .row-side .row-play { position: absolute; inset: 0; width: 48px; height: 48
   .library-close { min-height: 44px; }
   .scene-loader p { max-width: 30ch; line-height: 1.6; }
 }
+.world-interface { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
+.world-interface > canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.world-target { position: absolute; padding: 0; border: 0; background: transparent; color: transparent; box-shadow: none; border-radius: 0; cursor: pointer; pointer-events: auto; min-height: 44px; touch-action: manipulation; }
+.world-target:hover, .world-target:active { background: transparent; box-shadow: none; }
+.world-target:focus-visible { outline: 2px solid #ffe0a0; outline-offset: 5px; background: #e3bc6d12; }
+.world-whisper { position: absolute; bottom: 1.2%; left: 10%; width: 80%; text-align: center; font: 10px var(--sans); letter-spacing: .12em; color: #f1ddba; text-shadow: 0 2px 5px #07131b; }
+body.world-mode { overflow: hidden; height: 100dvh; }
+body.world-mode .wrap, body.world-mode .split, body.world-mode.has-3d .pan-stick { position: static; display: block; margin: 0; padding: 0; max-width: none; width: auto; height: auto; background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.world-mode .top, body.world-mode #learn, body.world-mode #dock, body.world-mode .scene-heading, body.world-mode .stage-tools, body.world-mode .stage-footer, body.world-mode .environment-picker, body.world-mode .motion-controls, body.world-mode #mic, body.world-mode .explore-hud { display: none !important; }
+body.world-mode #pan { display: none; }
+body.world-mode.world-song #pan { display: block; position: fixed; z-index: 5; top: 23%; left: 50%; transform: translateX(-50%); width: min(58vw, 70vh); height: 42vh; margin: 0; padding: 0; }
+body.world-mode .world { opacity: 1; }
+@media (max-width: 700px) {
+  body.world-mode.world-song #pan { width: 96vw; height: 39vh; top: 25%; }
+  .world-whisper { font-size: 9px; letter-spacing: .04em; }
+}
