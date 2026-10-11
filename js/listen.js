@@ -116,14 +116,23 @@ export function createDetector(sampleRate) {
   return { feed };
 }
 
-export function createListener(onHeard) {
+const METER_FLOOR_DB = -60;
+const METER_SPAN_DB = 50;
+
+export function createListener(onHeard, onEnded) {
   let ctx = null;
   let stream = null;
   let timer = 0;
+  let meter = null;
+  const wave = new Float32Array(SMALL);
 
-  async function start() {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+  async function start(deviceId) {
+    const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+    if (deviceId) audio.deviceId = { exact: deviceId };
+    stream = await navigator.mediaDevices.getUserMedia({ audio });
+    const live = stream;
+    stream.getAudioTracks()[0].addEventListener("ended", () => {
+      if (stream === live && onEnded) onEnded();
     });
     ctx = new AudioContext();
     const source = ctx.createMediaStreamSource(stream);
@@ -135,6 +144,7 @@ export function createListener(onHeard) {
     small.smoothingTimeConstant = 0;
     source.connect(big);
     source.connect(small);
+    meter = small;
     const bigDb = new Float32Array(big.frequencyBinCount);
     const smallDb = new Float32Array(small.frequencyBinCount);
     const detector = createDetector(ctx.sampleRate);
@@ -152,13 +162,38 @@ export function createListener(onHeard) {
     if (ctx) ctx.close();
     stream = null;
     ctx = null;
+    meter = null;
+  }
+
+  function level() {
+    if (!meter) return 0;
+    meter.getFloatTimeDomainData(wave);
+    let sum = 0;
+    for (const sample of wave) sum += sample * sample;
+    const db = 10 * Math.log10(sum / wave.length + 1e-12);
+    return Math.max(0, Math.min(1, (db - METER_FLOOR_DB) / METER_SPAN_DB));
+  }
+
+  async function inputs() {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    return all.filter((device) => device.kind === "audioinput");
   }
 
   return {
     start,
     stop,
+    level,
+    inputs,
     get on() {
       return !!stream;
+    },
+    get deviceId() {
+      const track = stream && stream.getAudioTracks()[0];
+      return track ? track.getSettings().deviceId || "" : "";
+    },
+    get label() {
+      const track = stream && stream.getAudioTracks()[0];
+      return track ? track.label : "";
     },
   };
 }

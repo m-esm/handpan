@@ -25,6 +25,12 @@
           <button id="listen" type="button" aria-pressed="false">Listen</button>
           <button id="mirror" type="button" aria-pressed="false">Mirror</button>
         </div>
+        <div id="mic" class="mic" hidden>
+          <span class="mic-dot" aria-hidden="true"></span>
+          <span id="mic-text" class="mic-text"></span>
+          <span class="mic-meter" aria-hidden="true"><span id="mic-fill"></span></span>
+          <label class="mic-pick"><span class="sr">Input source</span><select id="mic-input"></select></label>
+        </div>
         <div id="pan"></div>
         <p id="status" class="sr" role="status"></p>
       </div>

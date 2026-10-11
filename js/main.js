@@ -39,7 +39,7 @@ let lastListed = "";
 let routed = null;
 
 const player = createPlayer(audio, paint);
-const listener = createListener(onHeard);
+const listener = createListener(onHeard, onMicEnded);
 const HEARD_MS = 450;
 const TAP_DEAF_MS = 500;
 let heard = null;
@@ -76,25 +76,6 @@ function onHeard(found) {
     heard = null;
     player.refresh();
   }, HEARD_MS);
-  player.refresh();
-}
-
-async function toggleListen() {
-  micNote = "";
-  if (listener.on) {
-    listener.stop();
-  } else {
-    player.pause();
-    try {
-      await listener.start();
-    } catch (err) {
-      void err;
-      micNote = "The microphone is blocked. Allow it for this page, then press Listen.";
-    }
-  }
-  const button = document.getElementById("listen");
-  button.setAttribute("aria-pressed", listener.on ? "true" : "false");
-  button.textContent = listener.on ? "Listening" : "Listen";
   player.refresh();
 }
 
@@ -1241,7 +1222,6 @@ function spoken(id, hands) {
 }
 
 function captionText(snap) {
-  if (micNote) return micNote;
   if (listener.on && !snap.playing) {
     const wanted = patternFromHash() ? pitched(snap.notes) : [];
     const target = wanted.map((id) => spoken(id, snap.hands)).join(" and ");
@@ -1303,6 +1283,144 @@ window.addEventListener("keydown", (event) => {
     player.step(-1, listener.on);
   }
 });
+
+const MIC_KEY = "disc-kurd-mic";
+const MIC_QUIET_MS = 4000;
+const MIC_QUIET_LEVEL = 0.06;
+let micState = "off";
+let micQuietSince = 0;
+
+function savedMic() {
+  try {
+    return localStorage.getItem(MIC_KEY) || "";
+  } catch (err) {
+    void err;
+    return "";
+  }
+}
+
+function saveMic(id) {
+  try {
+    localStorage.setItem(MIC_KEY, id);
+  } catch (err) {
+    void err;
+  }
+}
+
+function micError(err) {
+  if (!navigator.mediaDevices || !window.isSecureContext) return "A microphone needs https or localhost.";
+  const name = err ? err.name : "";
+  if (name === "NotAllowedError") return "The microphone is blocked. Allow it for this page, then press Listen.";
+  if (name === "NotFoundError") return "No microphone found. Connect one, then press Listen.";
+  if (name === "NotReadableError") return "Another app holds this input. Close it, or pick another input.";
+  return "The microphone did not start. Press Listen to try again.";
+}
+
+function setMicText(text) {
+  const node = document.getElementById("mic-text");
+  if (node.textContent !== text) node.textContent = text;
+}
+
+function drawMic() {
+  const bar = document.getElementById("mic");
+  bar.hidden = micState === "off";
+  bar.dataset.state = micState;
+  document.querySelector(".mic-meter").hidden = micState !== "on";
+  document.querySelector(".mic-pick").hidden = micState !== "on";
+  if (micState === "asking") setMicText("Waiting for microphone permission");
+  if (micState === "error") setMicText(micNote);
+  const button = document.getElementById("listen");
+  button.setAttribute("aria-pressed", listener.on ? "true" : "false");
+  button.textContent = listener.on ? "Listening" : "Listen";
+}
+
+async function fillMicList() {
+  const select = document.getElementById("mic-input");
+  const found = await listener.inputs();
+  select.replaceChildren(
+    ...found.map((device, i) => {
+      const option = document.createElement("option");
+      option.value = device.deviceId;
+      option.textContent = device.label || `Microphone ${i + 1}`;
+      return option;
+    }),
+  );
+  select.value = listener.deviceId;
+  if (select.selectedIndex < 0 && select.options.length) select.selectedIndex = 0;
+}
+
+function meterLoop() {
+  if (!listener.on) return;
+  const now = performance.now();
+  const level = listener.level();
+  if (level > MIC_QUIET_LEVEL) micQuietSince = now;
+  const quiet = now - micQuietSince > MIC_QUIET_MS;
+  const bar = document.getElementById("mic");
+  document.getElementById("mic-fill").style.transform = `scaleX(${level.toFixed(3)})`;
+  bar.dataset.quiet = quiet ? "1" : "0";
+  bar.dataset.heard = heard ? (heard.miss ? "miss" : "hit") : "";
+  setMicText(quiet ? "No sound on this input. Check the source, or pick another." : "Listening");
+  requestAnimationFrame(meterLoop);
+}
+
+async function startListening(deviceId) {
+  micNote = "";
+  micState = "asking";
+  drawMic();
+  try {
+    await listener.start(deviceId);
+  } catch (err) {
+    if (deviceId && err && err.name === "OverconstrainedError") {
+      saveMic("");
+      await startListening("");
+      return;
+    }
+    micState = "error";
+    micNote = micError(err);
+    drawMic();
+    player.refresh();
+    return;
+  }
+  micState = "on";
+  micQuietSince = performance.now();
+  saveMic(listener.deviceId);
+  await fillMicList();
+  drawMic();
+  meterLoop();
+  player.refresh();
+}
+
+function stopListening(note) {
+  listener.stop();
+  micNote = note || "";
+  micState = note ? "error" : "off";
+  drawMic();
+  player.refresh();
+}
+
+function onMicEnded() {
+  stopListening("The input disconnected. Press Listen to start again.");
+}
+
+async function toggleListen() {
+  if (listener.on) {
+    stopListening("");
+    return;
+  }
+  player.pause();
+  await startListening(savedMic());
+}
+
+document.getElementById("mic-input").addEventListener("change", async (event) => {
+  listener.stop();
+  await startListening(event.target.value);
+});
+
+if (navigator.mediaDevices) {
+  navigator.mediaDevices.addEventListener("devicechange", () => {
+    if (listener.on) fillMicList();
+  });
+}
 
 function trackStickHeight() {
   const stick = document.querySelector(".pan-stick");

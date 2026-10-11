@@ -1144,3 +1144,89 @@ input[type="range"]::-moz-range-thumb {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.mic {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 4px 0 6px;
+  padding: 8px 10px 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  font-size: 14px;
+}
+
+.mic[data-state="error"] { border-color: #8a3a2b; }
+
+.mic-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--soft);
+}
+
+.mic[data-state="asking"] .mic-dot { animation: pulse 1.2s ease-in-out infinite; }
+
+.mic[data-state="on"] .mic-dot { background: #6fcfb0; box-shadow: 0 0 0 3px rgba(111, 207, 176, 0.18); }
+
+.mic[data-state="on"][data-quiet="1"] .mic-dot { background: var(--brass); box-shadow: 0 0 0 3px rgba(230, 177, 90, 0.18); }
+
+.mic[data-state="error"] .mic-dot { background: #d9735c; }
+
+.mic-text {
+  flex: 1 1 140px;
+  min-width: 0;
+  color: var(--mist);
+  line-height: 1.3;
+}
+
+.mic-meter {
+  flex: 0 0 96px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+#mic-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #6fcfb0 0%, #6fcfb0 60%, var(--brass) 85%, #d9735c 100%);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 60ms linear;
+}
+
+.mic[data-heard="hit"] .mic-meter { box-shadow: 0 0 0 2px #6fcfb0; }
+
+.mic[data-heard="miss"] .mic-meter { box-shadow: 0 0 0 2px #d9735c; }
+
+.mic-pick { flex: 1 1 200px; min-width: 0; display: flex; }
+
+.mic-pick select {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 34px 6px 12px;
+  font: inherit;
+  color: var(--mist);
+  background-color: var(--panel-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23b9a890' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-s);
+  text-overflow: ellipsis;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+@media (min-width: 1001px) and (min-height: 521px) {
+  .mic-pick { flex: 0 1 260px; }
+}
