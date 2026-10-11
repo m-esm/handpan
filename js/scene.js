@@ -252,11 +252,13 @@ function createDrum(host, onHit, onStrike) {
     color: 0xffffff,
     vertexColors: true,
     metalness: 1,
-    roughness: 0.29,
+    roughness: 0.62,
     roughnessMap: grain,
-    clearcoat: 0.35,
+    bumpMap: grain,
+    bumpScale: 0.014,
+    clearcoat: 0.16,
     clearcoatRoughness: 0.35,
-    envMapIntensity: 0.95,
+    envMapIntensity: 0.85,
   });
   const under = new THREE.MeshPhysicalMaterial({
     color: 0x7a4c28,
@@ -274,6 +276,20 @@ function createDrum(host, onHit, onStrike) {
   drum.add(new THREE.Mesh(bowlGeometry(), under), lip);
   let dome = null;
 
+  const pedestal = new THREE.Group();
+  const pedestalStone = new THREE.MeshStandardMaterial({ color: 0x4c5e5c, roughness: 0.82, metalness: 0.08, bumpMap: grain, bumpScale: 0.02 });
+  const pedestalTrim = new THREE.MeshStandardMaterial({ color: 0xa68852, roughness: 0.46, metalness: 0.78 });
+  for (const [radius, height, y, material] of [[2.15, 0.22, -0.92, pedestalStone], [2.22, 0.055, -0.79, pedestalTrim], [2.18, 0.055, -1.05, pedestalTrim]]) {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 96), material);
+    base.position.y = y;
+    pedestal.add(base);
+  }
+  const inlay = new THREE.Mesh(new THREE.CircleGeometry(2.13, 96), new THREE.MeshStandardMaterial({ map: mosaicTexture(), roughness: 0.58, metalness: 0.18 }));
+  inlay.rotation.x = -Math.PI / 2;
+  inlay.position.y = -0.759;
+  pedestal.add(inlay);
+  scene.add(pedestal);
+
   const shadow = new THREE.Mesh(
     new THREE.PlaneGeometry(7.4, 7.4),
     new THREE.MeshBasicMaterial({
@@ -287,11 +303,11 @@ function createDrum(host, onHit, onStrike) {
     }),
   );
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = -0.66;
+  shadow.position.y = -0.75;
   scene.add(shadow);
 
   const floor = new THREE.Group();
-  floor.position.y = -0.64;
+  floor.position.y = -0.74;
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
   const line = (inner, width, color, opacity, from, span) => {
@@ -308,15 +324,15 @@ function createDrum(host, onHit, onStrike) {
     floor.add(mesh);
     return mesh;
   };
-  const halo = line(2.02, 0.016, TEAL, 0.55, 0, Math.PI * 2);
-  line(2.3, 0.006, BRASS, 0.35, 0, Math.PI * 2);
+  const halo = line(2.02, 0.009, BRASS, 0.3, 0, Math.PI * 2);
+  line(2.09, 0.006, BRASS, 0.35, 0, Math.PI * 2);
   const dial = new THREE.Group();
   floor.add(dial);
   for (let k = 0; k < 24; k += 1) {
     const arc = new THREE.Mesh(
-      new THREE.RingGeometry(2.12, 2.17, 6, 1, (k / 24) * Math.PI * 2, 0.07),
+      new THREE.RingGeometry(1.95, 2, 6, 1, (k / 24) * Math.PI * 2, 0.03),
       new THREE.MeshBasicMaterial({
-        color: k % 6 === 0 ? BRASS : TEAL,
+        color: BRASS,
         transparent: true,
         opacity: k % 6 === 0 ? 0.8 : 0.3,
         depthWrite: false,
@@ -414,7 +430,11 @@ function createDrum(host, onHit, onStrike) {
 
   function layout(next) {
     specs = next;
-    if (!dome && specs.length) {
+    if (specs.length) {
+      if (dome) {
+        drum.remove(dome);
+        dome.geometry.dispose();
+      }
       dome = new THREE.Mesh(domeGeometry(specs.map((spec) => fieldFrame(spec.deg, spec.ding))), metal);
       drum.add(dome);
     }
@@ -460,9 +480,9 @@ function createDrum(host, onHit, onStrike) {
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
-    const back = 1.17 * Math.max(1, 1.3 / camera.aspect);
+    const back = 1.13 * Math.max(1, 1.3 / camera.aspect);
     camera.position.set(0, 5.3 * back, 4.3 * back);
-    camera.lookAt(0, -0.12, 0.2);
+    camera.lookAt(0, -0.4, 0.2);
     camera.updateProjectionMatrix();
     renderer.render(scene, camera);
   }
@@ -540,8 +560,7 @@ function createDrum(host, onHit, onStrike) {
       drum.position.y = Math.sin(time / 1500) * 0.014;
       drum.rotation.z += (-tilt.x * 0.06 - drum.rotation.z) * 0.06;
       drum.rotation.x += (tilt.y * 0.06 - drum.rotation.x) * 0.06;
-      dial.rotation.z = time / 9000;
-      halo.material.opacity = 0.45 + Math.sin(time / 900) * 0.12;
+      halo.material.opacity = 0.28;
     }
     renderer.render(scene, camera);
   }
@@ -562,201 +581,274 @@ function createDrum(host, onHit, onStrike) {
   };
 }
 
-const NOISE = `
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-float fbm(vec2 p) {
-  float sum = 0.0;
-  float amp = 0.5;
-  for (int k = 0; k < 5; k++) {
-    sum += amp * noise(p);
-    p *= 2.03;
-    amp *= 0.5;
+function mosaicTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 512;
+  const pen = canvas.getContext("2d");
+  pen.fillStyle = "#173d43";
+  pen.fillRect(0, 0, 512, 512);
+  for (let y = 0; y <= 512; y += 128) {
+    for (let x = 0; x <= 512; x += 128) {
+      pen.beginPath();
+      for (let n = 0; n < 16; n += 1) {
+        const angle = n * Math.PI / 8;
+        const r = n % 2 ? 24 : 51;
+        const px = x + Math.cos(angle) * r;
+        const py = y + Math.sin(angle) * r;
+        if (!n) pen.moveTo(px, py);
+        else pen.lineTo(px, py);
+      }
+      pen.closePath();
+      pen.fillStyle = "#32656a";
+      pen.fill();
+      pen.lineWidth = 3;
+      pen.strokeStyle = "#b99458";
+      pen.stroke();
+      pen.strokeStyle = "#688482";
+      pen.lineWidth = 1;
+      pen.strokeRect(x + 44, y + 44, 40, 40);
+    }
   }
-  return sum;
-}`;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
 
 function createWorld() {
-  const renderer = new THREE.WebGLRenderer({ antialias: false });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const canvas = renderer.domElement;
   canvas.className = "world";
   canvas.setAttribute("aria-hidden", "true");
   document.body.prepend(canvas);
-
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x080605, 0.022);
-  const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 300);
-
-  const clock = { value: 0 };
-  const flash = { value: 0 };
-
-  const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(140, 48, 24),
-    new THREE.ShaderMaterial({
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false,
-      uniforms: { time: clock, flash },
-      vertexShader: `
-        varying vec3 vDir;
-        void main() {
-          vDir = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }`,
-      fragmentShader: `
-        uniform float time;
-        uniform float flash;
-        varying vec3 vDir;
-        ${NOISE}
-        void main() {
-          vec3 d = normalize(vDir);
-          float h = d.y;
-          float az = atan(d.x, -d.z);
-          vec3 base = mix(vec3(0.045, 0.03, 0.024), vec3(0.008, 0.007, 0.01), smoothstep(-0.05, 0.55, h));
-          float veil = fbm(vec2(az * 2.4 + time * 0.012, h * 6.0 - time * 0.02));
-          float pick = fbm(vec2(az * 1.2 - time * 0.006, h * 2.5 + 7.0));
-          vec3 copper = vec3(0.8, 0.36, 0.14);
-          vec3 teal = vec3(0.12, 0.58, 0.52);
-          vec3 tone = mix(copper, teal, smoothstep(0.38, 0.66, pick));
-          float band = smoothstep(-0.02, 0.06, h) * exp(-h * 4.2);
-          float curtain = pow(veil, 2.2) * band;
-          float stars = step(0.9988, hash(floor(vec2(az * 220.0, h * 220.0)))) * smoothstep(0.1, 0.5, h);
-          vec3 color = base + tone * curtain * (0.55 + flash * 0.5) + vec3(0.9, 0.85, 0.8) * stars * 0.5;
-          gl_FragColor = vec4(color, 1.0);
-        }`,
-    }),
-  );
-  scene.add(sky);
-
-  const pulse = { value: 1 };
-  const pulseColor = { value: new THREE.Color(BRASS) };
-  const eye = { value: new THREE.Vector3() };
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(400, 400),
-    new THREE.ShaderMaterial({
-      fog: false,
-      uniforms: { time: clock, pulse, pulseColor, eye },
-      vertexShader: `
-        varying vec3 vWorld;
-        void main() {
-          vec4 world = modelMatrix * vec4(position, 1.0);
-          vWorld = world.xyz;
-          gl_Position = projectionMatrix * viewMatrix * world;
-        }`,
-      fragmentShader: `
-        uniform float time;
-        uniform float pulse;
-        uniform vec3 pulseColor;
-        uniform vec3 eye;
-        varying vec3 vWorld;
-        float grid(vec2 p, float size) {
-          vec2 q = p / size;
-          vec2 g = abs(fract(q - 0.5) - 0.5) / fwidth(q);
-          return 1.0 - min(min(g.x, g.y), 1.0);
-        }
-        void main() {
-          vec2 p = vWorld.xz;
-          float far = length(p - eye.xz);
-          float fade = exp(-far * 0.038);
-          vec3 brass = vec3(0.9, 0.62, 0.28);
-          vec3 teal = vec3(0.2, 0.72, 0.62);
-          float fine = grid(p, 1.0);
-          float coarse = grid(p, 6.0);
-          float sweep = 0.6 + 0.4 * sin(far * 0.35 - time * 0.9);
-          vec3 color = vec3(0.012, 0.009, 0.008);
-          color += teal * fine * 0.16 * sweep;
-          color += brass * coarse * 0.55;
-          float ring = length(p - vec2(0.0, -6.0));
-          float front = smoothstep(1.6, 0.0, abs(ring - pulse * 46.0)) * (1.0 - pulse) * (1.0 - pulse);
-          color += pulseColor * front * (0.25 + fine * 1.4 + coarse * 1.2);
-          gl_FragColor = vec4(color * fade, 1.0);
-        }`,
-    }),
-  );
-  ground.rotation.x = -Math.PI / 2;
-  scene.add(ground);
-
-  const pillars = Array.from({ length: 10 }, (_, k) => {
-    const angle = ((-58.5 + k * 13) * Math.PI) / 180;
-    const height = 5 + ((k * 7) % 4) * 1.7 + k * 0.3;
-    const material = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, height, 0.2), material);
-    mesh.position.set(Math.sin(angle) * 26, height / 2, -6 - Math.cos(angle) * 26);
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.05), material);
-    cap.position.set(mesh.position.x, height + 0.4, mesh.position.z);
-    cap.rotation.y = -angle;
-    scene.add(mesh, cap);
-    return { material, power: 0, tone: new THREE.Color(k % 2 ? CREAM : BRASS), rest: 0.07 + (k % 3) * 0.02 };
-  });
-
-  const rings = [
-    { size: 10, color: BRASS, power: 1.1 },
-    { size: 11.2, color: TEAL, power: 0.7 },
-    { size: 13, color: BRASS, power: 0.35 },
-  ].map((spec, i) => {
-    const material = new THREE.MeshBasicMaterial({ fog: false });
-    material.color.setHex(spec.color).multiplyScalar(spec.power);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(spec.size, 0.035, 8, 200), material);
-    ring.position.set(0, 8.5, -44);
-    ring.rotation.y = i * 0.6;
-    scene.add(ring);
-    return ring;
-  });
-
-  const COUNT = 520;
-  const spots = new Float32Array(COUNT * 3);
-  for (let i = 0; i < COUNT; i += 1) {
-    spots[i * 3] = (Math.random() - 0.5) * 60;
-    spots[i * 3 + 1] = Math.random() * 14;
-    spots[i * 3 + 2] = -Math.random() * 46 + 8;
+  scene.background = new THREE.Color(0x142c3c);
+  scene.fog = new THREE.FogExp2(0x142c3c, 0.015);
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
+  scene.add(new THREE.HemisphereLight(0x9dbdd4, 0x322517, 2));
+  const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);
+  moonlight.position.set(-12, 24, -5);
+  moonlight.castShadow = true;
+  moonlight.shadow.mapSize.set(2048, 2048);
+  moonlight.shadow.camera.left = -32;
+  moonlight.shadow.camera.right = 32;
+  moonlight.shadow.camera.top = 32;
+  moonlight.shadow.camera.bottom = -32;
+  moonlight.shadow.camera.far = 90;
+  moonlight.shadow.normalBias = 0.07;
+  scene.add(moonlight);
+  const amber = new THREE.DirectionalLight(0xe9b16f, 1.2);
+  amber.position.set(12, 6, 10);
+  scene.add(amber);
+  const grain = grainTexture();
+  const stoneCanvas = document.createElement("canvas");
+  stoneCanvas.width = stoneCanvas.height = 256;
+  const stonePen = stoneCanvas.getContext("2d");
+  const pixels = stonePen.createImageData(256, 256);
+  for (let y = 0; y < 256; y += 1) {
+    for (let x = 0; x < 256; x += 1) {
+      const i = (y * 256 + x) * 4;
+      const cloud = Math.sin(x * 0.08 + Math.sin(y * 0.05) * 2) * 6 + Math.sin(y * 0.12) * 4;
+      const value = 188 + cloud + Math.random() * 22;
+      pixels.data[i] = value;
+      pixels.data[i + 1] = value - 9;
+      pixels.data[i + 2] = value - 21;
+      pixels.data[i + 3] = 255;
+    }
+  }
+  stonePen.putImageData(pixels, 0, 0);
+  const stoneMap = new THREE.CanvasTexture(stoneCanvas);
+  stoneMap.colorSpace = THREE.SRGBColorSpace;
+  const stone = new THREE.MeshStandardMaterial({ color: 0xa89b85, map: stoneMap, roughness: 0.94, bumpMap: grain, bumpScale: 0.04 });
+  const pale = new THREE.MeshStandardMaterial({ color: 0xc4b99d, map: stoneMap, roughness: 0.87, bumpMap: grain, bumpScale: 0.025 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x374749, roughness: 0.9 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xa9874a, metalness: 0.75, roughness: 0.43 });
+  const tile = new THREE.MeshStandardMaterial({ map: mosaicTexture(), roughness: 0.4, metalness: 0.15, color: 0xadc7c2 });
+  const box = (w, h, d, x, y, z, material = stone, parent = scene) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    mesh.position.set(x, y, z);
+    parent.add(mesh);
+    return mesh;
+  };
+  const arch = (x, z, width, spring, rise, depth, rotation = 0) => {
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    group.rotation.y = rotation;
+    scene.add(group);
+    const half = width / 2;
+    for (const side of [-1, 1]) {
+      box(0.65, spring, depth, side * (half + 0.32), spring / 2, 0, stone, group);
+      box(0.94, 0.24, depth + 0.24, side * (half + 0.32), 0.18, 0, pale, group);
+      box(0.86, 0.22, depth + 0.22, side * (half + 0.32), spring - 0.08, 0, pale, group);
+      box(0.15, spring - 0.8, depth + 0.02, side * (half + 0.32), spring / 2, 0, tile, group);
+      const shape = new THREE.Shape();
+      shape.moveTo(0, spring + rise);
+      shape.bezierCurveTo(side * half * 0.45, spring + rise * 0.83, side * half, spring + rise * 0.48, side * half, spring);
+      shape.lineTo(side * (half + 0.63), spring);
+      shape.bezierCurveTo(side * (half + 0.65), spring + rise * 0.58, side * half * 0.55, spring + rise + 0.45, 0, spring + rise + 0.64);
+      shape.closePath();
+      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 }), pale);
+      mesh.position.z = -depth / 2;
+      group.add(mesh);
+      const curve = new THREE.CubicBezierCurve3(
+        new THREE.Vector3(0, spring + rise + 0.27, depth / 2 + 0.025),
+        new THREE.Vector3(side * half * 0.53, spring + rise * 0.98, depth / 2 + 0.025),
+        new THREE.Vector3(side * (half + 0.27), spring + rise * 0.5, depth / 2 + 0.025),
+        new THREE.Vector3(side * (half + 0.27), spring, depth / 2 + 0.025),
+      );
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 36, 0.07, 6, false), tile));
+    }
+    return group;
+  };
+  box(70, 0.5, 90, 0, -0.28, -20, dark);
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x858c86, map: stoneMap, roughness: 0.65 });
+  const paving = new THREE.InstancedMesh(new THREE.BoxGeometry(3.16, 0.06, 3.16), floorMaterial, 240);
+  const pavingTransform = new THREE.Matrix4();
+  let pavingIndex = 0;
+  for (let z = 7; z > -38; z -= 3.2) {
+    for (let x = -24; x <= 24; x += 3.2) {
+      pavingTransform.makeTranslation(x, 0, z);
+      paving.setMatrixAt(pavingIndex, pavingTransform);
+      paving.setColorAt(pavingIndex, new THREE.Color().setScalar(0.87 + Math.sin(pavingIndex * 9.7) * 0.07));
+      pavingIndex += 1;
+    }
+  }
+  paving.count = pavingIndex;
+  scene.add(paving);
+  const runnerMap = mosaicTexture();
+  runnerMap.repeat.set(2, 12);
+  const runner = new THREE.MeshStandardMaterial({ map: runnerMap, roughness: 0.48, metalness: 0.18 });
+  box(4.5, 0.08, 28, 3, 0.07, -9, runner);
+  for (const x of [0.65, 5.35]) box(0.08, 0.1, 28, x, 0.07, -9, gold);
+  for (let i = 0; i < 3; i += 1) box(18 - i * 0.7, 0.18, 9 - i * 0.7, 1, i * 0.18 + 0.06, -22, stone);
+  for (let x = -20; x <= 22; x += 7) arch(x, -23, 5.6, 5.5, 4.4, 1.6);
+  box(50, 1.1, 2, 0, 10.8, -23, stone);
+  box(50, 0.22, 2.35, 0, 10.15, -23, tile);
+  box(50, 0.2, 2.5, 0, 11.4, -23, pale);
+  for (let x = -24; x <= 24; x += 1.5) box(0.65, 0.65, 1.9, x, 11.7, -23, stone);
+  for (let x = -17; x <= 18; x += 7) {
+    const medallion = new THREE.Mesh(new THREE.CircleGeometry(0.42, 8), tile);
+    medallion.position.set(x, 8.2, -22.08);
+    medallion.rotation.z = Math.PI / 8;
+    scene.add(medallion);
+  }
+  for (const side of [-1, 1]) {
+    for (const z of side === -1 ? [-14, -5] : [-14, -5, 4]) arch(side * 15, z, 6.5, 6.2, 4.8, 1.7, Math.PI / 2);
+    box(2, 1.2, 30, side * 15, 12, -7, stone);
+    box(2.1, 0.25, 30, side * 15, 11.2, -7, tile);
+  }
+  const nicheMaterial = new THREE.MeshStandardMaterial({ color: 0x103b43, roughness: 0.48 });
+  for (const x of [-17, -10, -3, 4, 11, 18]) {
+    box(0.9, 7.2, 0.3, x, 4.6, -21.95, tile);
+    box(5.3, 5.5, 0.3, x + 3.5, 2.9, -29, nicheMaterial);
+  }
+  const cloth = new THREE.MeshStandardMaterial({ color: 0x683a38, side: THREE.DoubleSide, roughness: 0.9 });
+  for (const x of [-12.4, 12.4]) {
+    const geometry = new THREE.PlaneGeometry(2, 5.3, 16, 24);
+    const p = geometry.attributes.position;
+    for (let i = 0; i < p.count; i += 1) p.setZ(i, Math.sin(p.getX(i) * 12) * 0.11);
+    geometry.computeVertexNormals();
+    const banner = new THREE.Mesh(geometry, cloth);
+    banner.position.set(x, 6.6, -8);
+    scene.add(banner);
+    box(2.3, 0.08, 0.1, x, 9.3, -8, gold);
+  }
+  const lamps = [];
+  const lantern = (x, y, z, scale = 1) => {
+    const group = new THREE.Group();
+    group.position.set(x, y, z);
+    group.scale.setScalar(scale);
+    scene.add(group);
+    const glass = new THREE.MeshStandardMaterial({ color: 0xffca78, emissive: 0xffa64c, emissiveIntensity: 2.5, roughness: 0.4 });
+    const lightbody = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.27, 0.62, 6), glass);
+    group.add(lightbody);
+    for (const at of [-0.38, 0.4]) {
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.25, 6), gold);
+      cap.position.y = at;
+      cap.rotation.z = at < 0 ? Math.PI : 0;
+      group.add(cap);
+    }
+    for (let n = 0; n < 6; n += 1) {
+      const a = n * Math.PI / 3;
+      box(0.025, 0.74, 0.025, Math.cos(a) * 0.23, 0, Math.sin(a) * 0.23, gold, group);
+    }
+    const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.5, 5), gold);
+    chain.position.y = 1.85;
+    group.add(chain);
+    const light = new THREE.PointLight(0xffb660, 22 * scale, 10 * scale, 2);
+    light.position.set(x, y, z);
+    scene.add(light);
+    lamps.push({ light, base: 22 * scale, glass });
+  };
+  for (const x of [-10.5, 10.5]) {
+    lantern(x, 5, -1, 1.2);
+    lantern(x, 4.5, -13, 1);
+    lantern(x, 4.2, -23, 0.9);
+  }
+  for (const x of [-5, 6]) lantern(x, 2, -19, 0.8);
+  const ridge = new THREE.MeshStandardMaterial({ color: 0x1e3441, roughness: 1 });
+  for (let k = 0; k < 18; k += 1) {
+    const height = 6 + Math.sin(k * 2.1) * 2 + k % 3;
+    box(4.5, height, 5, k * 5 - 42, height / 2 + 6, -48 - k % 3 * 2, ridge);
+    if (k % 3 === 0) {
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(2.8, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), ridge);
+      dome.position.set(k * 5 - 42, height + 6, -48);
+      scene.add(dome);
+    }
+  }
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(2.1, 32, 24), new THREE.MeshBasicMaterial({ color: 0xffe8bf, fog: false }));
+  moon.position.set(46, 35, -64);
+  scene.add(moon);
+  const moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: radialTexture([[0, "rgba(214,230,245,0.22)"], [0.3, "rgba(165,197,227,0.08)"], [1, "rgba(165,197,227,0)"]]),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+  }));
+  moonHalo.position.copy(moon.position);
+  moonHalo.scale.set(20, 20, 1);
+  scene.add(moonHalo);
+  const spots = new Float32Array(120 * 3);
+  for (let i = 0; i < 120; i += 1) {
+    spots[i * 3] = Math.sin(i * 127.1) * 25;
+    spots[i * 3 + 1] = (i % 31) / 2;
+    spots[i * 3 + 2] = Math.cos(i * 311.7) * 26 - 13;
   }
   const dustGeometry = new THREE.BufferGeometry();
   dustGeometry.setAttribute("position", new THREE.BufferAttribute(spots, 3));
-  const dustMaterial = new THREE.PointsMaterial({ size: 0.07, transparent: true, opacity: 0.8, depthWrite: false });
-  dustMaterial.color.setHex(CREAM).multiplyScalar(0.8);
-  scene.add(new THREE.Points(dustGeometry, dustMaterial));
-
+  const dust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0xf3d7a2, size: 0.035, transparent: true, opacity: 0.45, depthWrite: false }));
+  scene.add(dust);
+  scene.traverse((object) => {
+    if (object.isMesh && object.material.isMeshStandardMaterial) {
+      object.castShadow = !object.isInstancedMesh && object.material.emissiveIntensity <= 1;
+      object.receiveShadow = true;
+    }
+  });
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.75, 0.32));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.3, 0.6, 1.2));
   composer.addPass(new OutputPass());
-
   const look = new THREE.Vector2();
   const ease = new THREE.Vector2();
-  let tick = 0;
-
+  let last = 0;
+  let energy = 0;
   function draw(time) {
-    clock.value = time / 1000;
-    ease.lerp(look, 0.05);
-    camera.position.set(ease.x * 1.4, 2.7 - ease.y * 0.5 + Math.min(1.6, scrollY * 0.0008), 11);
-    camera.lookAt(ease.x * 0.4, 3.2, -14);
-    eye.value.copy(camera.position);
-    for (const pillar of pillars) {
-      pillar.power *= 0.95;
-      pillar.material.color.copy(pillar.tone).multiplyScalar(pillar.rest + pillar.power * 2.6);
-    }
-    if (!still) {
-      rings.forEach((ring, i) => {
-        ring.rotation.y = time / (11000 + i * 4000) + i * 0.6;
-        ring.rotation.x = Math.sin(time / (8000 + i * 2500)) * 0.3;
-      });
-      for (let i = 0; i < COUNT; i += 1) {
-        const at = i * 3 + 1;
-        spots[at] += 0.005 + (i % 5) * 0.0014;
-        if (spots[at] > 14) spots[at] = 0;
-      }
-      dustGeometry.attributes.position.needsUpdate = true;
-    }
+    ease.lerp(look, 0.035);
+    camera.position.set(1 + ease.x * 0.65, 4.2 - ease.y * 0.3, 15);
+    camera.lookAt(1, 5.5, -20);
+    lamps.forEach(({ light, base, glass }, i) => {
+      light.intensity = base * (1 + energy * 0.15 + (still ? 0 : Math.sin(time / 700 + i * 2) * 0.035));
+      glass.emissiveIntensity = 2.1 + energy * 0.5;
+    });
+    if (!still) dust.rotation.y = Math.sin(time / 40000) * 0.06;
+    energy *= 0.96;
     composer.render();
   }
-
   function resize() {
     renderer.setSize(innerWidth, innerHeight, false);
     composer.setSize(innerWidth, innerHeight);
@@ -764,33 +856,17 @@ function createWorld() {
     camera.updateProjectionMatrix();
     draw(performance.now());
   }
-
   addEventListener("resize", resize);
-  addEventListener("pointermove", (event) => {
-    look.set(event.clientX / innerWidth - 0.5, event.clientY / innerHeight - 0.5);
-  });
+  if (!still) addEventListener("pointermove", (event) => look.set(event.clientX / innerWidth - 0.5, event.clientY / innerHeight - 0.5));
   resize();
-
   return {
     frame(time) {
-      flash.value *= 0.93;
-      pulse.value = Math.min(1, pulse.value + 0.012);
-      tick += 1;
-      if (tick % 2 === 0) draw(time);
+      if (time - last < 40) return;
+      last = time;
+      draw(time);
     },
-    strike(pitch, color) {
-      flash.value = 1;
-      pulse.value = 0;
-      pulseColor.value.setHex(color);
-      const pillar = pillars[pitch];
-      if (pillar) {
-        pillar.power = 1;
-        pillar.tone.setHex(color);
-      }
-    },
-    redraw() {
-      draw(performance.now());
-    },
+    strike() { energy = 1; },
+    redraw() { draw(performance.now()); },
   };
 }
 

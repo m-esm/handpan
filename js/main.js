@@ -16,6 +16,10 @@ import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
 
 const audio = createAudio();
+document.querySelector(".browse-music").addEventListener("click", () => {
+  document.getElementById("dock").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+  document.getElementById("find").focus({ preventScroll: true });
+});
 let mirrored = false;
 try {
   mirrored = localStorage.getItem("disc-kurd-mirror") === "1";
@@ -24,7 +28,7 @@ try {
 }
 
 const caption = () => document.getElementById("caption");
-const KIND_ORDER = ["Hands", "Chords", "Grooves", "Pieces"];
+const KIND_ORDER = ["Pieces", "Hands", "Chords", "Grooves"];
 const KIND_NOTE = {
   Hands: "Two hands trading, which is how this pan is played.",
   Chords: "Two notes at once. One hand each.",
@@ -114,6 +118,7 @@ function fieldMarkup(id, x, y, radius, ding) {
 }
 
 function drawPan() {
+  const canvas = document.querySelector("#pan .pan-3d");
   const ring = ["A3", "Bb3", "C4", "D4", "E4", "F4", "G4", "A4", "C5"]
     .map((id) => {
       const field = FIELDS.find((item) => item.id === id);
@@ -167,6 +172,7 @@ function drawPan() {
     ${ring}
     ${ding}
   </svg>`;
+  if (canvas) document.getElementById("pan").append(canvas);
   const svg = document.querySelector(".pan-svg");
   svg.addEventListener("click", onPanHit);
   svg.addEventListener("keydown", onPanKey);
@@ -329,15 +335,15 @@ function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
   const heading = document.createElement("h2");
-  heading.textContent = "Patterns";
+  heading.textContent = "The music room";
   const lead = document.createElement("p");
   lead.className = "lead";
-  lead.textContent = "Search by title or note number, or choose a kind.";
+  lead.textContent = "Find a melody. Make it your own.";
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
   find.type = "search";
-  find.placeholder = "Title or number, like 8";
+  find.placeholder = "Search music or a note number…";
   find.setAttribute("aria-label", "Search patterns");
   find.value = query;
   find.addEventListener("input", () => {
@@ -369,7 +375,15 @@ function renderList() {
   }
   const rows = document.createElement("div");
   rows.id = "rows";
-  dock.append(heading, lead, find, chips, rows);
+  const libraryHead = document.createElement("div");
+  libraryHead.className = "library-head";
+  libraryHead.append(heading, lead, find, chips);
+  const resultCount = document.createElement("p");
+  resultCount.id = "result-count";
+  resultCount.className = "result-count";
+  resultCount.setAttribute("role", "status");
+  libraryHead.append(resultCount);
+  dock.append(libraryHead, rows);
   fillRows();
 }
 
@@ -379,6 +393,8 @@ function fillRows() {
   for (const chip of document.querySelectorAll("#dock .chip")) setChipLabel(chip);
   rows.innerHTML = "";
   const visible = PATTERNS.filter(matches);
+  const resultCount = document.getElementById("result-count");
+  if (resultCount) resultCount.textContent = `${visible.length} ${visible.length === 1 ? "selection" : "selections"}${query ? ` matching “${query}”` : " to explore"}`;
   if (visible.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty";
@@ -589,7 +605,7 @@ function rowFor(pattern) {
 
   const side = document.createElement("div");
   side.className = "row-side";
-  side.append(thumbFor(pattern, 56), play);
+  side.append(play);
   row.append(side, body, open);
   return row;
 }

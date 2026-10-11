@@ -23,11 +23,12 @@
 <body>
   <div class="wrap">
     <header class="top">
-      <a class="brand" href="#/">DISC</a>
+      <a class="brand" href="#/">DISC<span class="brand-place">The moonlit courtyard</span></a>
       <p class="scale">10-note D Kurd at 440 Hz</p>
     </header>
     <main class="split">
       <div class="pan-stick">
+        <div class="scene-heading"><span class="scene-ornament" aria-hidden="true">✧</span><h1>Echoes of Alamut</h1><p>Your D Kurd, beneath a Persian sky.</p><button class="browse-music" type="button">Explore the music ↓</button></div>
         <div class="stage-tools">
           <p id="caption" class="caption">Tap a note to hear it.</p>
           <button id="listen" type="button" aria-pressed="false">Listen</button>
@@ -40,6 +41,7 @@
           <label class="mic-pick"><span class="sr">Input source</span><select id="mic-input"></select></label>
         </div>
         <div id="pan"></div>
+        <div class="stage-footer"><span>Brass <b>left hand</b></span><span class="stage-seal" aria-hidden="true">✧</span><span>Ivory <b>right hand</b></span></div>
         <p id="status" class="sr" role="status"></p>
       </div>
       <div id="learn"></div>
