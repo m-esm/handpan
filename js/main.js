@@ -36,6 +36,7 @@ let kindFilter = "All";
 let lastScroll = -2;
 let settled = false;
 let lastListed = "";
+let routed = null;
 
 const player = createPlayer(audio, paint);
 const listener = createListener(onHeard);
@@ -139,7 +140,7 @@ function drawPan() {
     })
     .join("");
   const ding = fieldMarkup("D3", 210, 210, 54, true);
-  document.getElementById("pan").innerHTML = `<svg class="pan-svg" viewBox="0 0 420 420" role="group">
+  document.getElementById("pan").innerHTML = `<svg class="pan-svg" viewBox="0 0 420 420" role="group" aria-label="Handpan, ten notes">
     <defs>
       <radialGradient id="shell" cx="38%" cy="32%" r="75%">
         <stop offset="0%" stop-color="#e0b27a"/>
@@ -321,7 +322,7 @@ function setChipLabel(chip) {
 function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
-  const heading = document.createElement("h1");
+  const heading = document.createElement("h2");
   heading.textContent = "Patterns";
   const lead = document.createElement("p");
   lead.className = "lead";
@@ -375,7 +376,21 @@ function fillRows() {
   if (visible.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = kindFilter === "All" ? "No patterns match." : `No ${kindFilter} patterns match.`;
+    empty.textContent = kindFilter === "All" ? "No patterns match. " : `No ${kindFilter} patterns match. `;
+    const clear = textButton("step-btn", "Clear search");
+    clear.addEventListener("click", () => {
+      query = "";
+      kindFilter = "All";
+      const find = document.getElementById("find");
+      find.value = "";
+      for (const chip of document.querySelectorAll("#dock .chip")) {
+        chip.setAttribute("aria-pressed", chip.dataset.kind === "All" ? "true" : "false");
+      }
+      fillRows();
+      paint(player.snapshot());
+      find.focus();
+    });
+    empty.append(clear);
     rows.append(empty);
     return;
   }
@@ -508,9 +523,11 @@ function rowFor(pattern) {
       return;
     }
     const open = patternFromHash();
-    if (player.range && (!open || open.id !== pattern.id)) player.setRange(null);
-    player.setLoop(pattern.loop !== false);
-    player.play(pattern, 0);
+    const same = !!open && open.id === pattern.id;
+    if (player.range && !same) player.setRange(null);
+    if (!same) player.setLoop(pattern.loop !== false);
+    if (open && !same) location.hash = `#/p/${pattern.id}`;
+    player.play(pattern, 0, { keepTempo: same });
   });
 
   const body = document.createElement("div");
@@ -528,6 +545,7 @@ function rowFor(pattern) {
     chip.className = "mini-hit";
     chip.dataset.event = String(event.index);
     for (const id of event.notes) chip.append(noteNode(id, event.hands[id]));
+    chip.setAttribute("role", "img");
     chip.setAttribute("aria-label", event.notes.map((id) => spokenName(id)).join(" and "));
     mini.append(chip);
   }
@@ -567,6 +585,7 @@ function renderLearn(pattern) {
   back.href = "#/";
   back.textContent = "All patterns";
   const title = document.createElement("h1");
+  title.tabIndex = -1;
   title.textContent = pattern.title;
   head.append(back, title);
 
@@ -633,8 +652,11 @@ function renderLearn(pattern) {
   range.max = "140";
   range.step = "1";
   range.value = bpm.textContent;
+  range.setAttribute("aria-label", "Tempo");
+  range.setAttribute("aria-valuetext", `${range.value} bpm`);
   range.addEventListener("input", () => {
     bpm.textContent = range.value;
+    range.setAttribute("aria-valuetext", `${range.value} bpm`);
     player.setTempo(Number(range.value));
   });
   tempoLabel.append(bpm, unit, range);
@@ -661,7 +683,7 @@ function renderLearn(pattern) {
   keys.textContent =
     "Space plays and pauses. Arrows move one note. Click a bar number to loop that bar, and a second bar number to extend the loop. With Listen on, the page waits until you strike the lit note. Learn in steps takes a piece one part at a time, then joins the parts.";
 
-  transport.append(play, previous, next, tempoLabel, loop, ranged);
+  transport.append(play, previous, next, loop, ranged, tempoLabel);
 
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
@@ -692,6 +714,7 @@ function fillGuide(pattern) {
   const guide = document.getElementById("guide");
   if (!guide) return;
   lastScroll = -2;
+  const hadFocus = guide.contains(document.activeElement);
   guide.replaceChildren();
   const steps = stepsOf(pattern);
   if (steps.length === 0) return;
@@ -699,7 +722,12 @@ function fillGuide(pattern) {
   guide.classList.toggle("is-stepping", !!step);
   if (!step) {
     const done = steps.filter((item) => isLearned(pattern, item.key)).length;
-    const label = done ? `Continue steps, ${done} of ${steps.length} done` : "Learn in steps";
+    const label =
+      done === steps.length
+        ? "All steps done. Review"
+        : done
+          ? `Continue steps, ${done} of ${steps.length} done`
+          : "Learn in steps";
     const open = textButton("step-btn is-main", label);
     open.id = "steps-open";
     open.addEventListener("click", () => {
@@ -707,6 +735,7 @@ function fillGuide(pattern) {
       openStep(pattern, next < 0 ? 0 : next);
     });
     guide.append(open, partMap(pattern, sheetOf(pattern)));
+    if (hadFocus) open.focus({ preventScroll: true });
     return;
   }
   const at = stepAt[pattern.id];
@@ -721,7 +750,7 @@ function fillGuide(pattern) {
   what.className = "step-what";
   what.textContent = `${step.label}, ${barSpan(step.first, step.end)}`;
 
-  const back = textButton("step-btn", "Back");
+  const back = textButton("step-btn", "Previous step");
   back.disabled = at === 0;
   back.addEventListener("click", () => openStep(pattern, at - 1));
 
@@ -735,17 +764,18 @@ function fillGuide(pattern) {
 
   head.append(count, what, back, pass);
   if (done) {
-    const undo = textButton("step-btn", "Not yet");
+    const undo = textButton("step-btn", "Unmark");
     undo.addEventListener("click", () => markLearned(pattern, step.key, false));
     head.append(undo);
   }
-  const leave = textButton("step-btn", "Show whole piece");
+  const leave = textButton("step-btn", "Exit steps");
   leave.id = "steps-close";
   leave.addEventListener("click", () => openStep(pattern, null));
   head.append(leave);
 
-  const map = document.createElement("nav");
+  const map = document.createElement("div");
   map.className = "partmap";
+  map.setAttribute("role", "group");
   map.setAttribute("aria-label", "Steps for this piece");
   steps.forEach((item, i) => {
     const chip = textButton("step-chip", item.short);
@@ -757,6 +787,9 @@ function fillGuide(pattern) {
     map.append(chip);
   });
   guide.append(head, map);
+  const current = map.querySelector(".is-current");
+  if (current) map.scrollLeft += current.getBoundingClientRect().left - map.getBoundingClientRect().left - 8;
+  if (hadFocus) pass.focus({ preventScroll: true });
 }
 
 function focusSheet(pattern) {
@@ -796,8 +829,9 @@ function openStep(pattern, at) {
 }
 
 function partMap(pattern, sheet) {
-  const map = document.createElement("nav");
+  const map = document.createElement("div");
   map.className = "partmap";
+  map.setAttribute("role", "group");
   map.setAttribute("aria-label", "Parts of this piece");
   sheet.sections.forEach((section, i) => {
     const chip = document.createElement("button");
@@ -832,7 +866,9 @@ function legend() {
   soft.textContent = "small is soft";
   const tak = document.createElement("span");
   tak.textContent = "\u00d7 is a tak";
-  line.append(left, right, soft, tak);
+  const bars = document.createElement("span");
+  bars.textContent = "tap a bar number to loop it";
+  line.append(left, right, soft, tak, bars);
   return line;
 }
 
@@ -1006,20 +1042,31 @@ function route() {
     learn.innerHTML = "";
     const hint = document.createElement("p");
     hint.className = "hint";
-    hint.textContent = "Tap a note to hear it, or choose a pattern below.";
+    hint.textContent = "Tap a note to hear it, or choose a pattern.";
     const key = document.createElement("p");
     key.className = "key";
-    key.textContent = "0 is the ding. 1 to 9 climb in pitch around the rim.";
+    key.textContent = "0 is the ding. 1 to 9 climb in pitch around the rim. Brass is the left hand, cream is the right.";
     learn.append(hint, key);
     paint(player.snapshot());
+    const left = routed ? document.querySelector(`.row[data-pattern="${routed}"]`) : null;
+    if (left) {
+      left.querySelector(".open").focus({ preventScroll: true });
+      left.scrollIntoView({ block: "center" });
+    }
+    routed = "";
     return;
   }
   renderLearn(pattern);
+  if (routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
+  routed = pattern.id;
   if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
   const step = stepOf(pattern);
   const bars = barsOf(pattern, player.range);
-  if (step && !(bars && bars.first >= step.first && bars.end <= step.end)) placeStep(pattern, step);
+  if (step && !(bars && bars.first >= step.first && bars.end <= step.end)) {
+    if (player.playing) loopBars(pattern, step.first, step.end);
+    else placeStep(pattern, step);
+  }
   else paint(player.snapshot());
 }
 
@@ -1034,7 +1081,6 @@ function paint(snap) {
     field.classList.toggle("is-on", sounding);
     field.classList.toggle("is-place", !sounding && on);
     field.classList.toggle("is-next", !on && nextNotes.has(id));
-    field.setAttribute("aria-pressed", on ? "true" : "false");
     const shade = field.querySelector(".field-shade");
     const face = field.querySelector(".field-face");
     if (echo) {
@@ -1075,7 +1121,10 @@ function paint(snap) {
       settled = true;
       const part = slot.closest(".part").dataset.section;
       for (const chip of document.querySelectorAll(".part-chip")) {
-        chip.classList.toggle("is-current", chip.dataset.section === part);
+        const here = chip.dataset.section === part;
+        chip.classList.toggle("is-current", here);
+        if (here) chip.setAttribute("aria-current", "true");
+        else chip.removeAttribute("aria-current");
       }
     }
     const chip = document.querySelector(".mini-hit.is-on, .mini-hit.is-place");
@@ -1084,10 +1133,13 @@ function paint(snap) {
   const node = caption();
   const text = captionText(snap);
   if (node.textContent !== text) node.textContent = text;
+  const status = document.getElementById("status");
+  const say = micNote || (listener.on && !snap.playing ? text : "");
+  if (status && status.textContent !== say) status.textContent = say;
 
   document.querySelectorAll(".row-play").forEach((button) => {
     const active = snap.playing && button.dataset.play === snap.patternId;
-    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.dataset.state = active ? "playing" : "paused";
     const label = active ? "Pause" : "Play";
     const mark = button.querySelector(".mark");
     if (mark.textContent !== label) mark.textContent = label;
@@ -1112,7 +1164,7 @@ function paint(snap) {
 
   const play = document.getElementById("play");
   if (play) {
-    play.setAttribute("aria-pressed", snap.playing ? "true" : "false");
+    play.dataset.state = snap.playing ? "playing" : "paused";
     const label = snap.playing ? "Pause" : "Play";
     const mark = play.querySelector(".mark");
     if (mark.textContent !== label) mark.textContent = label;
@@ -1123,6 +1175,7 @@ function paint(snap) {
   if (bpm) bpm.textContent = String(snap.bpm);
   if (tempo && document.activeElement !== tempo && tempo.value !== String(snap.bpm)) {
     tempo.value = String(snap.bpm);
+    tempo.setAttribute("aria-valuetext", `${snap.bpm} bpm`);
   }
   const loop = document.getElementById("loop");
   if (loop) {
@@ -1152,7 +1205,6 @@ function paintRange(snap) {
   for (const button of sheet.querySelectorAll(".part-loop")) {
     const whole = Number(button.dataset.from) === first && Number(button.dataset.to) === end;
     button.setAttribute("aria-pressed", whole ? "true" : "false");
-    button.textContent = whole ? "Stop loop" : "Loop part";
   }
   const ranged = document.getElementById("range");
   if (ranged) {
@@ -1221,13 +1273,15 @@ document.getElementById("mirror").addEventListener("click", () => {
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  if (event.target.closest("input, textarea, select")) return;
   if (event.code === "Escape" && document.body.classList.contains("is-learn")) {
     event.preventDefault();
     location.hash = "#/";
     return;
   }
-  if (event.target.closest("input, textarea, .field, .chip")) return;
   if (event.code === "Space") {
+    if (event.target.closest("button, a, [role=button]")) return;
     event.preventDefault();
     const play = document.getElementById("play");
     if (play) {

@@ -18,18 +18,19 @@
       <a class="brand" href="#/">DISC</a>
       <p class="scale">10-note D Kurd at 440 Hz</p>
     </header>
-    <div class="split">
-      <section id="dock"></section>
+    <main class="split">
       <div class="pan-stick">
         <div class="stage-tools">
-          <p id="caption" class="caption">Tap a dimple to hear it.</p>
+          <p id="caption" class="caption">Tap a note to hear it.</p>
           <button id="listen" type="button" aria-pressed="false">Listen</button>
           <button id="mirror" type="button" aria-pressed="false">Mirror</button>
         </div>
         <div id="pan"></div>
+        <p id="status" class="sr" role="status"></p>
       </div>
       <div id="learn"></div>
-    </div>
+      <section id="dock" aria-label="Patterns"></section>
+    </main>
   </div>
   <script type="module" src="js/main.js"></script>
   <script src="js/live.js" defer></script>
