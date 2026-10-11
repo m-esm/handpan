@@ -49,6 +49,16 @@ export const TAK = "tak";
 
 const TAB = { D: "D3", 1: "A3", 2: "Bb3", 3: "C4", 4: "D4", 5: "E4", 6: "F4", 7: "G4", 8: "A4", 9: "C5", t: TAK };
 
+export const NUMBER = Object.fromEntries(
+  Object.entries(TAB)
+    .filter(([key]) => key !== "t")
+    .map(([key, id]) => [id, key === "D" ? "0" : key]),
+);
+
+export function numberOf(id) {
+  return id === TAK ? "\u00d7" : NUMBER[id];
+}
+
 const METERS = {
   eighths: { slotsPerBeat: 2, beatsPerBar: 4 },
   sixteenths: { slotsPerBeat: 4, beatsPerBar: 4 },

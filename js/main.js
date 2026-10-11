@@ -9,6 +9,7 @@ import {
   stepsOf,
   beatLabel,
   pretty,
+  numberOf,
 } from "./score.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
@@ -103,10 +104,14 @@ function flipHand(hand) {
   return hand;
 }
 
+function spokenName(id) {
+  if (id === TAK) return "tak";
+  const ding = id === "D3" ? ", the ding" : "";
+  return `${numberOf(id)}, ${pretty(id)}${ding}`;
+}
+
 function dimpleLabel(id) {
-  const hand = flipHand(SIDE[id]);
-  const name = id === "D3" ? "ding D3" : pretty(id);
-  return `${name}, ${hand} hand`;
+  return `${spokenName(id)}, ${flipHand(SIDE[id])} hand`;
 }
 
 function place(deg, orbit) {
@@ -116,18 +121,12 @@ function place(deg, orbit) {
 }
 
 function fieldMarkup(id, x, y, radius, ding) {
-  const note = NOTES[id];
-  const wide = note.letter.length > 1;
-  const nameSize = ding ? 46 : wide ? 20 : 24;
-  const nameY = ding ? 6 : 8;
-  const octY = ding ? -22 : -12;
-  const octSize = ding ? 16 : 13;
-  return `<g class="field${ding ? " ding" : ""}" data-note="${id}" role="button" tabindex="0" transform="translate(${x} ${y})" aria-label="${dimpleLabel(id)}">
+  const nameSize = ding ? 50 : 30;
+  const hand = flipHand(SIDE[id]);
+  return `<g class="field hand-${hand}${ding ? " ding" : ""}" data-note="${id}" role="button" tabindex="0" transform="translate(${x} ${y})" aria-label="${dimpleLabel(id)}">
     <circle class="field-shade" r="${radius}" fill="url(#dimple)"></circle>
     <circle class="field-face" r="${radius * 0.72}" fill="#4e3b2e"></circle>
-    <text class="field-name" style="font-size:${nameSize}px" y="${nameY}">${note.letter}</text>
-    <text class="field-oct" style="font-size:${octSize}px" y="${octY}">${note.octave}</text>
-    ${ding ? '<text class="field-role" y="22">ding</text>' : ""}
+    <text class="field-name" style="font-size:${nameSize}px">${numberOf(id)}</text>
   </g>`;
 }
 
@@ -227,9 +226,8 @@ function soundNote(id) {
   player.refresh();
   if (!player.playing) {
     const hand = flipHand(SIDE[id]);
-    const name = id === "D3" ? "ding" : pretty(id);
     const node = caption();
-    if (node) node.textContent = hand ? `${name}, ${hand} hand` : name;
+    if (node) node.textContent = hand ? `${numberOf(id)}, ${hand} hand` : numberOf(id);
   }
 }
 
@@ -278,7 +276,7 @@ function noteWords(id) {
   const letter = fold(note.letter);
   const spoken = letter.length > 1 ? `${letter[0]} flat` : letter;
   const ding = note.ding ? " ding" : "";
-  return `${spoken} ${letter}${note.octave}${ding}`;
+  return `${numberOf(id)} ${spoken} ${letter}${note.octave}${ding}`;
 }
 
 function haystack(pattern) {
@@ -327,12 +325,12 @@ function renderList() {
   heading.textContent = "Patterns";
   const lead = document.createElement("p");
   lead.className = "lead";
-  lead.textContent = "Search by title or note, or choose a kind.";
+  lead.textContent = "Search by title or note number, or choose a kind.";
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
   find.type = "search";
-  find.placeholder = "Title or note";
+  find.placeholder = "Title or number, like 8";
   find.setAttribute("aria-label", "Search patterns");
   find.value = query;
   find.addEventListener("input", () => {
@@ -529,7 +527,8 @@ function rowFor(pattern) {
     const chip = document.createElement("span");
     chip.className = "mini-hit";
     chip.dataset.event = String(event.index);
-    chip.textContent = event.notes.map((id) => pretty(id)).join(" ");
+    for (const id of event.notes) chip.append(noteNode(id, event.hands[id]));
+    chip.setAttribute("aria-label", event.notes.map((id) => spokenName(id)).join(" and "));
     mini.append(chip);
   }
   if (shown.length < events.length) {
@@ -606,14 +605,16 @@ function renderLearn(pattern) {
 
   const previous = document.createElement("button");
   previous.type = "button";
-  previous.className = "stepper";
-  previous.textContent = "Previous";
+  previous.className = "stepper is-prev";
+  previous.setAttribute("aria-label", "Previous note");
+  previous.title = "Previous note";
   previous.addEventListener("click", () => player.step(-1, listener.on));
 
   const next = document.createElement("button");
   next.type = "button";
-  next.className = "stepper";
-  next.textContent = "Next";
+  next.className = "stepper is-next";
+  next.setAttribute("aria-label", "Next note");
+  next.title = "Next note";
   next.addEventListener("click", () => player.step(1, listener.on));
 
   const tempoLabel = document.createElement("label");
@@ -842,10 +843,7 @@ function noteNode(id, hand) {
     node.textContent = "\u00d7";
     return node;
   }
-  const octave = document.createElement("sub");
-  octave.textContent = String(NOTES[id].octave);
-  node.classList.toggle("is-wide", NOTES[id].letter.length > 1);
-  node.append(NOTES[id].letter, octave);
+  node.textContent = numberOf(id);
   return node;
 }
 
@@ -860,7 +858,7 @@ function slotNode(pattern, sheet, bar, slot, event) {
   node.classList.add("hit");
   node.classList.toggle("is-soft", event.notes.every((id) => id === TAK || event.amps[id] < SOFT_BELOW));
   node.dataset.event = String(event.index);
-  const names = event.notes.map((id) => `${id === "D3" ? "ding" : pretty(id)}, ${flipHand(event.hands[id])} hand`);
+  const names = event.notes.map((id) => `${spokenName(id)}, ${flipHand(event.hands[id])} hand`);
   node.setAttribute("aria-label", `Bar ${bar + 1}, count ${beatLabel(beat, pattern)}: ${names.join(" and ")}`);
   for (const id of event.notes) node.append(noteNode(id, event.hands[id]));
   node.addEventListener("click", () => player.seek(event.index, player.playing, listener.on));
@@ -1008,8 +1006,11 @@ function route() {
     learn.innerHTML = "";
     const hint = document.createElement("p");
     hint.className = "hint";
-    hint.textContent = "Choose a pattern. Tap a note on the pan to hear it.";
-    learn.append(hint);
+    hint.textContent = "Tap a note to hear it, or choose a pattern below.";
+    const key = document.createElement("p");
+    key.className = "key";
+    key.textContent = "0 is the ding. 1 to 9 climb in pitch around the rim.";
+    learn.append(hint, key);
     paint(player.snapshot());
     return;
   }
@@ -1182,8 +1183,7 @@ function scrollStrip(scroller, current) {
 
 function spoken(id, hands) {
   const hand = flipHand(hands[id]);
-  const name = id === "D3" ? "ding" : pretty(id);
-  return hand ? `${name}, ${hand} hand` : name;
+  return hand ? `${numberOf(id)}, ${hand} hand` : numberOf(id);
 }
 
 function captionText(snap) {
@@ -1191,7 +1191,7 @@ function captionText(snap) {
   if (listener.on && !snap.playing) {
     const wanted = patternFromHash() ? pitched(snap.notes) : [];
     const target = wanted.map((id) => spoken(id, snap.hands)).join(" and ");
-    const name = heard ? (heard.id === "D3" ? "the ding" : pretty(heard.id)) : "";
+    const name = heard ? numberOf(heard.id) : "";
     if (heard && heard.miss) return `Heard ${name}. Play ${target}.`;
     if (heard) return target ? `Heard ${name}. Now ${target}.` : `Heard ${name}.`;
     return target ? `Play ${target}.` : "Listening. Strike a note.";
@@ -1202,11 +1202,7 @@ function captionText(snap) {
     return pattern ? "Press Play, or tap a note." : "Tap a note to hear it.";
   }
   return snap.notes
-    .map((id) => {
-      const hand = flipHand(snap.hands[id]);
-      const name = id === "D3" ? "ding" : pretty(id);
-      return hand ? `${name}, ${hand} hand` : name;
-    })
+    .map((id) => spoken(id, snap.hands))
     .join(" and ");
 }
 
