@@ -7,3 +7,5 @@ https://m-esm.github.io/handpan/
 The list holds drills and eight pieces written for these ten notes. Play one from the list. Open it to follow the same note on the pan and on the sheet. Loop a part or a range of bars, and tick a part when you have learned it. Learn in steps takes a piece one part at a time: each new part alone, then a join from bar 1 to the end of that part, then the whole piece.
 
 Listen uses the microphone. The page shows the note you struck, and on a piece it waits until you strike the lit note.
+
+Check the pieces before pushing: `node scripts/check.mjs [candidate-pieces.js]`. It prints every piece and ends with the fault count.
