@@ -5,6 +5,7 @@
     "css/app.css",
     "js/main.js",
     "js/score.js",
+    "js/pieces.js",
     "js/sound.js",
     "js/play.js",
     "js/live.js",

@@ -580,6 +580,29 @@ input[type="range"] {
   color: var(--soft);
 }
 
+.step-bar.is-part { color: var(--brass); }
+
+.step.is-on .step-bar.is-part { color: #4a3418; }
+
+.step.is-soft .step-notes {
+  font-size: 21px;
+  opacity: 0.62;
+}
+
+.pan-svg.is-tak .rim {
+  stroke: var(--brass);
+  stroke-opacity: 0.7;
+  stroke-width: 3;
+}
+
+.mini-more {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--soft);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .step-count {
   font-variant-numeric: tabular-nums;
   font-size: 13px;

@@ -3,6 +3,7 @@ import {
   FIELDS,
   SIDE,
   PATTERNS,
+  TAK,
   eventsOf,
   cellsOf,
   beatLabel,
@@ -25,7 +26,7 @@ const KIND_NOTE = {
   Hands: "Two hands trading, which is how this pan is played.",
   Chords: "Two notes at once. One hand each.",
   Grooves: "A short loop you can keep going.",
-  Pieces: "A phrase that leaves the ding and comes back.",
+  Pieces: "Whole pieces with parts. A bass note, then a tune over it.",
 };
 let query = "";
 let kindFilter = "All";
@@ -106,7 +107,7 @@ function drawPan() {
     </defs>
     <circle cx="210" cy="210" r="198" fill="#120c09"/>
     <circle cx="210" cy="210" r="188" fill="url(#shell)"/>
-    <circle cx="210" cy="210" r="160" fill="none" stroke="#f3e2cc" stroke-opacity="0.13"/>
+    <circle class="rim" cx="210" cy="210" r="160" fill="none" stroke="#f3e2cc" stroke-opacity="0.13"/>
     <circle cx="210" cy="210" r="132" fill="none" stroke="#f3e2cc" stroke-opacity="0.08"/>
     <circle cx="210" cy="210" r="96" fill="none" stroke="#1a100c" stroke-opacity="0.28"/>
     <ellipse cx="164" cy="146" rx="74" ry="32" fill="#fff6e8" opacity="0.16" transform="rotate(-32 164 146)"/>
@@ -200,6 +201,7 @@ function wordsOf(text) {
 }
 
 function noteWords(id) {
+  if (id === TAK) return "tak tap";
   const note = NOTES[id];
   const letter = fold(note.letter);
   const spoken = letter.length > 1 ? `${letter[0]} flat` : letter;
@@ -327,6 +329,28 @@ function fillRows() {
   }
 }
 
+const SOFT_BELOW = 0.6;
+const MINI_MAX = 40;
+const MINI_OPENING = 16;
+
+function barBeats(pattern) {
+  return pattern.beatsPerBar || 4;
+}
+
+function clock(seconds) {
+  const whole = Math.round(seconds);
+  if (whole < 60) return `${whole} s`;
+  return `${Math.floor(whole / 60)} min ${whole % 60} s`;
+}
+
+function barMark(pattern, bar) {
+  const mark = document.createElement("span");
+  const part = (pattern.sections || []).find((section) => Math.round(section.beat / barBeats(pattern)) === bar);
+  mark.className = part ? "step-bar is-part" : "step-bar";
+  mark.textContent = part ? `${part.name}, bar ${bar + 1}` : `Bar ${bar + 1}`;
+  return mark;
+}
+
 function rowFor(pattern) {
   const row = document.createElement("article");
   row.className = "row";
@@ -345,7 +369,7 @@ function rowFor(pattern) {
       player.pause();
       return;
     }
-    player.setLoop(true);
+    player.setLoop(pattern.loop !== false);
     player.play(pattern, 0);
   });
 
@@ -357,17 +381,26 @@ function rowFor(pattern) {
   blurb.textContent = pattern.blurb;
   const mini = document.createElement("div");
   mini.className = "mini";
-  for (const event of eventsOf(pattern)) {
+  const events = eventsOf(pattern);
+  const shown = events.length > MINI_MAX ? events.slice(0, MINI_OPENING) : events;
+  for (const event of shown) {
     const chip = document.createElement("span");
     chip.className = "mini-hit";
     chip.dataset.event = String(event.index);
     chip.textContent = event.notes.map((id) => pretty(id)).join(" ");
     mini.append(chip);
   }
+  if (shown.length < events.length) {
+    const more = document.createElement("span");
+    more.className = "mini-more";
+    more.textContent = `and ${events.length - shown.length} more`;
+    mini.append(more);
+  }
   const meta = document.createElement("p");
   meta.className = "meta";
-  const bars = Math.ceil(pattern.loopBeats / 4);
-  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm`;
+  const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
+  const length = pattern.loop === false ? `, ${clock((pattern.loopBeats * 60) / pattern.bpm)}` : "";
+  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm${length}`;
   body.append(title, blurb, mini, meta);
 
   const open = document.createElement("a");
@@ -479,13 +512,18 @@ function renderLearn(pattern) {
   const roll = document.createElement("div");
   roll.className = "roll";
   roll.id = "roll";
+  let marked = -1;
   for (const cell of cellsOf(pattern)) {
+    const bar = Math.floor(cell.beat / barBeats(pattern) + 0.0001);
+    const opensBar = pattern.loopBeats > barBeats(pattern) && bar !== marked;
+    marked = bar;
     if (cell.rest) {
       const rest = document.createElement("div");
       rest.className = "rest";
+      if (opensBar) rest.append(barMark(pattern, bar));
       const count = document.createElement("span");
       count.className = "step-count";
-      count.textContent = beatLabel(cell.beat);
+      count.textContent = beatLabel(cell.beat, pattern);
       const word = document.createElement("span");
       word.className = "rest-word";
       word.textContent = "ring";
@@ -495,17 +533,12 @@ function renderLearn(pattern) {
     }
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "step";
+    button.className = cell.notes.every((id) => id === TAK || cell.amps[id] < SOFT_BELOW) ? "step is-soft" : "step";
     button.dataset.event = String(cell.index);
-    if (pattern.loopBeats > 4 && cell.beat % 4 === 0) {
-      const bar = document.createElement("span");
-      bar.className = "step-bar";
-      bar.textContent = `Bar ${Math.floor(cell.beat / 4) + 1}`;
-      button.append(bar);
-    }
+    if (opensBar) button.append(barMark(pattern, bar));
     const count = document.createElement("span");
     count.className = "step-count";
-    count.textContent = beatLabel(cell.beat);
+    count.textContent = beatLabel(cell.beat, pattern);
     const notes = document.createElement("span");
     notes.className = "step-notes";
     for (const id of cell.notes) {
@@ -535,7 +568,7 @@ function renderLearn(pattern) {
     preview.setAttribute("aria-label", "Back to the first note");
     const count = document.createElement("span");
     count.className = "step-count";
-    count.textContent = beatLabel(firstEvent.beat);
+    count.textContent = beatLabel(firstEvent.beat, pattern);
     const notes = document.createElement("span");
     notes.className = "step-notes";
     for (const id of firstEvent.notes) {
@@ -622,6 +655,8 @@ function paint(snap) {
       face.setAttribute("filter", "none");
     }
   });
+  const svg = document.querySelector(".pan-svg");
+  if (svg) svg.classList.toggle("is-tak", snap.playing && onNotes.has(TAK));
   document.querySelectorAll("[data-event]").forEach((node) => {
     const row = node.closest("[data-pattern]");
     const inPattern = !row || row.dataset.pattern === snap.patternId;

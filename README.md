@@ -4,4 +4,4 @@ Practice patterns for the Gear4music DISC 10-note D Kurd handpan. The ding is D3
 
 https://m-esm.github.io/handpan/
 
-Play a pattern from the list. Open it to follow the same note on the pan and on the strip.
+The list holds drills and eight pieces written for these ten notes. Play one from the list. Open it to follow the same note on the pan and on the strip.

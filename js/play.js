@@ -106,7 +106,7 @@ export function createPlayer(audio, emit) {
       if (time > ahead) break;
       if (time >= now - 0.05) {
         const when = Math.max(time, now + 0.01);
-        const cancel = audio.strikeChord(event.notes, when);
+        const cancel = audio.strikeChord(event.notes, when, event.amps);
         state.armed.push({
           time: when,
           ordinal: state.cursor,
@@ -169,7 +169,7 @@ export function createPlayer(audio, emit) {
     state.pattern = pattern;
     state.events = eventsOf(pattern);
     state.bpm = pattern.bpm;
-    state.loop = true;
+    state.loop = pattern.loop !== false;
     state.index = 0;
     state.cursor = 0;
     state.startCursor = 0;
@@ -204,7 +204,7 @@ export function createPlayer(audio, emit) {
     state.ended = false;
     state.index = index;
     state.cursor = index;
-    audio.resume().then(() => audio.strikeChord(event.notes, audio.now() + 0.02));
+    audio.resume().then(() => audio.strikeChord(event.notes, audio.now() + 0.02, event.amps));
     emitNow();
   }
 

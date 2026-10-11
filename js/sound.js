@@ -1,9 +1,31 @@
-import { NOTES } from "./score.js";
+import { NOTES, TAK } from "./score.js";
 
 export function createAudio() {
   let ctx = null;
   let master = null;
   let noiseBuffer = null;
+
+  function roomBuffer(audio) {
+    const length = Math.floor(audio.sampleRate * 2.4);
+    const buffer = audio.createBuffer(2, length, audio.sampleRate);
+    let energy = 0;
+    for (let channel = 0; channel < 2; channel += 1) {
+      const data = buffer.getChannelData(channel);
+      let smooth = 0;
+      for (let i = 0; i < length; i += 1) {
+        const t = i / length;
+        smooth += (Math.random() * 2 - 1 - smooth) * (0.55 - 0.4 * t);
+        data[i] = smooth * Math.pow(1 - t, 2.6);
+        energy += data[i] * data[i];
+      }
+    }
+    const scale = 1 / Math.sqrt(energy / 2);
+    for (let channel = 0; channel < 2; channel += 1) {
+      const data = buffer.getChannelData(channel);
+      for (let i = 0; i < length; i += 1) data[i] *= scale;
+    }
+    return buffer;
+  }
 
   function context() {
     if (ctx) return ctx;
@@ -11,12 +33,20 @@ export function createAudio() {
     master = ctx.createGain();
     master.gain.value = 0.9;
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -20;
-    comp.knee.value = 10;
+    comp.threshold.value = -18;
+    comp.knee.value = 12;
     comp.ratio.value = 2.5;
-    comp.attack.value = 0.004;
-    comp.release.value = 0.22;
+    comp.attack.value = 0.006;
+    comp.release.value = 0.25;
+    const room = ctx.createConvolver();
+    room.normalize = false;
+    room.buffer = roomBuffer(ctx);
+    const wet = ctx.createGain();
+    wet.gain.value = 0.3;
     master.connect(comp);
+    master.connect(room);
+    room.connect(wet);
+    wet.connect(comp);
     comp.connect(ctx.destination);
     return ctx;
   }
@@ -40,61 +70,7 @@ export function createAudio() {
     return audio;
   }
 
-  function strike(id, when, amp = 1) {
-    const audio = context();
-    const note = NOTES[id];
-    const t = when ?? audio.currentTime;
-    const dur = note.ding ? 3.5 : 2.05;
-    const env = audio.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime((note.ding ? 0.5 : 0.38) * amp, t + 0.012);
-    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    env.connect(master);
-
-    const partials = note.ding
-      ? [
-          [1, 0.62, 0],
-          [2, 0.36, 0],
-          [3, 0.08, 1.2],
-          [4.02, 0.035, 3],
-        ]
-      : [
-          [1, 0.55, 0],
-          [2, 0.3, 0.3],
-          [2.995, 0.08, 1.5],
-          [5.03, 0.04, 4],
-        ];
-
-    const sources = [];
-    for (const [ratio, gain, detune] of partials) {
-      const osc = audio.createOscillator();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(note.hz * ratio + detune, t);
-      const level = audio.createGain();
-      level.gain.value = gain;
-      osc.connect(level);
-      level.connect(env);
-      osc.start(t);
-      osc.stop(t + dur + 0.05);
-      sources.push(osc);
-    }
-
-    const click = audio.createBufferSource();
-    click.buffer = noise(audio);
-    const band = audio.createBiquadFilter();
-    band.type = "bandpass";
-    band.frequency.value = note.ding ? 900 : 1800;
-    band.Q.value = 0.7;
-    const clickGain = audio.createGain();
-    clickGain.gain.setValueAtTime(note.ding ? 0.22 : 0.28, t);
-    clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
-    click.connect(band);
-    band.connect(clickGain);
-    clickGain.connect(env);
-    click.start(t);
-    click.stop(t + 0.04);
-    sources.push(click);
-
+  function stopper(sources) {
     return () => {
       for (const source of sources) {
         try {
@@ -106,9 +82,74 @@ export function createAudio() {
     };
   }
 
-  function strikeChord(ids, when) {
-    const amp = ids.length > 1 ? 0.78 : 1;
-    const cancels = ids.map((id) => strike(id, when, amp));
+  function burst(audio, t, out, hz, q, level) {
+    const click = audio.createBufferSource();
+    click.buffer = noise(audio);
+    const band = audio.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = hz;
+    band.Q.value = q;
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(level, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    click.connect(band);
+    band.connect(gain);
+    gain.connect(out);
+    click.start(t);
+    click.stop(t + 0.04);
+    return click;
+  }
+
+  function partial(audio, t, out, hz, level, ring) {
+    const osc = audio.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(hz, t);
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(level, t + 0.005);
+    gain.gain.setTargetAtTime(0, t + 0.005, ring / 6.9);
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(t);
+    osc.stop(t + ring + 0.2);
+    return osc;
+  }
+
+  function tak(audio, t, amp) {
+    const out = audio.createGain();
+    out.gain.value = 0.55 * amp;
+    out.connect(master);
+    return stopper([
+      burst(audio, t, out, 2600, 1.4, 0.9),
+      partial(audio, t, out, 1180, 0.07, 0.12),
+      partial(audio, t, out, 1760, 0.05, 0.09),
+    ]);
+  }
+
+  function strike(id, when, amp = 1) {
+    const audio = context();
+    const t = when ?? audio.currentTime;
+    if (id === TAK) return tak(audio, t, amp);
+    const note = NOTES[id];
+    const ring = note.ding ? 4.6 : 3.3 * Math.pow(220 / note.hz, 0.4);
+    const bright = 0.55 + 0.6 * amp;
+    const out = audio.createGain();
+    out.gain.value = (note.ding ? 0.24 : 0.19) * amp;
+    out.connect(master);
+    return stopper([
+      partial(audio, t, out, note.hz, 1, ring),
+      partial(audio, t, out, note.hz + 0.7, 0.4, ring * 0.9),
+      partial(audio, t, out, note.hz * 2, 0.46 * bright, ring * 0.6),
+      partial(audio, t, out, note.hz * 3 + 0.9, 0.22 * bright, ring * 0.4),
+      partial(audio, t, out, note.hz * 4.07, 0.07 * bright, 0.5),
+      partial(audio, t, out, note.hz * 5.42, 0.045 * bright, 0.28),
+      burst(audio, t, out, note.ding ? 1100 : 1500 + note.hz * 2, 0.9, 0.5 * amp),
+    ]);
+  }
+
+  function strikeChord(ids, when, amps = {}) {
+    const share = ids.length > 1 ? 0.8 : 1;
+    const cancels = ids.map((id) => strike(id, when, share * (amps[id] ?? 1)));
     return () => {
       for (const cancel of cancels) cancel();
     };

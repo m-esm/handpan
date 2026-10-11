@@ -1,3 +1,5 @@
+import { PIECES } from "./pieces.js";
+
 export const NOTES = {
   D3: { id: "D3", letter: "D", octave: 3, hz: 146.8324, ding: true },
   A3: { id: "A3", letter: "A", octave: 3, hz: 220 },
@@ -41,6 +43,131 @@ const R = "right";
 
 function step(beat, note, hand) {
   return { beat, note, hand };
+}
+
+export const TAK = "tak";
+
+const TAB = { D: "D3", 1: "A3", 2: "Bb3", 3: "C4", 4: "D4", 5: "E4", 6: "F4", 7: "G4", 8: "A4", 9: "C5", t: TAK };
+
+const METERS = {
+  eighths: { slotsPerBeat: 2, beatsPerBar: 4 },
+  sixteenths: { slotsPerBeat: 4, beatsPerBar: 4 },
+  "six-eight": { slotsPerBeat: 3, beatsPerBar: 2, count: "slots" },
+  "seven-eight": { slotsPerBeat: 2, beatsPerBar: 3.5, count: "slots" },
+};
+
+const LEVEL = { "^": 1, plain: 0.8, "-": 0.42 };
+const FORCED = { "<": L, ">": R };
+const FREE = { D3: L, [TAK]: R };
+
+function readBar(text, where) {
+  const slots = [];
+  let chord = null;
+  let target = [];
+  for (const char of text) {
+    if (char === " ") continue;
+    if (char === ".") {
+      slots.push([]);
+      target = [];
+    } else if (char === "[") {
+      chord = [];
+    } else if (char === "]") {
+      slots.push(chord);
+      target = chord;
+      chord = null;
+    } else if (char in TAB) {
+      const hit = { note: TAB[char], amp: LEVEL.plain, hand: null };
+      if (chord) chord.push(hit);
+      else slots.push([hit]);
+      target = [hit];
+    } else if (char in LEVEL) {
+      for (const hit of target) hit.amp = LEVEL[char];
+    } else if (char in FORCED) {
+      for (const hit of target) hit.hand = FORCED[char];
+    } else {
+      throw new Error(`${where}: unknown mark ${char}`);
+    }
+  }
+  return slots;
+}
+
+function handChoices(hits, where) {
+  for (const hit of hits) {
+    if (!hit.hand && !(hit.note in FREE)) hit.hand = SIDE[hit.note];
+  }
+  const other = (hand) => (hand === L ? R : L);
+  if (hits.length === 1) return hits[0].hand ? [[hits[0].hand]] : [[L], [R]];
+  if (hits.length === 2) {
+    const [a, b] = hits;
+    if (a.hand && b.hand && a.hand !== b.hand) return [[a.hand, b.hand]];
+    if (a.hand && !b.hand) return [[a.hand, other(a.hand)]];
+    if (!a.hand && b.hand) return [[other(b.hand), b.hand]];
+  }
+  throw new Error(`${where}: a strike needs one note for each hand`);
+}
+
+function assignHands(events, id) {
+  const rows = [];
+  events.forEach((event, i) => {
+    const choices = handChoices(event.hits, `${id}, beat ${event.beat}`);
+    const solo = event.hits.length === 1 ? event.hits[0].note : null;
+    rows.push(
+      choices.map((hands) => {
+        const lean = solo in FREE && hands[0] !== FREE[solo] ? 0.01 : 0;
+        if (i === 0) return { hands, cost: lean, from: null };
+        const gap = event.beat - events[i - 1].beat;
+        let best = null;
+        for (const before of rows[i - 1]) {
+          const clash = hands.some((hand) => before.hands.includes(hand)) ? 1 / gap : 0;
+          const cost = before.cost + clash + lean;
+          if (!best || cost < best.cost) best = { hands, cost, from: before };
+        }
+        return best;
+      }),
+    );
+  });
+  let node = rows[rows.length - 1].reduce((a, b) => (a.cost <= b.cost ? a : b));
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    events[i].hits.forEach((hit, n) => {
+      hit.hand = node.hands[n];
+    });
+    node = node.from;
+  }
+}
+
+function compile(piece) {
+  const meter = METERS[piece.meter];
+  const perBar = meter.slotsPerBeat * meter.beatsPerBar;
+  const events = [];
+  const sections = [];
+  let bar = 0;
+  for (const name of piece.form) {
+    sections.push({ beat: bar * meter.beatsPerBar, name });
+    piece.parts[name].forEach((text, n) => {
+      const where = `${piece.id}, ${name}, bar ${n + 1}`;
+      const slots = readBar(text, where);
+      if (slots.length !== perBar) throw new Error(`${where}: ${slots.length} slots, not ${perBar}`);
+      slots.forEach((hits, slot) => {
+        if (hits.length === 0) return;
+        events.push({ beat: (bar * perBar + slot) / meter.slotsPerBeat, hits: hits.map((hit) => ({ ...hit })) });
+      });
+      bar += 1;
+    });
+  }
+  assignHands(events, piece.id);
+  return {
+    id: piece.id,
+    title: piece.title,
+    kind: "Pieces",
+    bpm: piece.bpm,
+    loopBeats: bar * meter.beatsPerBar,
+    blurb: piece.blurb,
+    about: piece.about,
+    steps: events.flatMap((event) => event.hits.map((hit) => ({ beat: event.beat, ...hit }))),
+    sections,
+    loop: false,
+    ...meter,
+  };
 }
 
 export const PATTERNS = [
@@ -304,153 +431,11 @@ export const PATTERNS = [
       step(15, "A3", R),
     ],
   },
-  {
-    id: "climb-home",
-    title: "Climb home",
-    kind: "Pieces",
-    bpm: 76,
-    loopBeats: 16,
-    blurb: "From the low A up to the high C, then down onto the ding.",
-    about:
-      "Low A, B-flat, C, D, E, F, G, high A, high C. Then high A, G, F, E, D, C, and the ding. Hands trade on every note. The ding is the last note, and the low A starts the climb again.",
-    steps: [
-      step(0, "A3", R),
-      step(1, "Bb3", L),
-      step(2, "C4", R),
-      step(3, "D4", L),
-      step(4, "E4", R),
-      step(5, "F4", L),
-      step(6, "G4", R),
-      step(7, "A4", L),
-      step(8, "C5", R),
-      step(9, "A4", L),
-      step(10, "G4", R),
-      step(11, "F4", L),
-      step(12, "E4", R),
-      step(13, "D4", L),
-      step(14, "C4", R),
-      step(15, "D3", L),
-    ],
-  },
-  {
-    id: "out-and-back",
-    title: "Out and back",
-    kind: "Pieces",
-    bpm: 80,
-    loopBeats: 32,
-    blurb: "Up to the high C, down, and a second lift back to the low A.",
-    about:
-      "It starts on the ding and climbs to the high C: ding, low A, B-flat, C, D, E, F, G, high A, high C. It comes down to the low A. Then F, E, D, C, B-flat, low A, D, E, F, G, high A, G, F, and the low A. The low A leads back to the ding. Left hand on the ding, B-flat, D, F, and high A.",
-    steps: [
-      step(0, "D3", L),
-      step(1, "A3", R),
-      step(2, "Bb3", L),
-      step(3, "C4", R),
-      step(4, "D4", L),
-      step(5, "E4", R),
-      step(6, "F4", L),
-      step(7, "G4", R),
-      step(8, "A4", L),
-      step(9, "C5", R),
-      step(10, "A4", L),
-      step(11, "G4", R),
-      step(12, "F4", L),
-      step(13, "E4", R),
-      step(14, "D4", L),
-      step(15, "C4", R),
-      step(16, "Bb3", L),
-      step(17, "A3", R),
-      step(18, "F4", L),
-      step(19, "E4", R),
-      step(20, "D4", L),
-      step(21, "C4", R),
-      step(22, "Bb3", L),
-      step(23, "A3", R),
-      step(24, "D4", L),
-      step(25, "E4", R),
-      step(26, "F4", L),
-      step(27, "G4", R),
-      step(28, "A4", L),
-      step(29, "G4", R),
-      step(30, "F4", L),
-      step(31, "A3", R),
-    ],
-  },
-  {
-    id: "pairs-along-the-way",
-    title: "Pairs along the way",
-    kind: "Pieces",
-    bpm: 74,
-    loopBeats: 32,
-    blurb: "Four two-note strikes, with a line of single notes between them.",
-    about:
-      "Ding and low A, then F, low A, D, C, B-flat, low A. G with the higher D, then F, E, D, C, B-flat, C. F with the low A, then G, F, E, D, C, B-flat. High A with E, then F, E, D, C, B-flat, low A. The low A joins the ding when the loop starts again.",
-    steps: [
-      step(0, "D3", L),
-      step(0, "A3", R),
-      step(2, "F4", L),
-      step(3, "A3", R),
-      step(4, "D4", L),
-      step(5, "C4", R),
-      step(6, "Bb3", L),
-      step(7, "A3", R),
-      step(8, "D4", L),
-      step(8, "G4", R),
-      step(10, "F4", L),
-      step(11, "E4", R),
-      step(12, "D4", L),
-      step(13, "C4", R),
-      step(14, "Bb3", L),
-      step(15, "C4", R),
-      step(16, "F4", L),
-      step(16, "A3", R),
-      step(18, "G4", R),
-      step(19, "F4", L),
-      step(20, "E4", R),
-      step(21, "D4", L),
-      step(22, "C4", R),
-      step(23, "Bb3", L),
-      step(24, "A4", L),
-      step(24, "E4", R),
-      step(26, "F4", L),
-      step(27, "E4", R),
-      step(28, "D4", L),
-      step(29, "C4", R),
-      step(30, "Bb3", L),
-      step(31, "A3", R),
-    ],
-  },
-  {
-    id: "four-doors",
-    title: "Four doors",
-    kind: "Pieces",
-    bpm: 70,
-    loopBeats: 16,
-    blurb: "Each bar opens with two notes, one in each hand.",
-    about:
-      "Ding and low A, then F and low A. B-flat and G, then F and E. F and C, then D and low A. High A and E, then G and the ding.",
-    steps: [
-      step(0, "D3", L),
-      step(0, "A3", R),
-      step(2, "F4", L),
-      step(3, "A3", R),
-      step(4, "Bb3", L),
-      step(4, "G4", R),
-      step(6, "F4", L),
-      step(7, "E4", R),
-      step(8, "F4", L),
-      step(8, "C4", R),
-      step(10, "D4", L),
-      step(11, "A3", R),
-      step(12, "A4", L),
-      step(12, "E4", R),
-      step(14, "G4", R),
-      step(15, "D3", L),
-    ],
-  },
+  ...PIECES.map(compile),
 ];
 
 export function pretty(id) {
+  if (id === TAK) return TAK;
   const note = NOTES[id];
   return `${note.letter}${note.octave}`;
 }
@@ -460,11 +445,12 @@ export function eventsOf(pattern) {
   for (const step of pattern.steps) {
     let event = map.get(step.beat);
     if (!event) {
-      event = { beat: step.beat, notes: [], hands: {} };
+      event = { beat: step.beat, notes: [], hands: {}, amps: {} };
       map.set(step.beat, event);
     }
     event.notes.push(step.note);
     event.hands[step.note] = step.hand;
+    event.amps[step.note] = step.amp ?? 1;
   }
   return [...map.values()]
     .sort((a, b) => a.beat - b.beat)
@@ -482,10 +468,12 @@ export function cellsOf(pattern) {
   return cells;
 }
 
-export function beatLabel(beat) {
-  const inside = beat % 4;
-  const count = Math.floor(inside) + 1;
-  const fraction = Math.round((inside - Math.floor(inside)) * 2) / 2;
-  if (fraction === 0.5) return `${count} and`;
-  return String(count);
+const COUNT_WORDS = { 2: ["", " and"], 4: ["", " e", " and", " a"] };
+
+export function beatLabel(beat, pattern) {
+  const perBeat = pattern.slotsPerBeat || 2;
+  const perBar = (pattern.beatsPerBar || 4) * perBeat;
+  const slot = Math.round(beat * perBeat) % perBar;
+  if (pattern.count === "slots") return String(slot + 1);
+  return `${Math.floor(slot / perBeat) + 1}${COUNT_WORDS[perBeat][slot % perBeat]}`;
 }
