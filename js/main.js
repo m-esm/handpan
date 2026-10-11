@@ -979,13 +979,14 @@ function pickBar(pattern, bar) {
 
 function keepInView(node, toTop) {
   const learn = document.getElementById("learn");
-  const inner = getComputedStyle(learn).overflowY === "auto";
+  const inner = learn.scrollHeight > learn.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(learn).overflowY);
   const deck = document.querySelector(".deck");
   const stick = document.querySelector(".pan-stick");
   const box = node.getBoundingClientRect();
+  const deckBottom = deck ? deck.getBoundingClientRect().bottom : 0;
   const top = inner
-    ? Math.max(learn.getBoundingClientRect().top, deck ? deck.getBoundingClientRect().bottom : 0)
-    : stick.getBoundingClientRect().bottom;
+    ? Math.max(learn.getBoundingClientRect().top, deckBottom)
+    : Math.max(stick.getBoundingClientRect().bottom, deckBottom);
   const bottom = inner ? learn.getBoundingClientRect().bottom : window.innerHeight;
   if (!toTop && box.top >= top + 4 && box.bottom <= bottom - 4) return;
   const shift = box.top - top - 10;
@@ -1251,5 +1252,13 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
+function trackStickHeight() {
+  const stick = document.querySelector(".pan-stick");
+  const apply = () => document.documentElement.style.setProperty("--stick-h", `${stick.offsetHeight}px`);
+  new ResizeObserver(apply).observe(stick);
+  apply();
+}
+
+trackStickHeight();
 drawPan();
 route();
