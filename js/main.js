@@ -11,6 +11,7 @@ import {
 } from "./score.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
+import { createListener, accepts } from "./listen.js";
 
 const audio = createAudio();
 let mirrored = false;
@@ -35,6 +36,64 @@ let settled = false;
 let lastListed = "";
 
 const player = createPlayer(audio, paint);
+const listener = createListener(onHeard);
+const HEARD_MS = 450;
+const TAP_DEAF_MS = 500;
+let heard = null;
+let heardTimer = 0;
+let deafUntil = 0;
+let micNote = "";
+
+function pitched(notes) {
+  return notes.filter((id) => id !== TAK);
+}
+
+function skipTaks() {
+  for (let n = 0; n < 16 && pitched(player.snapshot().notes).length === 0; n += 1) player.step(1, true);
+}
+
+function onHeard(found) {
+  if (player.playing || performance.now() < deafUntil) return;
+  let id = found.id;
+  let miss = false;
+  if (patternFromHash() && player.pattern) {
+    skipTaks();
+    const wanted = pitched(player.snapshot().notes);
+    if (accepts(found, wanted)) {
+      if (!wanted.includes(id)) id = wanted[0];
+      player.step(1, true);
+      skipTaks();
+    } else {
+      miss = true;
+    }
+  }
+  heard = { id, miss };
+  clearTimeout(heardTimer);
+  heardTimer = setTimeout(() => {
+    heard = null;
+    player.refresh();
+  }, HEARD_MS);
+  player.refresh();
+}
+
+async function toggleListen() {
+  micNote = "";
+  if (listener.on) {
+    listener.stop();
+  } else {
+    player.pause();
+    try {
+      await listener.start();
+    } catch (err) {
+      void err;
+      micNote = "The microphone is blocked. Allow it for this page, then press Listen.";
+    }
+  }
+  const button = document.getElementById("listen");
+  button.setAttribute("aria-pressed", listener.on ? "true" : "false");
+  button.textContent = listener.on ? "Listening" : "Listen";
+  player.refresh();
+}
 
 function flipHand(hand) {
   if (!mirrored || !hand) return hand;
@@ -93,6 +152,16 @@ function drawPan() {
         <stop offset="58%" stop-color="#241910"/>
         <stop offset="100%" stop-color="#120d0a"/>
       </radialGradient>
+      <radialGradient id="dimple-heard" cx="42%" cy="34%" r="75%">
+        <stop offset="0%" stop-color="#e2fff4"/>
+        <stop offset="45%" stop-color="#6fcfb0"/>
+        <stop offset="100%" stop-color="#2f7f6a"/>
+      </radialGradient>
+      <radialGradient id="dimple-miss" cx="42%" cy="34%" r="75%">
+        <stop offset="0%" stop-color="#ffd9cf"/>
+        <stop offset="45%" stop-color="#d9735c"/>
+        <stop offset="100%" stop-color="#8a3a2b"/>
+      </radialGradient>
       <radialGradient id="dimple-on" cx="42%" cy="34%" r="75%">
         <stop offset="0%" stop-color="#fff0cc"/>
         <stop offset="42%" stop-color="#e6b15a"/>
@@ -140,6 +209,7 @@ function onPanKey(event) {
 const tapTimers = new Map();
 
 function soundNote(id) {
+  deafUntil = performance.now() + TAP_DEAF_MS;
   audio.resume().then(() => audio.strikeChord([id], audio.now() + 0.02));
   const field = document.querySelector(`.field[data-note="${id}"]`);
   if (field) {
@@ -494,13 +564,13 @@ function renderLearn(pattern) {
   previous.type = "button";
   previous.className = "stepper";
   previous.textContent = "Previous";
-  previous.addEventListener("click", () => player.step(-1));
+  previous.addEventListener("click", () => player.step(-1, listener.on));
 
   const next = document.createElement("button");
   next.type = "button";
   next.className = "stepper";
   next.textContent = "Next";
-  next.addEventListener("click", () => player.step(1));
+  next.addEventListener("click", () => player.step(1, listener.on));
 
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
@@ -544,7 +614,7 @@ function renderLearn(pattern) {
   const keys = document.createElement("p");
   keys.className = "keys";
   keys.textContent =
-    "Space plays and pauses. Arrows move one note. Click a bar number to loop that bar. Click a second bar number to loop the bars between them.";
+    "Space plays and pauses. Arrows move one note. Click a bar number to loop that bar, and a second bar number to extend the loop. With Listen on, the page waits until you strike the lit note.";
 
   transport.append(play, previous, next, tempoLabel, loop, ranged);
 
@@ -575,7 +645,7 @@ function partMap(pattern, sheet) {
     chip.classList.toggle("is-learned", isLearned(pattern, section.name));
     chip.addEventListener("click", () => {
       const first = section.bars.flatMap((bar) => bar.slots).find(Boolean);
-      if (first) player.seek(first.index, player.playing);
+      if (first) player.seek(first.index, player.playing, listener.on);
       const target = document.querySelector(`.part[data-section="${i}"]`);
       if (target) keepInView(target, true);
     });
@@ -630,7 +700,7 @@ function slotNode(pattern, sheet, bar, slot, event) {
   const names = event.notes.map((id) => `${id === "D3" ? "ding" : pretty(id)}, ${flipHand(event.hands[id])} hand`);
   node.setAttribute("aria-label", `Bar ${bar + 1}, count ${beatLabel(beat, pattern)}: ${names.join(" and ")}`);
   for (const id of event.notes) node.append(noteNode(id, event.hands[id]));
-  node.addEventListener("click", () => player.seek(event.index, player.playing));
+  node.addEventListener("click", () => player.seek(event.index, player.playing, listener.on));
   return node;
 }
 
@@ -805,18 +875,23 @@ function paint(snap) {
   document.querySelectorAll(".field").forEach((field) => {
     const id = field.dataset.note;
     const on = onNotes.has(id);
-    const sounding = snap.playing && on;
+    const sounding = (snap.playing || listener.on) && on;
+    const echo = heard && heard.id === id ? (heard.miss ? "url(#dimple-miss)" : "url(#dimple-heard)") : null;
     field.classList.toggle("is-on", sounding);
-    field.classList.toggle("is-place", !snap.playing && on);
+    field.classList.toggle("is-place", !sounding && on);
     field.classList.toggle("is-next", !on && nextNotes.has(id));
     field.setAttribute("aria-pressed", on ? "true" : "false");
     const shade = field.querySelector(".field-shade");
     const face = field.querySelector(".field-face");
-    if (sounding || field.classList.contains("is-tap")) {
+    if (echo) {
+      shade.setAttribute("fill", echo);
+      face.setAttribute("fill", echo);
+      face.setAttribute("filter", "url(#glow)");
+    } else if (sounding || field.classList.contains("is-tap")) {
       shade.setAttribute("fill", "url(#dimple-on)");
       face.setAttribute("fill", "url(#dimple-on)");
       face.setAttribute("filter", "url(#glow)");
-    } else if (!snap.playing && on) {
+    } else if (on) {
       shade.setAttribute("fill", "#5c4128");
       face.setAttribute("fill", "#6a4e34");
       face.setAttribute("filter", "none");
@@ -949,7 +1024,22 @@ function scrollStrip(scroller, current) {
   scroller.scrollTo({ left: target, behavior: "auto" });
 }
 
+function spoken(id, hands) {
+  const hand = flipHand(hands[id]);
+  const name = id === "D3" ? "ding" : pretty(id);
+  return hand ? `${name}, ${hand} hand` : name;
+}
+
 function captionText(snap) {
+  if (micNote) return micNote;
+  if (listener.on && !snap.playing) {
+    const wanted = patternFromHash() ? pitched(snap.notes) : [];
+    const target = wanted.map((id) => spoken(id, snap.hands)).join(" and ");
+    const name = heard ? (heard.id === "D3" ? "the ding" : pretty(heard.id)) : "";
+    if (heard && heard.miss) return `Heard ${name}. Play ${target}.`;
+    if (heard) return target ? `Heard ${name}. Now ${target}.` : `Heard ${name}.`;
+    return target ? `Play ${target}.` : "Listening. Strike a note.";
+  }
   if (!snap.notes.length) {
     if (!snap.patternId) return "Tap a note to hear it.";
     const pattern = PATTERNS.find((item) => item.id === snap.patternId);
@@ -963,6 +1053,8 @@ function captionText(snap) {
     })
     .join(" and ");
 }
+
+document.getElementById("listen").addEventListener("click", toggleListen);
 
 document.getElementById("mirror").addEventListener("click", () => {
   mirrored = !mirrored;
@@ -997,10 +1089,10 @@ window.addEventListener("keydown", (event) => {
   if (!document.body.classList.contains("is-learn")) return;
   if (event.code === "ArrowRight") {
     event.preventDefault();
-    player.step(1);
+    player.step(1, listener.on);
   } else if (event.code === "ArrowLeft") {
     event.preventDefault();
-    player.step(-1);
+    player.step(-1, listener.on);
   }
 });
 
