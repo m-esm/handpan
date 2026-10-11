@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#14110e">
-  <title>DISC D Kurd</title>
-  <meta name="description" content="Practice patterns for a 10-note D Kurd handpan. The pan and the note list light up together.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2314110e'/%3E%3Ccircle cx='16' cy='16' r='12' fill='%23a86b3c'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23e6b15a'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#10232b">
+  <title>Alamut | A courtyard for sound</title>
+  <meta name="description" content="Find your rhythm in Alamut. Play a ten-note D Kurd handpan, discover melodies, and learn each piece at your own pace in a moonlit Persian courtyard.">
+  <link rel="icon" type="image/svg+xml" href="img/alamut-mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,14 +21,14 @@
   </script>
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap" inert>
     <header class="top">
-      <a class="brand" href="#/">DISC<span class="brand-place">The moonlit courtyard</span></a>
-      <p class="scale">10-note D Kurd at 440 Hz</p>
+      <a class="brand" href="#/" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="38" height="38" alt=""><span>Alamut</span><span class="brand-place">A courtyard for sound</span></a>
+      <div class="header-tools"><p class="scale">D Kurd <span>10 notes / 440 Hz</span></p><button id="library-toggle" type="button" aria-expanded="true" aria-controls="dock">Hide music</button></div>
     </header>
     <main class="split">
       <div class="pan-stick">
-        <div class="scene-heading"><span class="scene-ornament" aria-hidden="true">✧</span><h1>Echoes of Alamut</h1><p>Your D Kurd, beneath a Persian sky.</p><button class="browse-music" type="button">Explore the music ↓</button></div>
+        <div class="scene-heading"><h1>A courtyard for sound.</h1><p>Settle in. Find a melody. Follow its rhythm.</p><button id="explore-world" type="button">Explore Alamut <span aria-hidden="true">↗</span></button><button class="browse-music" type="button">Browse music ↓</button></div>
         <div class="stage-tools">
           <p id="caption" class="caption">Tap a note to hear it.</p>
           <button id="listen" type="button" aria-pressed="false">Listen</button>
@@ -41,13 +41,23 @@
           <label class="mic-pick"><span class="sr">Input source</span><select id="mic-input"></select></label>
         </div>
         <div id="pan"></div>
+        <p id="scene-notice" class="scene-notice" role="status" hidden></p>
         <div class="stage-footer"><span>Brass <b>left hand</b></span><span class="stage-seal" aria-hidden="true">✧</span><span>Ivory <b>right hand</b></span></div>
+        <div class="environment-picker"><span id="environment-name">The lantern courtyard</span><label><span class="sr">Landscape</span><select id="environment"><option value="auto">Follow the music</option></select></label></div>
         <p id="status" class="sr" role="status"></p>
       </div>
       <div id="learn"></div>
       <section id="dock" aria-label="Patterns"></section>
     </main>
   </div>
+  <div id="scene-loader" class="scene-loader" role="status" aria-live="polite">
+    <img src="img/alamut-mark.svg" width="72" height="72" alt="">
+    <span class="loader-name">Alamut</span>
+    <p id="loading-message">Opening the courtyard</p>
+    <span class="loading-track" aria-hidden="true"></span>
+    <button id="simple-view" type="button">Continue in simple view</button>
+  </div>
+  <noscript><style>#scene-loader{display:none}</style><p>Enable JavaScript to play and learn with Alamut.</p></noscript>
   <script type="module" src="js/main.js"></script>
   <script src="js/live.js" defer></script>
 </body>

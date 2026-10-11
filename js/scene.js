@@ -1,8 +1,7 @@
 import * as THREE from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { createLandscape } from "./landscape.js";
+import { VIEWS } from "./environments.js";
 
 const BRASS = 0xe6b15a;
 const CREAM = 0xf0e2d2;
@@ -17,6 +16,7 @@ const ALONG = 0.245;
 const DING = 0.47;
 const UP = new THREE.Vector3(0, 1, 0);
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const profiling = new URLSearchParams(location.search).has("perf");
 
 const LOOKS = {
   idle: { color: BRASS, glow: 0, ring: 0, ink: false },
@@ -149,8 +149,8 @@ function reach(frame, point) {
 }
 
 function domeGeometry(frames) {
-  const RINGS = 120;
-  const SPOKES = 320;
+  const RINGS = 64;
+  const SPOKES = 192;
   const spots = [];
   const colors = [];
   const flat = [];
@@ -222,10 +222,13 @@ function bowlGeometry() {
     const a = (i / 20) * (Math.PI / 2);
     points.push(new THREE.Vector2(0.3 + (RADIUS - 0.3) * Math.cos(a), -0.1 - 0.52 * Math.sin(a)));
   }
-  return new THREE.LatheGeometry(points, 160);
+  return new THREE.LatheGeometry(points, 96);
 }
 
 function createDrum(host, onHit, onStrike) {
+  let pendingFrames = 40;
+  let inView = true;
+  let lastFocused = "";
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -429,6 +432,7 @@ function createDrum(host, onHit, onStrike) {
   }
 
   function layout(next) {
+    pendingFrames = 40;
     specs = next;
     if (specs.length) {
       if (dome) {
@@ -453,6 +457,7 @@ function createDrum(host, onHit, onStrike) {
 
   function set(id, state) {
     const before = states.get(id);
+    if (before !== state) pendingFrames = 40;
     states.set(id, state);
     const item = fields.get(id);
     if (!item) return;
@@ -475,6 +480,7 @@ function createDrum(host, onHit, onStrike) {
   }
 
   function resize() {
+    pendingFrames = 40;
     const width = host.clientWidth;
     const height = canvas.clientHeight;
     if (!width || !height) return;
@@ -520,11 +526,12 @@ function createDrum(host, onHit, onStrike) {
     if (id) onHit(id);
   });
   canvas.addEventListener("pointermove", (event) => {
+    if (!still) pendingFrames = 40;
     canvas.style.cursor = noteAt(event) ? "pointer" : "default";
     const box = canvas.getBoundingClientRect();
     tilt.set((event.clientX - box.left) / box.width - 0.5, (event.clientY - box.top) / box.height - 0.5);
   });
-  canvas.addEventListener("pointerleave", () => tilt.set(0, 0));
+  canvas.addEventListener("pointerleave", () => { tilt.set(0, 0); pendingFrames = 40; });
 
   const white = new THREE.Color(0xffffff);
 
@@ -532,6 +539,10 @@ function createDrum(host, onHit, onStrike) {
     const active = document.activeElement;
     const target = active && active.closest && active.matches(":focus-visible") ? active.closest(".field") : null;
     const focused = target ? target.dataset.note : "";
+    if (focused !== lastFocused) { pendingFrames = 40; lastFocused = focused; }
+    if (!pendingFrames) return;
+    pendingFrames -= 1;
+    renderer.info.reset();
     for (const [id, item] of fields) {
       const look = LOOKS[item.state] || LOOKS.idle;
       const lit = id === focused;
@@ -547,6 +558,7 @@ function createDrum(host, onHit, onStrike) {
         item.ripple.scale.set(item.frame.along * grow, item.frame.across * grow, 1);
         item.ripple.material.opacity = (1 - item.wave) ** 2;
       }
+      for (const mesh of [item.glow, item.ring, item.ripple, item.flare]) mesh.visible = mesh.material.opacity > 0.005;
     }
     strike.intensity *= 0.88;
     if (waveAt < 1) {
@@ -557,7 +569,6 @@ function createDrum(host, onHit, onStrike) {
     }
     lip.material.emissiveIntensity += ((tak ? 2 : 0) - lip.material.emissiveIntensity) * 0.3;
     if (!still) {
-      drum.position.y = Math.sin(time / 1500) * 0.014;
       drum.rotation.z += (-tilt.x * 0.06 - drum.rotation.z) * 0.06;
       drum.rotation.x += (tilt.y * 0.06 - drum.rotation.x) * 0.06;
       halo.material.opacity = 0.28;
@@ -566,18 +577,18 @@ function createDrum(host, onHit, onStrike) {
   }
 
   document.fonts.ready.then(() => layout(specs));
+  new IntersectionObserver(([entry]) => { inView = entry.isIntersecting; if (inView) pendingFrames = 40; }).observe(host);
 
   return {
     layout,
     set,
     frame,
+    stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     setTak(on) {
+      if (tak !== on) pendingFrames = 40;
       tak = on;
     },
-    visible() {
-      const box = canvas.getBoundingClientRect();
-      return box.bottom > 0 && box.top < innerHeight;
-    },
+    visible: () => inView,
   };
 }
 
@@ -615,9 +626,37 @@ function mosaicTexture() {
   return texture;
 }
 
+function batchArchitecture(scene) {
+  scene.updateMatrixWorld(true);
+  const batches = new Map();
+  scene.traverse((object) => {
+    if (!object.isMesh || object.isInstancedMesh || object.userData.keepSeparate || !object.material.isMeshStandardMaterial) return;
+    const key = object.material.uuid;
+    if (!batches.has(key)) batches.set(key, []);
+    batches.get(key).push(object);
+  });
+  for (const meshes of batches.values()) {
+    if (meshes.length < 2) continue;
+    const geometries = meshes.map((mesh) => {
+      const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+      return geometry.applyMatrix4(mesh.matrixWorld);
+    });
+    const geometry = mergeGeometries(geometries, false);
+    for (const item of geometries) item.dispose();
+    if (!geometry) continue;
+    const merged = new THREE.Mesh(geometry, meshes[0].material);
+    merged.castShadow = meshes[0].castShadow;
+    merged.receiveShadow = meshes[0].receiveShadow;
+    for (const mesh of meshes) mesh.removeFromParent();
+    for (const original of new Set(meshes.map((mesh) => mesh.geometry))) original.dispose();
+    scene.add(merged);
+  }
+}
+
 function createWorld() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  renderer.info.autoReset = false;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.shadowMap.enabled = true;
@@ -738,7 +777,7 @@ function createWorld() {
     scene.add(medallion);
   }
   for (const side of [-1, 1]) {
-    for (const z of side === -1 ? [-14, -5] : [-14, -5, 4]) arch(side * 15, z, 6.5, 6.2, 4.8, 1.7, Math.PI / 2);
+    for (const z of side === -1 ? [-18] : [-18, -10, -2]) arch(side * 15, z, 6.5, 6.2, 4.8, 1.7, Math.PI / 2);
     box(2, 1.2, 30, side * 15, 12, -7, stone);
     box(2.1, 0.25, 30, side * 15, 11.2, -7, tile);
   }
@@ -783,6 +822,10 @@ function createWorld() {
     const light = new THREE.PointLight(0xffb660, 22 * scale, 10 * scale, 2);
     light.position.set(x, y, z);
     scene.add(light);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture([[0, "rgba(255,193,110,0.32)"], [0.3, "rgba(255,166,61,0.1)"], [1, "rgba(255,166,61,0)"]]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.position.set(x, y, z);
+    halo.scale.set(2.5 * scale, 2.5 * scale, 1);
+    scene.add(halo);
     lamps.push({ light, base: 22 * scale, glass });
   };
   for (const x of [-10.5, 10.5]) {
@@ -829,43 +872,149 @@ function createWorld() {
   });
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.3, 0.6, 1.2));
-  composer.addPass(new OutputPass());
+  batchArchitecture(scene);
+  const courtyard = new THREE.Group();
+  for (const child of [...scene.children]) {
+    if (!child.isLight || child.isPointLight) courtyard.add(child);
+  }
+  scene.add(courtyard);
+  const landscape = createLandscape();
+  batchArchitecture(landscape.group);
+  landscape.group.visible = false;
+  scene.add(landscape.group);
+  let view = VIEWS.courtyard;
+  let viewKey = "courtyard";
+  let exploring = false;
+  let savedView = "courtyard";
+  let orbit = 0;
+  let dragging = null;
+  const beacons = new THREE.Group();
+  beacons.visible = false;
+  const pickTargets = [];
+  const pickVolumes = [];
+  Object.keys(VIEWS).forEach((key, index) => {
+    const angle = (index / Object.keys(VIEWS).length) * Math.PI * 2;
+    const beacon = new THREE.Group();
+    beacon.position.set(Math.cos(angle) * 24, 0, Math.sin(angle) * 18 - 15);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 16), new THREE.MeshStandardMaterial({ color: 0x97764d, metalness: 0.5, roughness: 0.45 }));
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshStandardMaterial({ color: 0xffd898, emissive: 0xe6b15a, emissiveIntensity: 1.8, metalness: 0.4, roughness: 0.3 }));
+    gem.position.y = 2.8;
+    gem.userData.view = key;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.035, 6, 36), new THREE.MeshBasicMaterial({ color: 0xf4d29b }));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.4;
+    beacon.add(base, gem, ring);
+    const hitArea = new THREE.Mesh(new THREE.SphereGeometry(2.4, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
+    hitArea.position.y = 2.8;
+    hitArea.userData.view = key;
+    beacon.add(hitArea);
+    beacons.add(beacon);
+    pickTargets.push(gem);
+    pickVolumes.push(hitArea);
+  });
+  scene.add(beacons);
   const look = new THREE.Vector2();
   const ease = new THREE.Vector2();
   let last = 0;
   let energy = 0;
+  let pendingFrames = 30;
   function draw(time) {
+    renderer.info.reset();
     ease.lerp(look, 0.035);
-    camera.position.set(1 + ease.x * 0.65, 4.2 - ease.y * 0.3, 15);
-    camera.lookAt(1, 5.5, -20);
+    if (exploring) {
+      camera.position.set(Math.sin(orbit) * 58, 23, Math.cos(orbit) * 58 - 12);
+      camera.lookAt(-3, 7, -22);
+    } else {
+      camera.position.set(view.eye[0] + ease.x * 0.65, view.eye[1] - ease.y * 0.3, view.eye[2]);
+      camera.lookAt(...view.target);
+    }
     lamps.forEach(({ light, base, glass }, i) => {
-      light.intensity = base * (1 + energy * 0.15 + (still ? 0 : Math.sin(time / 700 + i * 2) * 0.035));
+      light.intensity = base * (1 + energy * 0.15);
       glass.emissiveIntensity = 2.1 + energy * 0.5;
     });
-    if (!still) dust.rotation.y = Math.sin(time / 40000) * 0.06;
     energy *= 0.96;
-    composer.render();
+    renderer.render(scene, camera);
   }
   function resize() {
     renderer.setSize(innerWidth, innerHeight, false);
-    composer.setSize(innerWidth, innerHeight);
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     draw(performance.now());
   }
   addEventListener("resize", resize);
-  if (!still) addEventListener("pointermove", (event) => look.set(event.clientX / innerWidth - 0.5, event.clientY / innerHeight - 0.5));
+  if (!still) addEventListener("pointermove", (event) => {
+    if (!event.target.closest("#pan")) return;
+    look.set(event.clientX / innerWidth - 0.5, event.clientY / innerHeight - 0.5);
+    pendingFrames = 30;
+  });
   resize();
+  function environment(key) {
+      if (!VIEWS[key] || key === viewKey) return;
+      viewKey = key;
+      view = VIEWS[key];
+      if (exploring) orbit = Math.atan2(view.eye[0], view.eye[2] + 25) * 0.7;
+      pickTargets.forEach((gem) => {
+        const selected = gem.userData.view === key;
+        gem.material.color.setHex(selected ? 0x8be4d4 : 0xffd898);
+        gem.material.emissive.setHex(selected ? 0x469c94 : 0xe6b15a);
+      });
+      courtyard.visible = key === "courtyard";
+      landscape.group.visible = key !== "courtyard";
+      landscape.set(key);
+      scene.background.setHex(view.sky);
+      scene.fog.color.setHex(view.sky);
+      scene.fog.density = key === "courtyard" ? 0.015 : 0.006;
+      moonlight.color.setHex(key === "dawn" ? 0xffc28b : key === "valley" ? 0xffeed2 : 0xb9d7ed);
+      moonlight.intensity = key === "lake" ? 1.2 : 2.5;
+      renderer.shadowMap.needsUpdate = true;
+      pendingFrames = 30;
+      draw(performance.now());
+  }
+  document.addEventListener("alamut-explore", (event) => {
+    if (event.detail.open && !exploring) savedView = viewKey;
+    exploring = event.detail.open;
+    beacons.visible = exploring;
+    if (exploring) {
+      environment(event.detail.view || "dawn");
+    } else {
+      environment(savedView);
+    }
+    pendingFrames = 30;
+    draw(performance.now());
+  });
+  canvas.addEventListener("pointerdown", (event) => {
+    if (!exploring) return;
+    dragging = { x: event.clientX, start: event.clientX, y: event.clientY };
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!dragging || !exploring) return;
+    orbit = THREE.MathUtils.clamp(orbit - (event.clientX - dragging.x) * 0.005, -0.8, 0.8);
+    dragging.x = event.clientX;
+    pendingFrames = 30;
+    if (still) draw(performance.now());
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    if (!dragging) return;
+    const click = Math.abs(event.clientX - dragging.start) < 6 && Math.abs(event.clientY - dragging.y) < 6;
+    dragging = null;
+    if (!click) return;
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(event.clientX / innerWidth * 2 - 1, 1 - event.clientY / innerHeight * 2), camera);
+    const hit = ray.intersectObjects(pickVolumes)[0];
+    if (hit) document.dispatchEvent(new CustomEvent("alamut-place", { detail: { view: hit.object.userData.view } }));
+  });
+  canvas.addEventListener("pointercancel", () => { dragging = null; });
   return {
+    environment,
+    stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     frame(time) {
-      if (time - last < 40) return;
+      if (!pendingFrames || time - last < 40) return;
+      pendingFrames -= 1;
       last = time;
       draw(time);
     },
-    strike() { energy = 1; },
+    strike() { energy = 1; pendingFrames = 30; },
     redraw() { draw(performance.now()); },
   };
 }
@@ -874,15 +1023,30 @@ export function createStage({ pan, onHit }) {
   const world = createWorld();
   const drum = createDrum(pan, onHit, (pitch, color) => world.strike(pitch, color));
 
+  let lastFrame = 0;
+  const timings = [];
+  const submissions = [];
   function loop(time) {
     requestAnimationFrame(loop);
     if (document.hidden) return;
+    const start = profiling ? performance.now() : 0;
     if (drum.visible()) drum.frame(time);
     if (!still) world.frame(time);
+    if (profiling) {
+      if (lastFrame) timings.push(time - lastFrame);
+      lastFrame = time;
+      submissions.push(performance.now() - start);
+      if (timings.length >= 90) {
+        const sorted = [...timings].sort((a, b) => a - b);
+        pan.dataset.profile = JSON.stringify({ frameMs: timings.reduce((a, b) => a + b, 0) / timings.length, p95Ms: sorted[Math.floor(sorted.length * 0.95)], submitMs: submissions.reduce((a, b) => a + b, 0) / submissions.length, drum: drum.stats(), world: world.stats() });
+        timings.length = 0;
+        submissions.length = 0;
+      }
+    }
   }
 
   requestAnimationFrame(loop);
   if (still) addEventListener("scroll", () => world.redraw(), { passive: true });
 
-  return { layout: drum.layout, set: drum.set, setTak: drum.setTak };
+  return { layout: drum.layout, set: drum.set, setTak: drum.setTak, environment: world.environment };
 }
