@@ -37,6 +37,7 @@ let lastScroll = -2;
 let settled = false;
 let lastListed = "";
 let routed = null;
+let stage = null;
 
 const player = createPlayer(audio, paint);
 const listener = createListener(onHeard, onMicEnded);
@@ -170,6 +171,30 @@ function drawPan() {
   svg.addEventListener("click", onPanHit);
   svg.addEventListener("keydown", onPanKey);
   syncMirror();
+  if (stage) stage.layout(panLayout());
+}
+
+function panLayout() {
+  return ["D3", ...FIELDS.map((field) => field.id)].map((id) => {
+    const field = FIELDS.find((item) => item.id === id);
+    const deg = field ? (mirrored ? (360 - field.deg) % 360 : field.deg) : 0;
+    return { id, deg, ding: id === "D3", hand: flipHand(SIDE[id]), text: numberOf(id) };
+  });
+}
+
+function bootStage() {
+  const probe = document.createElement("canvas");
+  if (!probe.getContext("webgl2") && !probe.getContext("webgl")) return;
+  import("./scene.js")
+    .then(({ createStage }) => {
+      stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
+      document.body.classList.add("has-3d");
+      stage.layout(panLayout());
+      paint(player.snapshot());
+    })
+    .catch((err) => {
+      void err;
+    });
 }
 
 function onPanHit(event) {
@@ -1082,6 +1107,11 @@ function paint(snap) {
     field.classList.toggle("is-on", sounding);
     field.classList.toggle("is-place", !sounding && on);
     field.classList.toggle("is-next", !on && nextNotes.has(id));
+    if (stage) {
+      const lit = sounding || field.classList.contains("is-tap");
+      const look = echo ? (heard.miss ? "miss" : "heard") : lit ? "on" : on ? "place" : nextNotes.has(id) ? "next" : "idle";
+      stage.set(id, look);
+    }
     const shade = field.querySelector(".field-shade");
     const face = field.querySelector(".field-face");
     if (echo) {
@@ -1104,6 +1134,7 @@ function paint(snap) {
   });
   const svg = document.querySelector(".pan-svg");
   if (svg) svg.classList.toggle("is-tak", snap.playing && onNotes.has(TAK));
+  if (stage) stage.setTak(snap.playing && onNotes.has(TAK));
   document.querySelectorAll("[data-event]").forEach((node) => {
     const row = node.closest("[data-pattern]");
     const inPattern = !row || row.dataset.pattern === snap.patternId;
@@ -1450,3 +1481,4 @@ function trackStickHeight() {
 trackStickHeight();
 drawPan();
 route();
+bootStage();
