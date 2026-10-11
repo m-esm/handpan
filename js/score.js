@@ -482,6 +482,34 @@ export function sheetOf(pattern) {
   };
 }
 
+const HALVE_OVER = 4;
+
+export function stepsOf(pattern) {
+  const sections = sheetOf(pattern).sections;
+  if (sections.length < 2) return [];
+  const total = sections[sections.length - 1].end;
+  const steps = [];
+  const seen = new Set();
+  const add = (kind, label, short, first, end, key) =>
+    steps.push({ kind, label, short, first, end, key: key || `${first}:${end}` });
+  sections.forEach((section, i) => {
+    if (seen.has(section.name)) return;
+    seen.add(section.name);
+    const bars = section.end - section.first;
+    if (bars > HALVE_OVER) {
+      const mid = section.first + Math.ceil(bars / 2);
+      add("half", `${section.name}, first half`, `${section.name} 1/2`, section.first, mid);
+      add("half", `${section.name}, second half`, `${section.name} 2/2`, mid, section.end);
+    }
+    add("part", section.name, section.name, section.first, section.end, section.name);
+    if (i > 0 && section.end < total) {
+      add("join", `Join, start to ${section.name}`, `Join 1-${section.end}`, 0, section.end);
+    }
+  });
+  add("whole", "Whole piece", "Whole", 0, total);
+  return steps;
+}
+
 const COUNT_WORDS = { 2: ["", " and"], 4: ["", " e", " and", " a"] };
 
 export function beatLabel(beat, pattern) {

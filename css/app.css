@@ -35,6 +35,8 @@ button, a, input { font: inherit; color: inherit; }
 
 button, .open, .back, .brand { cursor: pointer; }
 
+[hidden] { display: none !important; }
+
 :focus-visible {
   outline: 2px solid var(--brass);
   outline-offset: 3px;
@@ -550,7 +552,7 @@ input[type="range"] {
   gap: 6px;
 }
 
-.part-chip {
+.part-chip, .step-chip {
   padding: 4px 10px;
   font-size: 13px;
   border: 1px solid var(--line);
@@ -558,18 +560,67 @@ input[type="range"] {
   color: var(--soft);
 }
 
-.part-chip.is-learned::after {
+.part-chip.is-learned::after, .step-chip.is-learned::after {
   content: " \2713";
   color: var(--brass);
 }
 
-.part-chip.is-current {
+.part-chip.is-current, .step-chip.is-current {
   background: var(--brass);
   border-color: var(--brass);
   color: var(--ink);
 }
 
-.part-chip.is-current.is-learned::after { color: var(--ink); }
+.part-chip.is-current.is-learned::after, .step-chip.is-current.is-learned::after { color: var(--ink); }
+
+.guide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.step-head {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.step-head strong {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.step-what {
+  flex: 1 1 160px;
+  color: var(--soft);
+  font-size: 14px;
+}
+
+.step-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mist);
+}
+
+.step-btn:hover { border-color: var(--brass); }
+
+.step-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--line);
+}
+
+.step-btn.is-main {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: var(--ink);
+}
 
 .legend {
   display: flex;
@@ -596,6 +647,33 @@ input[type="range"] {
   flex-direction: column;
   gap: 18px;
   padding-bottom: 24px;
+}
+
+.sheet.is-focus {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 16px;
+}
+
+.sheet.is-focus .part {
+  flex: 1 0 100%;
+  min-width: 0;
+}
+
+.sheet.is-focus .part.is-folded {
+  flex: 0 0 auto;
+  opacity: 0.55;
+}
+
+.part.is-folded .part-head { margin-bottom: 0; }
+
+.part.is-folded h2 { font-size: 16px; }
+
+.part.is-folded .bars,
+.part.is-folded .part-done,
+.sheet.is-focus .part-loop {
+  display: none;
 }
 
 .part-head {

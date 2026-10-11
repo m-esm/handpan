@@ -6,6 +6,7 @@ import {
   TAK,
   eventsOf,
   sheetOf,
+  stepsOf,
   beatLabel,
   pretty,
 } from "./score.js";
@@ -414,13 +415,27 @@ function clock(seconds) {
   return `${Math.floor(whole / 60)} min ${whole % 60} s`;
 }
 
-const LEARNED_KEY = "disc-kurd-learned";
-let learned = {};
-try {
-  learned = JSON.parse(localStorage.getItem(LEARNED_KEY)) || {};
-} catch (err) {
-  void err;
+function readStore(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || {};
+  } catch (err) {
+    void err;
+    return {};
+  }
 }
+
+function writeStore(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    void err;
+  }
+}
+
+const LEARNED_KEY = "disc-kurd-learned";
+const STEP_KEY = "disc-kurd-step";
+const learned = readStore(LEARNED_KEY);
+const stepAt = readStore(STEP_KEY);
 
 function partNames(pattern) {
   return [...new Set((pattern.sections || [{ name: "" }]).map((section) => section.name))];
@@ -434,11 +449,38 @@ function setLearned(pattern, name, on) {
   const names = (learned[pattern.id] || []).filter((item) => item !== name);
   if (on) names.push(name);
   learned[pattern.id] = names;
-  try {
-    localStorage.setItem(LEARNED_KEY, JSON.stringify(learned));
-  } catch (err) {
-    void err;
+  writeStore(LEARNED_KEY, learned);
+}
+
+function markLearned(pattern, key, on) {
+  setLearned(pattern, key, on);
+  for (const box of document.querySelectorAll(".part-done input")) {
+    if (box.dataset.part === key) box.checked = on;
   }
+  fillGuide(pattern);
+  fillRows();
+  paint(player.snapshot());
+}
+
+function stepOf(pattern) {
+  const at = stepAt[pattern.id];
+  return Number.isInteger(at) ? stepsOf(pattern)[at] || null : null;
+}
+
+function barsOf(pattern, range) {
+  if (!range) return null;
+  const beats = barBeats(pattern);
+  return { first: Math.round(range.from / beats), end: Math.round(range.to / beats) };
+}
+
+function onStep(pattern, range) {
+  const step = stepOf(pattern);
+  const bars = barsOf(pattern, range);
+  return !!step && !!bars && bars.first === step.first && bars.end === step.end;
+}
+
+function barSpan(first, end) {
+  return end - first === 1 ? `bar ${first + 1}` : `bars ${first + 1} to ${end}`;
 }
 
 function learnedLine(pattern) {
@@ -467,6 +509,8 @@ function rowFor(pattern) {
       player.pause();
       return;
     }
+    const open = patternFromHash();
+    if (player.range && (!open || open.id !== pattern.id)) player.setRange(null);
     player.setLoop(pattern.loop !== false);
     player.play(pattern, 0);
   });
@@ -600,7 +644,7 @@ function renderLearn(pattern) {
   loop.className = "loop";
   loop.textContent = "Loop";
   loop.addEventListener("click", () => {
-    if (player.range) clearRange();
+    if (player.range && !onStep(pattern, player.range)) clearRange();
     else player.setLoop(!player.loop);
   });
 
@@ -614,21 +658,140 @@ function renderLearn(pattern) {
   const keys = document.createElement("p");
   keys.className = "keys";
   keys.textContent =
-    "Space plays and pauses. Arrows move one note. Click a bar number to loop that bar, and a second bar number to extend the loop. With Listen on, the page waits until you strike the lit note.";
+    "Space plays and pauses. Arrows move one note. Click a bar number to loop that bar, and a second bar number to extend the loop. With Listen on, the page waits until you strike the lit note. Learn in steps takes a piece one part at a time, then joins the parts.";
 
   transport.append(play, previous, next, tempoLabel, loop, ranged);
 
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
   deck.className = "deck";
-  deck.append(transport);
-  if (sheet.sections.length > 1) deck.append(partMap(pattern, sheet));
+  const guide = document.createElement("div");
+  guide.id = "guide";
+  guide.className = "guide";
+  deck.append(transport, guide);
 
   const brief = document.createElement("div");
   brief.className = "brief";
   brief.append(about, warn);
 
   dock.append(head, brief, deck, keys, legend(), sheetNode(pattern, sheet));
+  fillGuide(pattern);
+  focusSheet(pattern);
+}
+
+function textButton(className, text) {
+  const node = document.createElement("button");
+  node.type = "button";
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+function fillGuide(pattern) {
+  const guide = document.getElementById("guide");
+  if (!guide) return;
+  lastScroll = -2;
+  guide.replaceChildren();
+  const steps = stepsOf(pattern);
+  if (steps.length === 0) return;
+  const step = stepOf(pattern);
+  guide.classList.toggle("is-stepping", !!step);
+  if (!step) {
+    const done = steps.filter((item) => isLearned(pattern, item.key)).length;
+    const label = done ? `Continue steps, ${done} of ${steps.length} done` : "Learn in steps";
+    const open = textButton("step-btn is-main", label);
+    open.id = "steps-open";
+    open.addEventListener("click", () => {
+      const next = steps.findIndex((item) => !isLearned(pattern, item.key));
+      openStep(pattern, next < 0 ? 0 : next);
+    });
+    guide.append(open, partMap(pattern, sheetOf(pattern)));
+    return;
+  }
+  const at = stepAt[pattern.id];
+  const last = at === steps.length - 1;
+  const done = isLearned(pattern, step.key);
+
+  const head = document.createElement("div");
+  head.className = "step-head";
+  const count = document.createElement("strong");
+  count.textContent = `Step ${at + 1} of ${steps.length}`;
+  const what = document.createElement("span");
+  what.className = "step-what";
+  what.textContent = `${step.label}, ${barSpan(step.first, step.end)}`;
+
+  const back = textButton("step-btn", "Back");
+  back.disabled = at === 0;
+  back.addEventListener("click", () => openStep(pattern, at - 1));
+
+  const passText = done ? (last ? "Finish" : "Next step") : last ? "Got it, finish" : "Got it, next";
+  const pass = textButton("step-btn is-main", passText);
+  pass.id = "step-pass";
+  pass.addEventListener("click", () => {
+    if (!done) markLearned(pattern, step.key, true);
+    openStep(pattern, last ? null : at + 1);
+  });
+
+  head.append(count, what, back, pass);
+  if (done) {
+    const undo = textButton("step-btn", "Not yet");
+    undo.addEventListener("click", () => markLearned(pattern, step.key, false));
+    head.append(undo);
+  }
+  const leave = textButton("step-btn", "Show whole piece");
+  leave.id = "steps-close";
+  leave.addEventListener("click", () => openStep(pattern, null));
+  head.append(leave);
+
+  const map = document.createElement("nav");
+  map.className = "partmap";
+  map.setAttribute("aria-label", "Steps for this piece");
+  steps.forEach((item, i) => {
+    const chip = textButton("step-chip", item.short);
+    chip.title = `${item.label}, ${barSpan(item.first, item.end)}`;
+    chip.classList.toggle("is-learned", isLearned(pattern, item.key));
+    chip.classList.toggle("is-current", i === at);
+    if (i === at) chip.setAttribute("aria-current", "step");
+    chip.addEventListener("click", () => openStep(pattern, i));
+    map.append(chip);
+  });
+  guide.append(head, map);
+}
+
+function focusSheet(pattern) {
+  const sheet = document.getElementById("sheet");
+  if (!sheet) return;
+  const step = stepOf(pattern);
+  sheet.classList.toggle("is-focus", !!step);
+  for (const part of sheet.querySelectorAll(".part")) {
+    let shown = 0;
+    for (const bar of part.querySelectorAll(".bar")) {
+      const n = Number(bar.dataset.bar);
+      bar.hidden = !!step && (n < step.first || n >= step.end);
+      if (!bar.hidden) shown += 1;
+    }
+    part.classList.toggle("is-folded", shown === 0);
+  }
+}
+
+function placeStep(pattern, step) {
+  const beats = barBeats(pattern);
+  player.setRange({ from: step.first * beats, to: step.end * beats });
+  const first = eventsOf(pattern).find((event) => event.beat >= step.first * beats - 0.001);
+  if (first) player.seek(first.index, false, true);
+}
+
+function openStep(pattern, at) {
+  const playing = player.playing;
+  if (at === null) delete stepAt[pattern.id];
+  else stepAt[pattern.id] = at;
+  writeStore(STEP_KEY, stepAt);
+  fillGuide(pattern);
+  focusSheet(pattern);
+  const step = stepOf(pattern);
+  if (!step) clearRange();
+  else if (playing) loopBars(pattern, step.first, step.end);
+  else placeStep(pattern, step);
 }
 
 function partMap(pattern, sheet) {
@@ -721,8 +884,7 @@ function sheetNode(pattern, sheet) {
       name.textContent = section.name;
       const span = document.createElement("span");
       span.className = "part-bars";
-      span.textContent =
-        section.end - section.first === 1 ? `bar ${section.first + 1}` : `bars ${section.first + 1} to ${section.end}`;
+      span.textContent = barSpan(section.first, section.end);
       const loop = document.createElement("button");
       loop.type = "button";
       loop.className = "part-loop";
@@ -741,17 +903,7 @@ function sheetNode(pattern, sheet) {
     box.type = "checkbox";
     box.dataset.part = section.name;
     box.checked = isLearned(pattern, section.name);
-    box.addEventListener("change", () => {
-      setLearned(pattern, section.name, box.checked);
-      for (const other of node.querySelectorAll(".part-done input")) {
-        if (other.dataset.part === section.name) other.checked = box.checked;
-      }
-      for (const chip of document.querySelectorAll(".part-chip")) {
-        if (chip.dataset.part === section.name) chip.classList.toggle("is-learned", box.checked);
-      }
-      fillRows();
-      paint(player.snapshot());
-    });
+    box.addEventListener("change", () => markLearned(pattern, section.name, box.checked));
     done.append(box, " Learned");
     head.append(done);
 
@@ -809,23 +961,20 @@ function loopBars(pattern, first, end) {
 }
 
 function clearRange() {
+  const pattern = player.pattern;
+  const step = pattern ? stepOf(pattern) : null;
+  const beats = pattern ? barBeats(pattern) : 4;
   const playing = player.playing;
   const at = player.index;
-  player.setRange(null);
+  player.setRange(step ? { from: step.first * beats, to: step.end * beats } : null);
   if (playing) player.seek(at, true);
 }
 
 function pickBar(pattern, bar) {
-  const beats = barBeats(pattern);
-  const range = player.range;
-  if (!range) {
-    loopBars(pattern, bar, bar + 1);
-    return;
-  }
-  const first = Math.round(range.from / beats);
-  const end = Math.round(range.to / beats);
-  if (bar >= first && bar < end) clearRange();
-  else loopBars(pattern, Math.min(first, bar), Math.max(end, bar + 1));
+  const bars = barsOf(pattern, player.range);
+  if (!bars || onStep(pattern, player.range)) loopBars(pattern, bar, bar + 1);
+  else if (bar >= bars.first && bar < bars.end) clearRange();
+  else loopBars(pattern, Math.min(bars.first, bar), Math.max(bars.end, bar + 1));
 }
 
 function keepInView(node, toTop) {
@@ -866,6 +1015,9 @@ function route() {
   renderLearn(pattern);
   if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
+  const step = stepOf(pattern);
+  const bars = barsOf(pattern, player.range);
+  if (step && !(bars && bars.first >= step.first && bars.end <= step.end)) placeStep(pattern, step);
   else paint(player.snapshot());
 }
 
@@ -973,7 +1125,9 @@ function paint(snap) {
   const loop = document.getElementById("loop");
   if (loop) {
     loop.setAttribute("aria-pressed", snap.loop ? "true" : "false");
-    loop.textContent = snap.range ? "Loop bars" : "Loop";
+    const shown = PATTERNS.find((item) => item.id === snap.patternId);
+    const stepped = !!shown && onStep(shown, snap.range);
+    loop.textContent = stepped ? "Loop step" : snap.range ? "Loop bars" : "Loop";
   }
   const warn = document.querySelector(".mirror-note");
   if (warn) warn.hidden = !mirrored;
@@ -981,16 +1135,17 @@ function paint(snap) {
 
 function paintRange(snap) {
   const pattern = PATTERNS.find((item) => item.id === snap.patternId);
-  const beats = pattern ? barBeats(pattern) : 4;
-  const first = snap.range ? Math.round(snap.range.from / beats) : -1;
-  const end = snap.range ? Math.round(snap.range.to / beats) : -1;
-  const key = `${snap.patternId} ${first} ${end}`;
+  const bars = pattern ? barsOf(pattern, snap.range) : null;
+  const stepped = !!pattern && onStep(pattern, snap.range);
+  const first = bars ? bars.first : -1;
+  const end = bars ? bars.end : -1;
+  const key = `${snap.patternId} ${first} ${end} ${stepped}`;
   const sheet = document.getElementById("sheet");
   if (!sheet || sheet.dataset.range === key) return;
   sheet.dataset.range = key;
   for (const bar of sheet.querySelectorAll(".bar")) {
     const n = Number(bar.dataset.bar);
-    bar.classList.toggle("in-range", n >= first && n < end);
+    bar.classList.toggle("in-range", !stepped && n >= first && n < end);
   }
   for (const button of sheet.querySelectorAll(".part-loop")) {
     const whole = Number(button.dataset.from) === first && Number(button.dataset.to) === end;
@@ -999,7 +1154,7 @@ function paintRange(snap) {
   }
   const ranged = document.getElementById("range");
   if (ranged) {
-    ranged.hidden = first < 0;
+    ranged.hidden = first < 0 || stepped;
     ranged.textContent = end - first === 1 ? `Bar ${first + 1} loops. Clear` : `Bars ${first + 1} to ${end} loop. Clear`;
   }
 }
