@@ -14,9 +14,12 @@ import {
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
+import { VIEWS, viewFor } from "./environments.js";
+import { initExplore } from "./explore.js";
 
 const audio = createAudio();
 document.querySelector(".browse-music").addEventListener("click", () => {
+  setLibraryOpen(true);
   document.getElementById("dock").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
   document.getElementById("find").focus({ preventScroll: true });
 });
@@ -42,6 +45,50 @@ let settled = false;
 let lastListed = "";
 let routed = null;
 let stage = null;
+let sceneLoadCancelled = false;
+let sceneChoice = "auto";
+let lastEnvironment = "";
+
+const sceneSelect = document.getElementById("environment");
+for (const [key, view] of Object.entries(VIEWS)) {
+  const option = document.createElement("option");
+  option.value = key;
+  option.textContent = view.name;
+  sceneSelect.append(option);
+}
+sceneSelect.addEventListener("change", () => {
+  sceneChoice = sceneSelect.value;
+  paint(player.snapshot());
+});
+
+function setLibraryOpen(open) {
+  document.body.classList.toggle("library-collapsed", !open);
+  document.getElementById("dock").hidden = !open;
+  const button = document.getElementById("library-toggle");
+  button.setAttribute("aria-expanded", String(open));
+  button.textContent = open ? "Hide music" : "Show music";
+  try { localStorage.setItem("alamut-library-open", String(open)); } catch (err) { void err; }
+}
+
+document.getElementById("library-toggle").addEventListener("click", () => {
+  setLibraryOpen(document.getElementById("dock").hidden);
+});
+
+function finishLoading(message = "") {
+  const focusLoader = document.getElementById("scene-loader").contains(document.activeElement);
+  document.querySelector(".wrap").removeAttribute("inert");
+  document.getElementById("scene-loader").hidden = true;
+  document.getElementById("pan").setAttribute("aria-busy", "false");
+  const notice = document.getElementById("scene-notice");
+  notice.textContent = message;
+  notice.hidden = !message;
+  if (focusLoader) document.querySelector(".brand").focus();
+}
+
+document.getElementById("simple-view").addEventListener("click", () => {
+  sceneLoadCancelled = true;
+  finishLoading("Simple view. All notes and learning tools are ready.");
+});
 
 const player = createPlayer(audio, paint);
 const listener = createListener(onHeard, onMicEnded);
@@ -188,19 +235,33 @@ function panLayout() {
   });
 }
 
-function bootStage() {
+async function bootStage() {
+  document.getElementById("pan").setAttribute("aria-busy", "true");
   const probe = document.createElement("canvas");
-  if (!probe.getContext("webgl2") && !probe.getContext("webgl")) return;
-  import("./scene.js")
-    .then(({ createStage }) => {
-      stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
-      document.body.classList.add("has-3d");
-      stage.layout(panLayout());
-      paint(player.snapshot());
-    })
-    .catch((err) => {
-      void err;
-    });
+  const context = probe.getContext("webgl2") || probe.getContext("webgl");
+  if (!context) { finishLoading("Simple view. Your browser could not start 3D; all music tools are ready."); return; }
+  context.getExtension("WEBGL_lose_context")?.loseContext();
+  const slow = setTimeout(() => {
+    document.getElementById("loading-message").textContent = "Still loading. You can start in simple view.";
+  }, 8000);
+  try {
+    const { createStage } = await import("./scene.js");
+    if (sceneLoadCancelled) return;
+    document.getElementById("loading-message").textContent = "Tuning the light and the handpan";
+    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+    if (sceneLoadCancelled) return;
+    stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
+    document.body.classList.add("has-3d");
+    stage.layout(panLayout());
+    paint(player.snapshot());
+    requestAnimationFrame(() => finishLoading());
+  } catch (err) {
+    for (const canvas of document.querySelectorAll(".world, .pan-3d")) canvas.remove();
+    document.body.classList.remove("has-3d");
+    finishLoading("Simple view. The courtyard could not load; all music tools are ready.");
+  } finally {
+    clearTimeout(slow);
+  }
 }
 
 function onPanHit(event) {
@@ -335,10 +396,10 @@ function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
   const heading = document.createElement("h2");
-  heading.textContent = "The music room";
+  heading.textContent = "Your music";
   const lead = document.createElement("p");
   lead.className = "lead";
-  lead.textContent = "Find a melody. Make it your own.";
+  lead.textContent = "Listen, explore, or learn a piece.";
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
@@ -377,7 +438,13 @@ function renderList() {
   rows.id = "rows";
   const libraryHead = document.createElement("div");
   libraryHead.className = "library-head";
-  libraryHead.append(heading, lead, find, chips);
+  const titleRow = document.createElement("div");
+  titleRow.className = "library-title";
+  const close = textButton("library-close", "Collapse");
+  close.setAttribute("aria-label", "Collapse music library");
+  close.addEventListener("click", () => { setLibraryOpen(false); document.getElementById("library-toggle").focus(); });
+  titleRow.append(heading, close);
+  libraryHead.append(titleRow, lead, find, chips);
   const resultCount = document.createElement("p");
   resultCount.id = "result-count";
   resultCount.className = "result-count";
@@ -568,6 +635,7 @@ function rowFor(pattern) {
   body.className = "row-body";
   const title = document.createElement("h3");
   title.textContent = pattern.title;
+  title.title = pattern.blurb;
   const blurb = document.createElement("p");
   blurb.className = "blurb";
   blurb.textContent = pattern.blurb;
@@ -596,7 +664,7 @@ function rowFor(pattern) {
   const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
   const length = pattern.loop === false ? `, ${clock((pattern.loopBeats * 60) / pattern.bpm)}` : "";
   meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm${length}${learnedLine(pattern)}`;
-  body.append(title, blurb, mini, meta);
+  body.append(title, blurb, meta, mini);
 
   const open = document.createElement("a");
   open.className = "open";
@@ -605,7 +673,7 @@ function rowFor(pattern) {
 
   const side = document.createElement("div");
   side.className = "row-side";
-  side.append(play);
+  side.append(thumbFor(pattern, 48), play);
   row.append(side, body, open);
   return row;
 }
@@ -613,7 +681,7 @@ function rowFor(pattern) {
 function renderLearn(pattern) {
   lastScroll = -2;
   settled = false;
-  document.title = `${pattern.title} - DISC D Kurd`;
+  document.title = `${pattern.title} | Alamut`;
   const dock = document.getElementById("learn");
   dock.innerHTML = "";
 
@@ -1080,7 +1148,7 @@ function route() {
   if (!document.getElementById("find")) renderList();
   const learn = document.getElementById("learn");
   if (!pattern) {
-    document.title = "DISC D Kurd";
+    document.title = "Alamut | A courtyard for sound";
     learn.innerHTML = "";
     const hint = document.createElement("p");
     hint.className = "hint";
@@ -1113,6 +1181,12 @@ function route() {
 }
 
 function paint(snap) {
+  const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
+  if (stage && environment !== lastEnvironment) {
+    stage.environment(environment);
+    lastEnvironment = environment;
+    document.getElementById("environment-name").textContent = VIEWS[environment].name;
+  }
   const onNotes = new Set(snap.notes);
   const nextNotes = new Set(snap.nextNotes);
   document.querySelectorAll(".field").forEach((field) => {
@@ -1204,8 +1278,9 @@ function paint(snap) {
     if (row && dock && dock.scrollHeight > dock.clientHeight + 4) {
       const dr = dock.getBoundingClientRect();
       const rr = row.getBoundingClientRect();
-      if (rr.top < dr.top || rr.bottom > dr.bottom) {
-        dock.scrollTop += rr.top - dr.top - 8;
+      const visibleTop = dr.top + (dock.querySelector(".library-head")?.offsetHeight || 0);
+      if (rr.top < visibleTop || rr.bottom > dr.bottom) {
+        dock.scrollTop += rr.top - visibleTop - 8;
       }
     }
   }
@@ -1320,6 +1395,7 @@ document.getElementById("mirror").addEventListener("click", () => {
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("input, textarea, select")) return;
   if (event.code === "Escape" && document.body.classList.contains("is-learn")) {
@@ -1495,6 +1571,8 @@ function trackStickHeight() {
 }
 
 trackStickHeight();
+initExplore({ onOpen: () => player.pause() });
 drawPan();
 route();
+try { setLibraryOpen(localStorage.getItem("alamut-library-open") === "true"); } catch (err) { setLibraryOpen(false); }
 bootStage();
