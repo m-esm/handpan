@@ -535,7 +535,9 @@ function rowFor(pattern) {
   const title = document.createElement("h3");
   title.textContent = pattern.title;
   const blurb = document.createElement("p");
+  blurb.className = "blurb";
   blurb.textContent = pattern.blurb;
+  blurb.title = pattern.blurb;
   const mini = document.createElement("div");
   mini.className = "mini";
   const events = eventsOf(pattern);
@@ -591,7 +593,7 @@ function renderLearn(pattern) {
 
   const about = document.createElement("p");
   about.className = "about";
-  about.textContent = pattern.about;
+  about.textContent = pattern.blurb;
 
   const warn = document.createElement("p");
   warn.className = "mirror-note";

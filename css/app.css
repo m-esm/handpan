@@ -432,6 +432,12 @@ h1 {
 
 .row p { margin: 6px 0 0; color: var(--soft); line-height: 1.4; }
 
+.row .blurb {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .row-body { min-width: 0; }
 
 .meta { font-size: 13px; margin-top: 8px; }
