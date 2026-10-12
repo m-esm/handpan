@@ -17,6 +17,7 @@ import { createListener, accepts } from "./listen.js";
 import { VIEWS, viewFor } from "./environments.js";
 import { initExplore } from "./explore.js";
 import { initMotion } from "./motion.js";
+import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPractice, savePractice } from "./practice.js";
 
 const audio = createAudio();
 document.getElementById("pan").addEventListener("pointerup", (event) => {
@@ -47,6 +48,14 @@ let stage = null;
 let sceneLoadCancelled = false;
 let sceneChoice = "auto";
 let lastEnvironment = "";
+let practice = null;
+let practiceRequest = null;
+let practiceSaved = null;
+try {
+  practiceSaved = readPractice(localStorage, PATTERNS);
+} catch {
+  practiceSaved = null;
+}
 
 const sceneSelect = document.getElementById("environment");
 for (const [key, view] of Object.entries(VIEWS)) {
@@ -107,7 +116,7 @@ function skipTaks() {
 }
 
 function onHeard(found) {
-  if (player.playing || performance.now() < deafUntil) return;
+  if (practice || player.playing || performance.now() < deafUntil) return;
   let id = found.id;
   let miss = false;
   if (patternFromHash() && player.pattern) {
@@ -278,12 +287,21 @@ function onPanKey(event) {
   if (event.code !== "Enter" && event.code !== "Space") return;
   event.preventDefault();
   event.stopPropagation();
+  if (event.repeat) return;
   soundNote(field.dataset.note);
 }
 
 const tapTimers = new Map();
 
 function soundNote(id) {
+  if (practice?.mode === "try") {
+    const result = practice.attempt.strike(id);
+    practice.message = result.complete ? "Phrase complete. Retry, hear it, or choose Next phrase."
+      : !result.accepted ? "Keep the current target. Try its numbered note."
+        : result.partial.length ? "Chord: add the remaining note(s)." : "";
+    if (result.target) player.seek(result.target.index, false, true);
+    updatePractice(player.snapshot());
+  }
   deafUntil = performance.now() + TAP_DEAF_MS;
   audio.resume().then(() => audio.strikeChord([id], audio.now() + 0.02)).catch(audioError);
   const field = document.querySelector(`.field[data-note="${id}"]`);
@@ -299,7 +317,7 @@ function soundNote(id) {
     );
   }
   player.refresh();
-  if (!player.playing) {
+  if (!player.playing && !practice) {
     const hand = flipHand(SIDE[id]);
     const node = caption();
     if (node) node.textContent = hand ? `${numberOf(id)}, ${hand} hand` : numberOf(id);
@@ -447,6 +465,16 @@ function renderList() {
   resultCount.className = "result-count";
   resultCount.setAttribute("role", "status");
   libraryHead.append(resultCount);
+  const beginner = textButton("practice-start", "Start beginner practice");
+  beginner.addEventListener("click", () => requestPractice(beginnerPattern(PATTERNS)));
+  const continuePractice = textButton("practice-start", "Continue practice");
+  continuePractice.id = "practice-continue";
+  continuePractice.hidden = !practiceSaved;
+  continuePractice.addEventListener("click", () => {
+    const pattern = PATTERNS.find((item) => item.id === practiceSaved?.patternId);
+    if (pattern) requestPractice(pattern, practiceSaved);
+  });
+  libraryHead.append(beginner, continuePractice);
   dock.append(libraryHead, rows);
   fillRows();
 }
@@ -616,6 +644,7 @@ function rowFor(pattern) {
   mark.textContent = "Play";
   play.append(mark);
   play.addEventListener("click", () => {
+    leavePractice();
     if (player.playing && player.pattern && player.pattern.id === pattern.id) {
       player.pause();
       return;
@@ -670,12 +699,261 @@ function rowFor(pattern) {
   open.className = "open";
   open.href = `#/p/${pattern.id}`;
   open.textContent = "Learn";
+  const practiceOpen = textButton("practice-entry", "Practice");
+  practiceOpen.setAttribute("aria-label", `Practice ${pattern.title} in short phrases`);
+  practiceOpen.addEventListener("click", () => requestPractice(pattern));
+  body.append(practiceOpen);
 
   const side = document.createElement("div");
   side.className = "row-side";
   side.append(thumbFor(pattern, 48), play);
   row.append(side, body, open);
   return row;
+}
+
+function rememberPractice() {
+  if (!practice) return;
+  practiceSaved = { version: 1, patternId: practice.pattern.id, phrase: practice.at, tempo: practice.tempo };
+  try {
+    savePractice(localStorage, practiceSaved, PATTERNS);
+  } catch {
+    void 0;
+  }
+  const button = document.getElementById("practice-continue");
+  if (button) button.hidden = false;
+}
+
+function requestPractice(pattern, saved = null) {
+  if (!pattern) return;
+  practiceRequest = { pattern, saved };
+  if (patternFromHash()?.id === pattern.id) route();
+  else location.hash = `#/p/${pattern.id}`;
+}
+
+function enterPractice(pattern, saved = null) {
+  player.pause();
+  stopListening("");
+  const phrases = phrasesOf(pattern);
+  if (!phrases.length) return;
+  const at = saved?.phrase ?? 0;
+  practice = {
+    pattern,
+    phrases,
+    at,
+    tempo: saved?.tempo ?? practiceTempo(pattern.bpm * 0.7),
+    mode: "ready",
+    attempt: createNotePractice(phrases[at].events),
+    message: "Choose Hear phrase, then try the notes at your own pace.",
+    pending: false,
+  };
+  selectPhrase(at);
+}
+
+function selectPhrase(at) {
+  player.pause();
+  practice.at = Math.max(0, Math.min(practice.phrases.length - 1, at));
+  practice.mode = "ready";
+  practice.pending = false;
+  practice.run = (practice.run || 0) + 1;
+  const phrase = practice.phrases[practice.at];
+  practice.attempt.reset(phrase.events);
+  practice.message = phrase.events.length ? "Hear the phrase or try its notes. No microphone needed."
+    : "This bar is silent. Rest for its full length on your instrument, then choose Next phrase.";
+  player.setRange(phrase.events.length ? { from: phrase.from, to: phrase.to } : null);
+  player.setLoop(false);
+  player.setTempo(practice.tempo);
+  if (phrase.events.length) player.seek(phrase.events[0].index, false, true);
+  rememberPractice();
+  renderLearn(practice.pattern);
+  paint(player.snapshot());
+}
+
+function leavePractice(redraw = true) {
+  if (!practice) return;
+  const pattern = practice.pattern;
+  practice = null;
+  player.pause();
+  player.setRange(null);
+  document.body.classList.remove("is-practicing");
+  if (redraw && patternFromHash()?.id === pattern.id) {
+    const step = stepOf(pattern);
+    if (step) placeStep(pattern, step);
+    renderLearn(pattern);
+    paint(player.snapshot());
+  }
+}
+
+function tryPhrase() {
+  if (!practice) return;
+  player.pause();
+  practice.pending = false;
+  practice.run += 1;
+  practice.mode = "try";
+  const phrase = practice.phrases[practice.at];
+  const attempt = practice.attempt.reset(phrase.events);
+  player.setLoop(false);
+  practice.message = attempt.complete ? "This bar is silent. There are no notes to tap."
+    : "Tap the lit target. Chords accept separate taps; wrong notes keep the target.";
+  if (attempt.target) player.seek(attempt.target.index, false, true);
+  updatePractice(player.snapshot());
+}
+
+async function playPhrase(mode, resume = false) {
+  if (!practice) return;
+  const session = practice;
+  const run = ++session.run;
+  const phrase = session.phrases[session.at];
+  if (!phrase.events.length) return;
+  player.pause();
+  session.mode = mode;
+  session.attempt.reset(phrase.events);
+  session.message = mode === "hear" ? "Listen once, including the rests. Then choose Try notes."
+    : "Repeat this bar on your instrument. Pause whenever you need.";
+  player.setLoop(mode === "repeat");
+  player.setTempo(session.tempo);
+  session.pending = true;
+  updatePractice(player.snapshot());
+  try {
+    if (resume) await player.resume();
+    else await player.play(session.pattern, phrase.from, { keepTempo: true });
+  } catch {
+    if (practice === session && session.run === run) session.message = "Sound could not start. Press Hear phrase to retry.";
+  } finally {
+    if (practice === session && session.run === run) {
+      session.pending = false;
+      updatePractice(player.snapshot());
+    }
+  }
+}
+
+function pausePractice() {
+  if (!practice || !["hear", "repeat"].includes(practice.mode)) return;
+  if (player.playing || practice.pending) {
+    practice.pending = false;
+    practice.run += 1;
+    player.pause();
+    practice.message = "Paused. Resume replays the current note; Restart begins the bar.";
+    updatePractice(player.snapshot());
+  } else playPhrase(practice.mode, true);
+}
+
+function practicePanel(pattern) {
+  const panel = document.createElement("section");
+  panel.className = "practice-panel";
+  panel.setAttribute("aria-label", "Short phrase practice");
+  if (!practice || practice.pattern.id !== pattern.id) {
+    const entry = textButton("practice-start", "Practice one bar at a time");
+    entry.addEventListener("click", () => requestPractice(pattern));
+    panel.append(entry);
+    return panel;
+  }
+  const position = document.createElement("strong");
+  position.id = "practice-position";
+  position.tabIndex = -1;
+  const modes = document.createElement("div");
+  modes.className = "practice-actions";
+  for (const [id, label, action] of [
+    ["hear", "Hear phrase", () => playPhrase("hear")],
+    ["try", "Try notes", tryPhrase],
+    ["repeat", "Repeat slowly", () => playPhrase("repeat")],
+  ]) {
+    const button = textButton("practice-mode", label);
+    button.id = `practice-${id}`;
+    button.addEventListener("click", action);
+    modes.append(button);
+  }
+  const target = document.createElement("p");
+  target.id = "practice-target";
+  const next = document.createElement("p");
+  next.id = "practice-next";
+  const message = document.createElement("p");
+  message.id = "practice-message";
+  message.setAttribute("role", "status");
+  const actions = document.createElement("div");
+  actions.className = "practice-actions";
+  const pause = textButton("", "Pause");
+  pause.id = "practice-pause";
+  pause.addEventListener("click", pausePractice);
+  const restart = textButton("", "Restart phrase");
+  restart.id = "practice-restart";
+  restart.addEventListener("click", () => {
+    if (["hear", "repeat"].includes(practice.mode)) playPhrase(practice.mode);
+    else tryPhrase();
+  });
+  const tak = textButton("", "Tap tak (T)");
+  tak.addEventListener("click", () => soundNote(TAK));
+  const back = textButton("", "Previous phrase");
+  back.id = "practice-previous";
+  back.addEventListener("click", () => {
+    selectPhrase(practice.at - 1);
+    const target = document.getElementById("practice-previous");
+    (target.disabled ? document.getElementById("practice-position") : target).focus({ preventScroll: true });
+  });
+  const forward = textButton("", "Next phrase");
+  forward.id = "practice-forward";
+  forward.addEventListener("click", () => {
+    selectPhrase(practice.at + 1);
+    const target = document.getElementById("practice-forward");
+    (target.disabled ? document.getElementById("practice-position") : target).focus({ preventScroll: true });
+  });
+  const exit = textButton("", "Exit practice");
+  exit.addEventListener("click", () => {
+    leavePractice();
+    document.querySelector("#learn .practice-start").focus({ preventScroll: true });
+  });
+  actions.append(pause, restart, tak, back, forward, exit);
+  const tempo = document.createElement("label");
+  tempo.className = "practice-tempo";
+  const bpm = document.createElement("span");
+  bpm.id = "practice-bpm";
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.min = "48";
+  slider.max = "140";
+  slider.value = String(practice.tempo);
+  slider.setAttribute("aria-label", "Practice tempo in beats per minute");
+  slider.addEventListener("input", () => {
+    practice.tempo = practiceTempo(Number(slider.value));
+    player.setTempo(practice.tempo);
+    rememberPractice();
+  });
+  tempo.append(bpm, slider);
+  const help = document.createElement("p");
+  help.className = "practice-help";
+  help.textContent = "0 = centre ding; 1–9 = rim notes; + = chord (both notes); × = tak, a rim tap; dots = rest or let the note ring. Tap the pan or use number keys and T. Try notes skips rests and teaches note order, not timing or physical handpan accuracy. Learned marks remain your own assessment.";
+  panel.append(position, modes, target, next, message, tempo, actions, help);
+  return panel;
+}
+
+function updatePractice(snap) {
+  if (!practice || !document.getElementById("practice-position")) return;
+  const phrase = practice.phrases[practice.at];
+  const attempt = practice.attempt.snapshot();
+  const active = ["hear", "repeat"].includes(practice.mode);
+  const at = active ? phrase.events.findIndex((event) => event.index === snap.index) : attempt.at;
+  const target = active ? phrase.events[at] : attempt.target;
+  const next = phrase.events[at + 1];
+  const describe = (event) => event ? event.notes.map((id) => `${id === TAK ? "tak" : numberOf(id)} (${flipHand(event.hands[id]) || "either"} hand)`).join(" + ") : "none";
+  const set = (id, text) => {
+    const node = document.getElementById(id);
+    if (node.textContent !== text) node.textContent = text;
+  };
+  set("practice-position", `Phrase ${practice.at + 1} of ${practice.phrases.length} · ${barSpan(phrase.first, phrase.end)}${phrase.name ? ` · ${phrase.name}` : ""}`);
+  set("practice-target", !phrase.events.length ? "Rest bar" : attempt.complete && practice.mode === "try" ? "Phrase complete" : `Current: ${describe(target)}`);
+  set("practice-next", `Next: ${describe(next)}${attempt.partial.length ? ` · Already tapped: ${attempt.partial.map((id) => id === TAK ? "tak" : numberOf(id)).join(" + ")}` : ""}`);
+  set("practice-message", active && snap.ended ? "Phrase heard, including its rests. Try notes or hear it again." : practice.message);
+  set("practice-bpm", `Practice tempo: ${practice.tempo} BPM`);
+  set("practice-restart", practice.mode === "try" && attempt.complete ? "Retry notes" : "Restart phrase");
+  const pause = document.getElementById("practice-pause");
+  pause.disabled = !active || !phrase.events.length;
+  pause.textContent = snap.playing || practice.pending ? "Pause" : "Resume";
+  document.getElementById("practice-previous").disabled = practice.at === 0;
+  document.getElementById("practice-forward").disabled = practice.at === practice.phrases.length - 1;
+  for (const mode of ["hear", "try", "repeat"]) {
+    const button = document.getElementById(`practice-${mode}`);
+    button.setAttribute("aria-pressed", String(practice.mode === mode));
+    button.disabled = !phrase.events.length;
+  }
 }
 
 function renderLearn(pattern) {
@@ -720,6 +998,7 @@ function renderLearn(pattern) {
   playMark.textContent = "Play";
   play.append(playMark);
   play.addEventListener("click", () => {
+    leavePractice();
     if (player.playing) {
       player.pause();
       return;
@@ -736,14 +1015,14 @@ function renderLearn(pattern) {
   previous.className = "stepper is-prev";
   previous.setAttribute("aria-label", "Previous note");
   previous.title = "Previous note";
-  previous.addEventListener("click", () => player.step(-1, listener.on));
+  previous.addEventListener("click", () => { leavePractice(); player.step(-1, listener.on); });
 
   const next = document.createElement("button");
   next.type = "button";
   next.className = "stepper is-next";
   next.setAttribute("aria-label", "Next note");
   next.title = "Next note";
-  next.addEventListener("click", () => player.step(1, listener.on));
+  next.addEventListener("click", () => { leavePractice(); player.step(1, listener.on); });
 
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
@@ -776,6 +1055,7 @@ function renderLearn(pattern) {
   loop.className = "loop";
   loop.textContent = "Loop";
   loop.addEventListener("click", () => {
+    leavePractice();
     if (player.range && !onStep(pattern, player.range)) clearRange();
     else player.setLoop(!player.loop);
   });
@@ -802,9 +1082,16 @@ function renderLearn(pattern) {
   guide.className = "guide";
   deck.append(transport, guide);
 
-  dock.append(head, warn, deck, legend(), sheetNode(pattern, sheet), keys);
+  document.body.classList.toggle("is-practicing", !!practice);
+  const panel = practicePanel(pattern);
+  const notation = sheetNode(pattern, sheet);
+  dock.append(head, warn, panel, deck, legend());
+  if (practice) panel.querySelector("#practice-next").after(notation);
+  else dock.append(notation);
+  dock.append(keys);
   fillGuide(pattern);
   focusSheet(pattern);
+  updatePractice(player.snapshot());
 }
 
 function textButton(className, text) {
@@ -900,7 +1187,7 @@ function fillGuide(pattern) {
 function focusSheet(pattern) {
   const sheet = document.getElementById("sheet");
   if (!sheet) return;
-  const step = stepOf(pattern);
+  const step = practice?.pattern.id === pattern.id ? practice.phrases[practice.at] : stepOf(pattern);
   sheet.classList.toggle("is-focus", !!step);
   for (const part of sheet.querySelectorAll(".part")) {
     let shown = 0;
@@ -921,6 +1208,7 @@ function placeStep(pattern, step) {
 }
 
 function openStep(pattern, at) {
+  leavePractice();
   const playing = player.playing;
   if (at === null) delete stepAt[pattern.id];
   else stepAt[pattern.id] = at;
@@ -947,6 +1235,7 @@ function partMap(pattern, sheet) {
     chip.textContent = section.name;
     chip.classList.toggle("is-learned", isLearned(pattern, section.name));
     chip.addEventListener("click", () => {
+      leavePractice();
       const first = section.bars.flatMap((bar) => bar.slots).find(Boolean);
       if (first) player.seek(first.index, player.playing, listener.on);
       const target = document.querySelector(`.part[data-section="${i}"]`);
@@ -1002,7 +1291,7 @@ function slotNode(pattern, sheet, bar, slot, event) {
   const names = event.notes.map((id) => `${spokenName(id)}, ${flipHand(event.hands[id])} hand`);
   node.setAttribute("aria-label", `Bar ${bar + 1}, count ${beatLabel(beat, pattern)}: ${names.join(" and ")}`);
   for (const id of event.notes) node.append(noteNode(id, event.hands[id]));
-  node.addEventListener("click", () => player.seek(event.index, player.playing, listener.on));
+  node.addEventListener("click", () => { leavePractice(); player.seek(event.index, player.playing, listener.on); });
   return node;
 }
 
@@ -1094,12 +1383,14 @@ function sheetNode(pattern, sheet) {
 }
 
 function loopBars(pattern, first, end) {
+  leavePractice();
   const beats = barBeats(pattern);
   player.setRange({ from: first * beats, to: end * beats });
   player.play(pattern, first * beats, { keepTempo: true });
 }
 
 function clearRange() {
+  leavePractice();
   const pattern = player.pattern;
   const step = pattern ? stepOf(pattern) : null;
   const beats = pattern ? barBeats(pattern) : 4;
@@ -1136,6 +1427,7 @@ function keepInView(node, toTop) {
 function route() {
   setTools(false);
   const pattern = patternFromHash();
+  if (practice && practice.pattern.id !== pattern?.id) leavePractice(false);
   if (location.hash.startsWith("#/p/") && !pattern) {
     location.hash = "#/";
     return;
@@ -1164,6 +1456,19 @@ function route() {
   routed = pattern.id;
   if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
+  if (practiceRequest?.pattern.id === pattern.id) {
+    const request = practiceRequest;
+    practiceRequest = null;
+    enterPractice(pattern, request.saved);
+    const first = document.getElementById("practice-hear");
+    (first?.disabled ? document.getElementById("practice-position") : first)?.focus({ preventScroll: true });
+    return;
+  }
+  if (practice) {
+    focusSheet(pattern);
+    paint(player.snapshot());
+    return;
+  }
   const step = stepOf(pattern);
   const bars = barsOf(pattern, player.range);
   if (step && !(bars && bars.first >= step.first && bars.end <= step.end)) {
@@ -1174,6 +1479,10 @@ function route() {
 }
 
 function paint(snap) {
+  if (practice && (!practice.phrases[practice.at].events.length || (practice.mode === "try" && practice.attempt.snapshot().complete))) {
+    snap = { ...snap, index: -1, notes: [], nextIndex: -1, nextNotes: [] };
+  }
+  updatePractice(snap);
   const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
   if (stage && environment !== lastEnvironment) {
     stage.environment(environment);
@@ -1231,7 +1540,7 @@ function paint(snap) {
   if (snap.index >= 0 && snap.index !== lastScroll) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
-    if (slot) {
+    if (slot && !practice) {
       if (settled) keepInView(slot.closest(".bar"));
       settled = true;
       const part = slot.closest(".part").dataset.section;
@@ -1355,6 +1664,8 @@ function spoken(id, hands) {
 }
 
 function captionText(snap) {
+  if (practice?.mode === "try" && practice.attempt.snapshot().complete) return "Phrase complete. Retry or choose Next phrase.";
+  if (practice && !practice.phrases[practice.at].events.length) return "Rest bar. Choose Next phrase when ready.";
   if (listener.on && !snap.playing) {
     const wanted = patternFromHash() ? pitched(snap.notes) : [];
     const target = wanted.map((id) => spoken(id, snap.hands)).join(" and ");
@@ -1391,6 +1702,18 @@ window.addEventListener("keydown", (event) => {
   if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("input, textarea, select")) return;
+  if (practice && /^(Digit[0-9]|Numpad[0-9]|KeyT)$/.test(event.code)) {
+    event.preventDefault();
+    if (!event.repeat) {
+      const id = event.code === "KeyT" ? TAK : Object.keys(NOTES).find((note) => numberOf(note) === event.code.slice(-1));
+      if (id) soundNote(id);
+    }
+    return;
+  }
+  if (practice && event.repeat && ["Space", "Enter"].includes(event.code)) {
+    event.preventDefault();
+    return;
+  }
   if (event.code === "Escape" && document.body.classList.contains("tools-open")) {
     event.preventDefault();
     setTools(false);
@@ -1405,6 +1728,10 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     if (event.target.closest("button, a, [role=button]")) return;
     event.preventDefault();
+    if (practice) {
+      if (!event.repeat) pausePractice();
+      return;
+    }
     const play = document.getElementById("play");
     if (play) {
       play.click();
@@ -1417,9 +1744,11 @@ window.addEventListener("keydown", (event) => {
   if (!document.body.classList.contains("is-learn")) return;
   if (event.code === "ArrowRight") {
     event.preventDefault();
+    leavePractice();
     player.step(1, listener.on);
   } else if (event.code === "ArrowLeft") {
     event.preventDefault();
+    leavePractice();
     player.step(-1, listener.on);
   }
 });
@@ -1429,6 +1758,8 @@ const MIC_QUIET_MS = 4000;
 const MIC_QUIET_LEVEL = 0.06;
 let micState = "off";
 let micQuietSince = 0;
+let micGeneration = 0;
+let micPending = null;
 
 function savedMic() {
   try {
@@ -1504,13 +1835,27 @@ function meterLoop() {
 }
 
 async function startListening(deviceId) {
+  leavePractice();
+  const generation = ++micGeneration;
+  if (micPending) {
+    try { await micPending; } catch { void 0; }
+    if (generation !== micGeneration) return;
+  }
   audio.recordingMode(true);
   micNote = "";
   micState = "asking";
   drawMic();
   try {
-    await listener.start(deviceId);
+    const pending = listener.start(deviceId);
+    micPending = pending;
+    try { await pending; } finally { if (micPending === pending) micPending = null; }
+    if (generation !== micGeneration) {
+      listener.stop();
+      audio.recordingMode(false);
+      return;
+    }
   } catch (err) {
+    if (generation !== micGeneration) return;
     audio.recordingMode(false);
     if (deviceId && err && err.name === "OverconstrainedError") {
       saveMic("");
@@ -1527,12 +1872,14 @@ async function startListening(deviceId) {
   micQuietSince = performance.now();
   saveMic(listener.deviceId);
   await fillMicList();
+  if (generation !== micGeneration) return;
   drawMic();
   meterLoop();
   player.refresh();
 }
 
 function stopListening(note) {
+  micGeneration += 1;
   listener.stop();
   audio.recordingMode(false);
   micNote = note || "";
@@ -1546,7 +1893,7 @@ function onMicEnded() {
 }
 
 async function toggleListen() {
-  if (listener.on) {
+  if (listener.on || micState === "asking") {
     stopListening("");
     return;
   }
@@ -1573,7 +1920,7 @@ function trackStickHeight() {
 }
 
 trackStickHeight();
-initExplore({ onOpen: () => player.pause() });
+initExplore({ onOpen: () => { leavePractice(); player.pause(); } });
 drawPan();
 route();
 bootStage();
