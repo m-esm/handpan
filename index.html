@@ -23,17 +23,18 @@
 <body>
   <div class="wrap" inert>
     <header class="top">
-      <a class="brand" href="#/" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="38" height="38" alt=""><span>Alamut</span><span class="brand-place">A courtyard for sound</span></a>
-      <div class="header-tools"><p class="scale">D Kurd <span>10 notes / 440 Hz</span></p><button id="library-toggle" type="button" aria-expanded="true" aria-controls="dock">Hide music</button></div>
+      <a class="brand" href="#/" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span>Alamut</span></a>
+      <button id="tools-toggle" type="button" aria-expanded="false" aria-controls="tools">Tools</button>
+      <div id="tools" class="tools">
+        <button id="listen" type="button" aria-pressed="false" title="Use the microphone to hear your handpan">Listen</button>
+        <button id="mirror" type="button" aria-pressed="false" title="Swap the left and right sides of the handpan">Mirror</button>
+        <div class="motion-controls" hidden><button id="motion-toggle" type="button" aria-pressed="false">Enable motion</button><button id="motion-center" type="button" hidden>Recenter</button></div>
+        <label class="scene-pick"><span class="sr">Landscape</span><select id="environment"><option value="auto">Follow the music</option></select></label>
+        <button id="explore-world" type="button">Explore</button>
+      </div>
     </header>
     <main class="split">
       <div class="pan-stick">
-        <div class="scene-heading"><h1>A courtyard for sound.</h1><p>Settle in. Find a melody. Follow its rhythm.</p><button id="explore-world" type="button">Explore Alamut <span aria-hidden="true">↗</span></button><button class="browse-music" type="button">Browse music ↓</button></div>
-        <div class="stage-tools">
-          <p id="caption" class="caption">Tap a note to hear it.</p>
-          <button id="listen" type="button" aria-pressed="false">Listen</button>
-          <button id="mirror" type="button" aria-pressed="false">Mirror</button>
-        </div>
         <div id="mic" class="mic" hidden>
           <span class="mic-dot" aria-hidden="true"></span>
           <span id="mic-text" class="mic-text"></span>
@@ -41,14 +42,13 @@
           <label class="mic-pick"><span class="sr">Input source</span><select id="mic-input"></select></label>
         </div>
         <div id="pan"></div>
+        <p id="caption" class="caption">Tap a note to hear it.</p>
+        <p id="motion-status" role="status"></p>
         <p id="scene-notice" class="scene-notice" role="status" hidden></p>
-        <div class="stage-footer"><span>Brass <b>left hand</b></span><span class="stage-seal" aria-hidden="true">✧</span><span>Ivory <b>right hand</b></span></div>
-        <div class="motion-controls" hidden><button id="motion-toggle" type="button" aria-pressed="false">Enable motion</button><button id="motion-center" type="button" hidden>Recenter</button><p id="motion-status" role="status"></p></div>
-        <div class="environment-picker"><span id="environment-name">The lantern courtyard</span><label><span class="sr">Landscape</span><select id="environment"><option value="auto">Follow the music</option></select></label></div>
         <p id="status" class="sr" role="status"></p>
       </div>
       <div id="learn"></div>
-      <section id="dock" aria-label="Patterns"></section>
+      <section id="dock" aria-label="Library"></section>
     </main>
   </div>
   <div id="scene-loader" class="scene-loader" role="status" aria-live="polite">

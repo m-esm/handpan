@@ -1,12 +1,12 @@
 # Alamut
 
-A courtyard for sound. A handpan practice space with six Persian mountain and courtyard settings. Discover music on stone pedestals, travel between landscapes with the compass, and select a melody to enter its playing scene. Phones show one music object at a time; wider screens show three. The catalogue and place collections come from the music data.
+A courtyard for sound. A handpan practice space with six Persian mountain and courtyard settings. The library lists every pattern with search and kind filters. Wide screens show the library on the left and the handpan on the right. Phones show the handpan on top and the library below it.
 
 Practice patterns for the Gear4music DISC 10-note D Kurd handpan. The ding is D3. The tone fields are A3, B-flat3, C4, D4, E4, F4, G4, A4, and C5, at 440 Hz.
 
 https://m-esm.github.io/handpan/
 
-Brass medallions control playback, tempo, looping, and note stepping. The handpan highlights the current and upcoming notes. Tools opens microphone, mirror, phone motion, and practice controls. Practice takes a full piece one part at a time, then joins the parts. Leave practice preserves progress without marking a step complete. Escape closes Tools, then returns to the music paths. Scene objects have keyboard-accessible targets.
+A piece opens with the player under the handpan and the bar-grid note sheet under the player. The handpan and the sheet highlight the current and upcoming notes. The header holds Listen, Mirror, the landscape picker, and Explore. Phones group them under Tools. Learn in steps takes a full piece one part at a time, then joins the parts. Escape closes Tools, then returns to the library.
 
 Listen uses the microphone. The page shows the note you struck, and on a piece it waits until you strike the lit note.
 

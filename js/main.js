@@ -22,11 +22,6 @@ const audio = createAudio();
 document.getElementById("pan").addEventListener("pointerup", (event) => {
   if (event.pointerType !== "mouse" && audio.ready()) audio.resume().catch(audioError);
 });
-document.querySelector(".browse-music").addEventListener("click", () => {
-  setLibraryOpen(true);
-  document.getElementById("dock").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
-  document.getElementById("find").focus({ preventScroll: true });
-});
 let mirrored = false;
 try {
   mirrored = localStorage.getItem("disc-kurd-mirror") === "1";
@@ -49,7 +44,6 @@ let settled = false;
 let lastListed = "";
 let routed = null;
 let stage = null;
-let worldInterface = null;
 let sceneLoadCancelled = false;
 let sceneChoice = "auto";
 let lastEnvironment = "";
@@ -66,18 +60,18 @@ sceneSelect.addEventListener("change", () => {
   paint(player.snapshot());
 });
 
-function setLibraryOpen(open) {
-  document.body.classList.toggle("library-collapsed", !open);
-  document.getElementById("dock").hidden = !open;
-  const button = document.getElementById("library-toggle");
-  button.setAttribute("aria-expanded", String(open));
-  button.textContent = open ? "Hide music" : "Show music";
-  try { localStorage.setItem("alamut-library-open", String(open)); } catch (err) { void err; }
+const toolsToggle = document.getElementById("tools-toggle");
+
+function setTools(open) {
+  document.body.classList.toggle("tools-open", open);
+  toolsToggle.setAttribute("aria-expanded", String(open));
 }
 
-document.getElementById("library-toggle").addEventListener("click", () => {
-  setLibraryOpen(document.getElementById("dock").hidden);
+toolsToggle.addEventListener("click", () => setTools(!document.body.classList.contains("tools-open")));
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest("#tools, #tools-toggle")) setTools(false);
 });
+document.getElementById("explore-world").addEventListener("click", () => setTools(false));
 
 function finishLoading(message = "") {
   const focusLoader = document.getElementById("scene-loader").contains(document.activeElement);
@@ -87,7 +81,7 @@ function finishLoading(message = "") {
   const notice = document.getElementById("scene-notice");
   notice.textContent = message;
   notice.hidden = !message;
-  if (focusLoader) (document.querySelector(".world-target") || document.querySelector(".brand")).focus({ preventScroll: true });
+  if (focusLoader) document.querySelector(".brand").focus({ preventScroll: true });
 }
 
 document.getElementById("simple-view").addEventListener("click", () => {
@@ -260,18 +254,6 @@ async function bootStage() {
     stage.layout(panLayout());
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
-    const { createWorldInterface } = await import("./world-interface.js");
-    worldInterface = createWorldInterface({ onAction: worldAction });
-    document.getElementById("learn").inert = true;
-    document.getElementById("dock").inert = true;
-    for (const node of document.querySelectorAll(".top, #learn, #dock, .scene-heading, .stage-tools, .stage-footer, .environment-picker, .motion-controls, #mic")) node.setAttribute("aria-hidden", "true");
-    for (const id of ["motion-status", "mic-text", "motion-toggle", "listen"]) {
-      const node = document.getElementById(id);
-      new MutationObserver(() => {
-        paint(player.snapshot());
-        if (["motion-status", "mic-text"].includes(id) && node.textContent) worldInterface.notice(node.textContent);
-      }).observe(node, { childList: true, characterData: true, subtree: true });
-    }
     paint(player.snapshot());
     requestAnimationFrame(() => finishLoading());
   } catch (err) {
@@ -288,47 +270,6 @@ function onPanHit(event) {
   if (!field) return;
   soundNote(field.dataset.note);
   field.blur();
-}
-
-function worldAction(action) {
-  const snap = player.snapshot();
-  const pattern = patternFromHash();
-  if (action.type === "song") {
-    sceneChoice = "auto";
-    player.pause();
-    location.hash = `#/p/${action.id}`;
-  } else if (action.type === "home") {
-    player.pause();
-    location.hash = "#/";
-  } else if (action.type === "environment") {
-    sceneChoice = action.id;
-    paint(snap);
-  } else if (action.type === "play") {
-    if (snap.playing) player.pause();
-    else player.resume();
-  } else if (action.type === "step") player.step(action.delta, listener.on);
-  else if (action.type === "tempo") player.setTempo(snap.bpm + action.delta);
-  else if (action.type === "loop") player.setLoop(!snap.loop);
-  else if (action.type === "listen") toggleListen();
-  else if (action.type === "mirror") {
-    mirrored = !mirrored;
-    try { localStorage.setItem("disc-kurd-mirror", mirrored ? "1" : "0"); } catch (err) { void err; }
-    drawPan();
-    paint(snap);
-  } else if (action.type === "motion") document.getElementById("motion-toggle").click();
-  else if (action.type === "center") document.getElementById("motion-center").click();
-  else if (action.type === "practice-exit" && pattern) { openStep(pattern, null); paint(player.snapshot()); }
-  else if (action.type === "practice-back" && pattern) { openStep(pattern, Math.max(0, stepAt[pattern.id] - 1)); paint(player.snapshot()); }
-  else if (action.type === "practice" && pattern) {
-    const steps = stepsOf(pattern);
-    const current = stepOf(pattern);
-    if (current) markLearned(pattern, current.key, true);
-    const firstUnlearned = steps.findIndex((item) => !isLearned(pattern, item.key));
-    const at = current ? stepAt[pattern.id] + 1 : Math.max(0, firstUnlearned);
-    openStep(pattern, at >= steps.length ? null : at);
-    paint(player.snapshot());
-    if (current && at >= steps.length) worldInterface?.notice("Practice finished. Your progress is saved.");
-  }
 }
 
 function onPanKey(event) {
@@ -368,7 +309,6 @@ function soundNote(id) {
 function audioError() {
   const message = "Sound could not start. Tap a note to try again.";
   document.getElementById("status").textContent = message;
-  worldInterface?.notice(message);
 }
 
 function syncMirror() {
@@ -462,15 +402,12 @@ function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
   const heading = document.createElement("h2");
-  heading.textContent = "Your music";
-  const lead = document.createElement("p");
-  lead.className = "lead";
-  lead.textContent = "Listen, explore, or learn a piece.";
+  heading.textContent = "Library";
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
   find.type = "search";
-  find.placeholder = "Search music or a note number…";
+  find.placeholder = "Search by name or note number";
   find.setAttribute("aria-label", "Search patterns");
   find.value = query;
   find.addEventListener("input", () => {
@@ -504,13 +441,7 @@ function renderList() {
   rows.id = "rows";
   const libraryHead = document.createElement("div");
   libraryHead.className = "library-head";
-  const titleRow = document.createElement("div");
-  titleRow.className = "library-title";
-  const close = textButton("library-close", "Collapse");
-  close.setAttribute("aria-label", "Collapse music library");
-  close.addEventListener("click", () => { setLibraryOpen(false); document.getElementById("library-toggle").focus(); });
-  titleRow.append(heading, close);
-  libraryHead.append(titleRow, lead, find, chips);
+  libraryHead.append(heading, find, chips);
   const resultCount = document.createElement("p");
   resultCount.id = "result-count";
   resultCount.className = "result-count";
@@ -527,7 +458,7 @@ function fillRows() {
   rows.innerHTML = "";
   const visible = PATTERNS.filter(matches);
   const resultCount = document.getElementById("result-count");
-  if (resultCount) resultCount.textContent = `${visible.length} ${visible.length === 1 ? "selection" : "selections"}${query ? ` matching “${query}”` : " to explore"}`;
+  if (resultCount) resultCount.textContent = visible.length === PATTERNS.length ? `${visible.length} patterns` : `${visible.length} of ${PATTERNS.length} patterns`;
   if (visible.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty";
@@ -700,8 +631,11 @@ function rowFor(pattern) {
   const body = document.createElement("div");
   body.className = "row-body";
   const title = document.createElement("h3");
-  title.textContent = pattern.title;
-  title.title = pattern.blurb;
+  const titleLink = document.createElement("a");
+  titleLink.href = `#/p/${pattern.id}`;
+  titleLink.textContent = pattern.title;
+  titleLink.title = pattern.blurb;
+  title.append(titleLink);
   const blurb = document.createElement("p");
   blurb.className = "blurb";
   blurb.textContent = pattern.blurb;
@@ -756,18 +690,17 @@ function renderLearn(pattern) {
   const back = document.createElement("a");
   back.className = "back";
   back.href = "#/";
-  back.textContent = "All patterns";
+  back.textContent = "Library";
   const title = document.createElement("h1");
   title.tabIndex = -1;
   title.textContent = pattern.title;
-  const name = document.createElement("div");
-  name.className = "learn-name";
-  name.append(thumbFor(pattern, 72), title);
-  head.append(back, name);
-
   const about = document.createElement("p");
   about.className = "about";
   about.textContent = pattern.blurb;
+  const name = document.createElement("div");
+  name.className = "learn-title";
+  name.append(title, about);
+  head.append(back, thumbFor(pattern, 48), name);
 
   const warn = document.createElement("p");
   warn.className = "mirror-note";
@@ -869,11 +802,7 @@ function renderLearn(pattern) {
   guide.className = "guide";
   deck.append(transport, guide);
 
-  const brief = document.createElement("div");
-  brief.className = "brief";
-  brief.append(about, warn);
-
-  dock.append(head, brief, deck, keys, legend(), sheetNode(pattern, sheet));
+  dock.append(head, warn, deck, legend(), sheetNode(pattern, sheet), keys);
   fillGuide(pattern);
   focusSheet(pattern);
 }
@@ -1205,8 +1134,8 @@ function keepInView(node, toTop) {
 }
 
 function route() {
+  setTools(false);
   const pattern = patternFromHash();
-  const previousRoute = routed;
   if (location.hash.startsWith("#/p/") && !pattern) {
     location.hash = "#/";
     return;
@@ -1215,32 +1144,23 @@ function route() {
   if (!document.getElementById("find")) renderList();
   const learn = document.getElementById("learn");
   if (!pattern) {
-    if (worldInterface) {
-      sceneChoice = worldInterface.galleryEnvironment();
-      player.pause();
-    }
     document.title = "Alamut | A courtyard for sound";
     learn.innerHTML = "";
-    const hint = document.createElement("p");
-    hint.className = "hint";
-    hint.textContent = "Tap a note to hear it, or choose a pattern.";
     const key = document.createElement("p");
     key.className = "key";
-    key.textContent = "0 is the ding. 1 to 9 climb in pitch around the rim. Brass is the left hand, cream is the right.";
-    learn.append(hint, key);
+    key.textContent = "0 is the ding. 1 to 9 climb in pitch around the rim. Brass numbers are the left hand, ivory the right.";
+    learn.append(key);
     paint(player.snapshot());
     const left = routed ? document.querySelector(`.row[data-pattern="${routed}"]`) : null;
-    if (left && !worldInterface) {
+    if (left) {
       left.querySelector(".open").focus({ preventScroll: true });
       left.scrollIntoView({ block: "center" });
     }
     routed = "";
-    if (worldInterface && previousRoute) worldInterface.focusRoute(previousRoute);
     return;
   }
-  if (worldInterface && previousRoute !== pattern.id) sceneChoice = "auto";
   renderLearn(pattern);
-  if (!worldInterface && routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
+  if (routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
   routed = pattern.id;
   if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
@@ -1251,21 +1171,14 @@ function route() {
     else placeStep(pattern, step);
   }
   else paint(player.snapshot());
-  if (worldInterface && previousRoute !== pattern.id) worldInterface.focusRoute();
 }
 
 function paint(snap) {
-  if (worldInterface) {
-    const current = patternFromHash();
-    const step = current ? stepOf(current) : null;
-    const steps = current ? stepsOf(current) : [];
-    worldInterface.update({ ...snap, practice: step ? step.label : "", hasPractice: steps.length > 0, practiceIndex: step ? stepAt[current.id] : -1, practiceCount: steps.length, practiceDone: current ? steps.filter((item) => isLearned(current, item.key)).length : 0, mirrored, listening: listener.on, micState, canRecenter: !document.getElementById("motion-center").disabled, motion: document.getElementById("motion-toggle").getAttribute("aria-pressed") === "true" });
-  }
   const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
   if (stage && environment !== lastEnvironment) {
     stage.environment(environment);
     lastEnvironment = environment;
-    document.getElementById("environment-name").textContent = VIEWS[environment].name;
+    sceneSelect.options[0].textContent = `Auto: ${VIEWS[environment].name.replace(/^Alamut · /, "")}`;
   }
   const onNotes = new Set(snap.notes);
   const nextNotes = new Set(snap.nextNotes);
@@ -1319,7 +1232,7 @@ function paint(snap) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) {
-      if (settled && !worldInterface) keepInView(slot.closest(".bar"));
+      if (settled) keepInView(slot.closest(".bar"));
       settled = true;
       const part = slot.closest(".part").dataset.section;
       for (const chip of document.querySelectorAll(".part-chip")) {
@@ -1478,6 +1391,12 @@ window.addEventListener("keydown", (event) => {
   if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("input, textarea, select")) return;
+  if (event.code === "Escape" && document.body.classList.contains("tools-open")) {
+    event.preventDefault();
+    setTools(false);
+    toolsToggle.focus();
+    return;
+  }
   if (event.code === "Escape" && document.body.classList.contains("is-learn")) {
     event.preventDefault();
     location.hash = "#/";
@@ -1486,7 +1405,6 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     if (event.target.closest("button, a, [role=button]")) return;
     event.preventDefault();
-    if (worldInterface && !patternFromHash()) return;
     const play = document.getElementById("play");
     if (play) {
       play.click();
@@ -1534,7 +1452,7 @@ function micError(err) {
   const name = err ? err.name : "";
   if (name === "NotAllowedError") return "The microphone is blocked. Allow it for this page, then press Listen.";
   if (name === "NotFoundError") return "No microphone found. Connect one, then press Listen.";
-  if (name === "NotReadableError") return worldInterface ? "Another app holds this input. Close it, then try Listen again." : "Another app holds this input. Close it, or pick another input.";
+  if (name === "NotReadableError") return "Another app holds this input. Close it, or pick another input.";
   return "The microphone did not start. Press Listen to try again.";
 }
 
@@ -1581,7 +1499,7 @@ function meterLoop() {
   document.getElementById("mic-fill").style.transform = `scaleX(${level.toFixed(3)})`;
   bar.dataset.quiet = quiet ? "1" : "0";
   bar.dataset.heard = heard ? (heard.miss ? "miss" : "hit") : "";
-  setMicText(quiet ? (worldInterface ? "No sound detected. Check your microphone and system input." : "No sound on this input. Check the source, or pick another.") : "Listening");
+  setMicText(quiet ? "No sound on this input. Check the source, or pick another." : "Listening");
   requestAnimationFrame(meterLoop);
 }
 
@@ -1658,5 +1576,4 @@ trackStickHeight();
 initExplore({ onOpen: () => player.pause() });
 drawPan();
 route();
-try { setLibraryOpen(localStorage.getItem("alamut-library-open") === "true"); } catch (err) { setLibraryOpen(false); }
 bootStage();
