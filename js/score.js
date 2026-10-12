@@ -168,7 +168,7 @@ function compile(piece) {
   return {
     id: piece.id,
     title: piece.title,
-    kind: "Pieces",
+    kind: piece.category || "Pieces",
     bpm: piece.bpm,
     loopBeats: bar * meter.beatsPerBar,
     blurb: piece.blurb,

@@ -123,7 +123,7 @@ async function main() {
     console.log(`COMPILE ${error.message}`);
     process.exit(1);
   });
-  const pieces = score.PATTERNS.filter((pattern) => pattern.kind === "Pieces");
+  const pieces = score.PATTERNS.filter((pattern) => pattern.sections?.length);
   const faults = duplicateIds(score.PATTERNS);
   for (const pattern of pieces) {
     console.log(summary(pattern, score));
