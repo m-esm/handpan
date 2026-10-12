@@ -1685,7 +1685,13 @@ body.world-mode .top, body.world-mode #learn, body.world-mode #dock, body.world-
 body.world-mode #pan { display: none; }
 body.world-mode.world-song #pan { display: block; position: fixed; z-index: 5; top: 23%; left: 50%; transform: translateX(-50%); width: min(58vw, 70vh); height: 42vh; margin: 0; padding: 0; }
 body.world-mode .world { opacity: 1; }
+body.world-mode.world-tools #pan { visibility: hidden; pointer-events: none; }
+.world-target:disabled { cursor: default; pointer-events: none; }
 @media (max-width: 700px) {
   body.world-mode.world-song #pan { width: 96vw; height: 39vh; top: 25%; }
   .world-whisper { font-size: 9px; letter-spacing: .04em; }
+}
+@media (max-height: 539px) and (orientation: landscape) {
+  body.world-mode.world-song #pan { left: 35%; top: 23%; width: 52vw; height: 55vh; }
+  .world-whisper { bottom: 0.8%; font-size: 9px; letter-spacing: 0; }
 }

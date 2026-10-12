@@ -323,9 +323,11 @@ function worldAction(action) {
     const steps = stepsOf(pattern);
     const current = stepOf(pattern);
     if (current) markLearned(pattern, current.key, true);
-    const at = current ? stepAt[pattern.id] + 1 : 0;
+    const firstUnlearned = steps.findIndex((item) => !isLearned(pattern, item.key));
+    const at = current ? stepAt[pattern.id] + 1 : Math.max(0, firstUnlearned);
     openStep(pattern, at >= steps.length ? null : at);
     paint(player.snapshot());
+    if (current && at >= steps.length) worldInterface?.notice("Practice finished. Your progress is saved.");
   }
 }
 
@@ -1204,6 +1206,7 @@ function keepInView(node, toTop) {
 
 function route() {
   const pattern = patternFromHash();
+  const previousRoute = routed;
   if (location.hash.startsWith("#/p/") && !pattern) {
     location.hash = "#/";
     return;
@@ -1212,6 +1215,10 @@ function route() {
   if (!document.getElementById("find")) renderList();
   const learn = document.getElementById("learn");
   if (!pattern) {
+    if (worldInterface) {
+      sceneChoice = worldInterface.galleryEnvironment();
+      player.pause();
+    }
     document.title = "Alamut | A courtyard for sound";
     learn.innerHTML = "";
     const hint = document.createElement("p");
@@ -1228,8 +1235,10 @@ function route() {
       left.scrollIntoView({ block: "center" });
     }
     routed = "";
+    if (worldInterface && previousRoute) worldInterface.focusRoute(previousRoute);
     return;
   }
+  if (worldInterface && previousRoute !== pattern.id) sceneChoice = "auto";
   renderLearn(pattern);
   if (!worldInterface && routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
   routed = pattern.id;
@@ -1242,13 +1251,15 @@ function route() {
     else placeStep(pattern, step);
   }
   else paint(player.snapshot());
+  if (worldInterface && previousRoute !== pattern.id) worldInterface.focusRoute();
 }
 
 function paint(snap) {
   if (worldInterface) {
     const current = patternFromHash();
     const step = current ? stepOf(current) : null;
-    worldInterface.update({ ...snap, practice: step ? step.label : "", hasPractice: !!current && stepsOf(current).length > 0, mirrored, listening: listener.on, motion: document.getElementById("motion-toggle").getAttribute("aria-pressed") === "true" });
+    const steps = current ? stepsOf(current) : [];
+    worldInterface.update({ ...snap, practice: step ? step.label : "", hasPractice: steps.length > 0, practiceIndex: step ? stepAt[current.id] : -1, practiceCount: steps.length, practiceDone: current ? steps.filter((item) => isLearned(current, item.key)).length : 0, mirrored, listening: listener.on, micState, canRecenter: !document.getElementById("motion-center").disabled, motion: document.getElementById("motion-toggle").getAttribute("aria-pressed") === "true" });
   }
   const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
   if (stage && environment !== lastEnvironment) {
@@ -1475,6 +1486,7 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     if (event.target.closest("button, a, [role=button]")) return;
     event.preventDefault();
+    if (worldInterface && !patternFromHash()) return;
     const play = document.getElementById("play");
     if (play) {
       play.click();
@@ -1522,7 +1534,7 @@ function micError(err) {
   const name = err ? err.name : "";
   if (name === "NotAllowedError") return "The microphone is blocked. Allow it for this page, then press Listen.";
   if (name === "NotFoundError") return "No microphone found. Connect one, then press Listen.";
-  if (name === "NotReadableError") return "Another app holds this input. Close it, or pick another input.";
+  if (name === "NotReadableError") return worldInterface ? "Another app holds this input. Close it, then try Listen again." : "Another app holds this input. Close it, or pick another input.";
   return "The microphone did not start. Press Listen to try again.";
 }
 
@@ -1569,7 +1581,7 @@ function meterLoop() {
   document.getElementById("mic-fill").style.transform = `scaleX(${level.toFixed(3)})`;
   bar.dataset.quiet = quiet ? "1" : "0";
   bar.dataset.heard = heard ? (heard.miss ? "miss" : "hit") : "";
-  setMicText(quiet ? "No sound on this input. Check the source, or pick another." : "Listening");
+  setMicText(quiet ? (worldInterface ? "No sound detected. Check your microphone and system input." : "No sound on this input. Check the source, or pick another.") : "Listening");
   requestAnimationFrame(meterLoop);
 }
 
