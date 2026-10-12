@@ -663,7 +663,7 @@ function rowFor(pattern) {
   meta.className = "meta";
   const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
   const length = pattern.loop === false ? `, ${clock((pattern.loopBeats * 60) / pattern.bpm)}` : "";
-  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm${length}${learnedLine(pattern)}`;
+  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm${length}${learnedLine(pattern)}`.replaceAll(", ", " \u00b7 ");
   body.append(title, blurb, meta, mini);
 
   const open = document.createElement("a");

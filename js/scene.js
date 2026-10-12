@@ -294,11 +294,12 @@ function createDrum(host, onHit, onStrike) {
   scene.add(pedestal);
 
   const shadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(7.4, 7.4),
+    new THREE.PlaneGeometry(4.26, 4.26),
     new THREE.MeshBasicMaterial({
       map: radialTexture([
-        [0, "rgba(0,0,0,0.85)"],
-        [0.45, "rgba(0,0,0,0.5)"],
+        [0, "rgba(0,0,0,0.8)"],
+        [0.74, "rgba(0,0,0,0.6)"],
+        [0.9, "rgba(0,0,0,0.18)"],
         [1, "rgba(0,0,0,0)"],
       ]),
       transparent: true,
