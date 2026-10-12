@@ -4,6 +4,16 @@ export function createAudio() {
   let ctx = null;
   let master = null;
   let noiseBuffer = null;
+  let recording = false;
+
+  function recordingMode(enabled) {
+    recording = enabled;
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = recording ? "play-and-record" : "playback";
+    } catch (err) {
+      void err;
+    }
+  }
 
   function roomBuffer(audio) {
     const length = Math.floor(audio.sampleRate * 2.4);
@@ -65,8 +75,9 @@ export function createAudio() {
   }
 
   async function resume() {
+    recordingMode(recording);
     const audio = context();
-    if (audio.state === "suspended") await audio.resume();
+    if (audio.state !== "running") await audio.resume();
     return audio;
   }
 
@@ -156,6 +167,7 @@ export function createAudio() {
   }
 
   return {
+    recordingMode,
     resume,
     strike,
     strikeChord,

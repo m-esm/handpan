@@ -19,6 +19,9 @@ import { initExplore } from "./explore.js";
 import { initMotion } from "./motion.js";
 
 const audio = createAudio();
+document.getElementById("pan").addEventListener("pointerup", (event) => {
+  if (event.pointerType !== "mouse" && audio.ready()) audio.resume().catch(audioError);
+});
 document.querySelector(".browse-music").addEventListener("click", () => {
   setLibraryOpen(true);
   document.getElementById("dock").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
@@ -339,7 +342,7 @@ const tapTimers = new Map();
 
 function soundNote(id) {
   deafUntil = performance.now() + TAP_DEAF_MS;
-  audio.resume().then(() => audio.strikeChord([id], audio.now() + 0.02));
+  audio.resume().then(() => audio.strikeChord([id], audio.now() + 0.02)).catch(audioError);
   const field = document.querySelector(`.field[data-note="${id}"]`);
   if (field) {
     field.classList.add("is-tap");
@@ -358,6 +361,12 @@ function soundNote(id) {
     const node = caption();
     if (node) node.textContent = hand ? `${numberOf(id)}, ${hand} hand` : numberOf(id);
   }
+}
+
+function audioError() {
+  const message = "Sound could not start. Tap a note to try again.";
+  document.getElementById("status").textContent = message;
+  worldInterface?.notice(message);
 }
 
 function syncMirror() {
@@ -1565,12 +1574,14 @@ function meterLoop() {
 }
 
 async function startListening(deviceId) {
+  audio.recordingMode(true);
   micNote = "";
   micState = "asking";
   drawMic();
   try {
     await listener.start(deviceId);
   } catch (err) {
+    audio.recordingMode(false);
     if (deviceId && err && err.name === "OverconstrainedError") {
       saveMic("");
       await startListening("");
@@ -1593,6 +1604,7 @@ async function startListening(deviceId) {
 
 function stopListening(note) {
   listener.stop();
+  audio.recordingMode(false);
   micNote = note || "";
   micState = note ? "error" : "off";
   drawMic();
