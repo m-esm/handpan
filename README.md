@@ -6,6 +6,8 @@ Practice patterns for the Gear4music DISC 10-note D Kurd handpan. The ding is D3
 
 https://m-esm.github.io/handpan/
 
+Play the handpan from the Library, Play, or Learn with number keys 0–9 (including the numeric keypad); 0 is the ding and T plays tak. Multiple keys can be struck together. Held keys do not repeat, and shortcuts leave search, form inputs, and Explore controls alone.
+
 A selected piece has one title, a Library link, and Play / Learn mode links. Play has the full score and transport; Learn practices one phrase at a time. Both keep the same selected piece. The handpan and score highlight current and upcoming notes. The header holds Microphone, Mirror, the landscape picker, and Explore. Phones group them under Tools. Escape closes Tools, then returns to the library with its search and filter intact and focus on the piece row.
 
 Microphone is available in Play. The page shows the note you struck and waits until you strike the lit note. Learn uses screen notes, so its Microphone control is disabled with an explanation. Opening a piece or restoring Learn never starts audio or requests microphone access.

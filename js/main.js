@@ -1546,8 +1546,8 @@ window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
   if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
-  if (event.target.closest("input, textarea, select")) return;
-  if (practice && /^(Digit[0-9]|Numpad[0-9]|KeyT)$/.test(event.code)) {
+  if (event.target.closest("input, textarea, select") || event.target.isContentEditable) return;
+  if (/^(Digit[0-9]|Numpad[0-9]|KeyT)$/.test(event.code)) {
     event.preventDefault();
     if (!event.repeat) {
       const id = event.code === "KeyT" ? TAK : Object.keys(NOTES).find((note) => numberOf(note) === event.code.slice(-1));
