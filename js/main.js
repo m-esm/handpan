@@ -6,7 +6,6 @@ import {
   TAK,
   eventsOf,
   sheetOf,
-  stepsOf,
   beatLabel,
   pretty,
   numberOf,
@@ -49,7 +48,6 @@ let sceneLoadCancelled = false;
 let sceneChoice = "auto";
 let lastEnvironment = "";
 let practice = null;
-let practiceRequest = null;
 let practiceSaved = null;
 try {
   practiceSaved = readPractice(localStorage, PATTERNS);
@@ -294,6 +292,8 @@ function onPanKey(event) {
 const tapTimers = new Map();
 
 function soundNote(id) {
+  const session = practice;
+  const run = session?.run;
   if (practice?.mode === "try") {
     const result = practice.attempt.strike(id);
     practice.message = result.complete ? "Phrase complete. Retry, hear it, or choose Next phrase."
@@ -303,7 +303,10 @@ function soundNote(id) {
     updatePractice(player.snapshot());
   }
   deafUntil = performance.now() + TAP_DEAF_MS;
-  audio.resume().then(() => audio.strikeChord([id], audio.now() + 0.02)).catch(audioError);
+  audio.resume().then(() => {
+    if (session && (practice !== session || session.run !== run)) return;
+    audio.strikeChord([id], audio.now() + 0.02);
+  }).catch(audioError);
   const field = document.querySelector(`.field[data-note="${id}"]`);
   if (field) {
     field.classList.add("is-tap");
@@ -336,9 +339,13 @@ function syncMirror() {
 }
 
 function patternFromHash() {
-  const match = /^#\/p\/([\w-]+)$/.exec(location.hash);
+  const match = /^#\/p\/([\w-]+)(?:\/(play|learn))?$/.exec(location.hash);
   if (!match) return null;
   return PATTERNS.find((pattern) => pattern.id === match[1]) || null;
+}
+
+function learnMode() {
+  return !!patternFromHash() && location.hash.endsWith("/learn");
 }
 
 function handLine(hands) {
@@ -465,17 +472,21 @@ function renderList() {
   resultCount.className = "result-count";
   resultCount.setAttribute("role", "status");
   libraryHead.append(resultCount);
-  const beginner = textButton("practice-start", "Start beginner practice");
+  const beginner = textButton("practice-start", "Start learning");
+  beginner.id = "practice-beginner";
   beginner.addEventListener("click", () => requestPractice(beginnerPattern(PATTERNS)));
-  const continuePractice = textButton("practice-start", "Continue practice");
+  const continuePractice = textButton("practice-start is-main", "");
   continuePractice.id = "practice-continue";
   continuePractice.hidden = !practiceSaved;
   continuePractice.addEventListener("click", () => {
     const pattern = PATTERNS.find((item) => item.id === practiceSaved?.patternId);
-    if (pattern) requestPractice(pattern, practiceSaved);
+    if (pattern) requestPractice(pattern);
   });
-  libraryHead.append(beginner, continuePractice);
-  dock.append(libraryHead, rows);
+  const welcome = document.createElement("div");
+  welcome.className = "library-welcome";
+  welcome.append(continuePractice, beginner);
+  dock.append(welcome, libraryHead, rows);
+  updateResume();
   fillRows();
 }
 
@@ -529,17 +540,9 @@ function fillRows() {
 }
 
 const SOFT_BELOW = 0.6;
-const MINI_MAX = 40;
-const MINI_OPENING = 16;
 
 function barBeats(pattern) {
   return pattern.beatsPerBar || 4;
-}
-
-function clock(seconds) {
-  const whole = Math.round(seconds);
-  if (whole < 60) return `${whole} s`;
-  return `${Math.floor(whole / 60)} min ${whole % 60} s`;
 }
 
 function readStore(key) {
@@ -560,9 +563,7 @@ function writeStore(key, value) {
 }
 
 const LEARNED_KEY = "disc-kurd-learned";
-const STEP_KEY = "disc-kurd-step";
 const learned = readStore(LEARNED_KEY);
-const stepAt = readStore(STEP_KEY);
 
 function partNames(pattern) {
   return [...new Set((pattern.sections || [{ name: "" }]).map((section) => section.name))];
@@ -589,21 +590,10 @@ function markLearned(pattern, key, on) {
   paint(player.snapshot());
 }
 
-function stepOf(pattern) {
-  const at = stepAt[pattern.id];
-  return Number.isInteger(at) ? stepsOf(pattern)[at] || null : null;
-}
-
 function barsOf(pattern, range) {
   if (!range) return null;
   const beats = barBeats(pattern);
   return { first: Math.round(range.from / beats), end: Math.round(range.to / beats) };
-}
-
-function onStep(pattern, range) {
-  const step = stepOf(pattern);
-  const bars = barsOf(pattern, range);
-  return !!step && !!bars && bars.first === step.first && bars.end === step.end;
 }
 
 function barSpan(first, end) {
@@ -634,81 +624,36 @@ function rowFor(pattern) {
   const row = document.createElement("article");
   row.className = "row";
   row.dataset.pattern = pattern.id;
-
-  const play = document.createElement("button");
-  play.type = "button";
-  play.className = "row-play";
-  play.dataset.play = pattern.id;
-  const mark = document.createElement("span");
-  mark.className = "mark";
-  mark.textContent = "Play";
-  play.append(mark);
-  play.addEventListener("click", () => {
-    leavePractice();
-    if (player.playing && player.pattern && player.pattern.id === pattern.id) {
-      player.pause();
-      return;
-    }
-    const open = patternFromHash();
-    const same = !!open && open.id === pattern.id;
-    if (player.range && !same) player.setRange(null);
-    if (!same) player.setLoop(pattern.loop !== false);
-    if (open && !same) location.hash = `#/p/${pattern.id}`;
-    player.play(pattern, 0, { keepTempo: same });
-  });
-
-  const body = document.createElement("div");
-  body.className = "row-body";
-  const title = document.createElement("h3");
-  const titleLink = document.createElement("a");
-  titleLink.href = `#/p/${pattern.id}`;
-  titleLink.textContent = pattern.title;
-  titleLink.title = pattern.blurb;
-  title.append(titleLink);
-  const blurb = document.createElement("p");
-  blurb.className = "blurb";
-  blurb.textContent = pattern.blurb;
-  blurb.title = pattern.blurb;
-  const mini = document.createElement("div");
-  mini.className = "mini";
-  const events = eventsOf(pattern);
-  const shown = events.length > MINI_MAX ? events.slice(0, MINI_OPENING) : events;
-  for (const event of shown) {
-    const chip = document.createElement("span");
-    chip.className = "mini-hit";
-    chip.dataset.event = String(event.index);
-    for (const id of event.notes) chip.append(noteNode(id, event.hands[id]));
-    chip.setAttribute("role", "img");
-    chip.setAttribute("aria-label", event.notes.map((id) => spokenName(id)).join(" and "));
-    mini.append(chip);
-  }
-  if (shown.length < events.length) {
-    const more = document.createElement("span");
-    more.className = "mini-more";
-    more.textContent = `and ${events.length - shown.length} more`;
-    mini.append(more);
-  }
-  const meta = document.createElement("p");
-  meta.className = "meta";
-  const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
-  const length = pattern.loop === false ? `, ${clock((pattern.loopBeats * 60) / pattern.bpm)}` : "";
-  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"}, ${pattern.bpm} bpm${length}${learnedLine(pattern)}`.replaceAll(", ", " \u00b7 ");
-  body.append(title, blurb, meta, mini);
-
   const open = document.createElement("a");
   open.className = "open";
   open.href = `#/p/${pattern.id}`;
-  open.textContent = "Learn";
-  const practiceOpen = textButton("practice-entry", "Practice");
-  practiceOpen.setAttribute("aria-label", `Practice ${pattern.title} in short phrases`);
-  practiceOpen.addEventListener("click", () => requestPractice(pattern));
-  body.append(practiceOpen);
-
-  const side = document.createElement("div");
-  side.className = "row-side";
-  side.append(thumbFor(pattern, 48), play);
-  row.append(side, body, open);
+  const body = document.createElement("div");
+  body.className = "row-body";
+  const title = document.createElement("h3");
+  title.textContent = pattern.title;
+  const meta = document.createElement("p");
+  meta.className = "meta";
+  const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
+  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"} · ${pattern.bpm} bpm${learnedLine(pattern)}`;
+  body.append(title, meta);
+  const arrow = document.createElement("span");
+  arrow.className = "row-arrow";
+  arrow.setAttribute("aria-hidden", "true");
+  arrow.textContent = "›";
+  open.append(thumbFor(pattern, 48), body, arrow);
+  row.append(open);
   return row;
+}
+
+function updateResume() {
+  const button = document.getElementById("practice-continue");
+  if (!button) return;
+  const pattern = PATTERNS.find((item) => item.id === practiceSaved?.patternId);
+  button.hidden = !pattern;
+  button.textContent = pattern ? `Continue learning · ${pattern.title}` : "";
+  const beginner = document.getElementById("practice-beginner");
+  beginner.classList.toggle("is-main", !pattern);
+  beginner.textContent = pattern ? "New to Alamut? Start learning" : "Start learning";
 }
 
 function rememberPractice() {
@@ -719,15 +664,11 @@ function rememberPractice() {
   } catch {
     void 0;
   }
-  const button = document.getElementById("practice-continue");
-  if (button) button.hidden = false;
+  updateResume();
 }
 
-function requestPractice(pattern, saved = null) {
-  if (!pattern) return;
-  practiceRequest = { pattern, saved };
-  if (patternFromHash()?.id === pattern.id) route();
-  else location.hash = `#/p/${pattern.id}`;
+function requestPractice(pattern) {
+  if (pattern) location.hash = `#/p/${pattern.id}/learn`;
 }
 
 function enterPractice(pattern, saved = null) {
@@ -768,19 +709,12 @@ function selectPhrase(at) {
   paint(player.snapshot());
 }
 
-function leavePractice(redraw = true) {
+function leavePractice() {
   if (!practice) return;
   const pattern = practice.pattern;
   practice = null;
-  player.pause();
-  player.setRange(null);
+  player.load(pattern);
   document.body.classList.remove("is-practicing");
-  if (redraw && patternFromHash()?.id === pattern.id) {
-    const step = stepOf(pattern);
-    if (step) placeStep(pattern, step);
-    renderLearn(pattern);
-    paint(player.snapshot());
-  }
 }
 
 function tryPhrase() {
@@ -837,16 +771,10 @@ function pausePractice() {
   } else playPhrase(practice.mode, true);
 }
 
-function practicePanel(pattern) {
+function practicePanel() {
   const panel = document.createElement("section");
   panel.className = "practice-panel";
   panel.setAttribute("aria-label", "Short phrase practice");
-  if (!practice || practice.pattern.id !== pattern.id) {
-    const entry = textButton("practice-start", "Practice one bar at a time");
-    entry.addEventListener("click", () => requestPractice(pattern));
-    panel.append(entry);
-    return panel;
-  }
   const position = document.createElement("strong");
   position.id = "practice-position";
   position.tabIndex = -1;
@@ -881,6 +809,7 @@ function practicePanel(pattern) {
     else tryPhrase();
   });
   const tak = textButton("", "Tap tak (T)");
+  tak.id = "practice-tak";
   tak.addEventListener("click", () => soundNote(TAK));
   const back = textButton("", "Previous phrase");
   back.id = "practice-previous";
@@ -896,12 +825,10 @@ function practicePanel(pattern) {
     const target = document.getElementById("practice-forward");
     (target.disabled ? document.getElementById("practice-position") : target).focus({ preventScroll: true });
   });
-  const exit = textButton("", "Exit practice");
-  exit.addEventListener("click", () => {
-    leavePractice();
-    document.querySelector("#learn .practice-start").focus({ preventScroll: true });
-  });
-  actions.append(pause, restart, tak, back, forward, exit);
+  actions.append(pause, restart, tak);
+  const navigation = document.createElement("div");
+  navigation.className = "phrase-navigation";
+  navigation.append(back, forward);
   const tempo = document.createElement("label");
   tempo.className = "practice-tempo";
   const bpm = document.createElement("span");
@@ -918,10 +845,17 @@ function practicePanel(pattern) {
     rememberPractice();
   });
   tempo.append(bpm, slider);
-  const help = document.createElement("p");
+  const help = document.createElement("details");
   help.className = "practice-help";
-  help.textContent = "0 = centre ding; 1–9 = rim notes; + = chord (both notes); × = tak, a rim tap; dots = rest or let the note ring. Tap the pan or use number keys and T. Try notes skips rests and teaches note order, not timing or physical handpan accuracy. Learned marks remain your own assessment.";
-  panel.append(position, modes, target, next, message, tempo, actions, help);
+  const summary = document.createElement("summary");
+  summary.textContent = "How to read and play";
+  const explanation = document.createElement("p");
+  explanation.textContent = "0 is the centre ding; 1–9 are rim notes; + joins a chord; × is a tak; dots let the sound ring or rest. Tap the pan or use 0–9 and T. Try notes teaches note order, with no microphone or timing score. Microphone following is available in Play. Hear phrase and Repeat slowly keep the rests.";
+  help.append(summary, explanation);
+  panel.append(position, target, next, modes, actions, message, tempo, navigation, help);
+  for (const button of panel.querySelectorAll(".practice-actions button, .phrase-navigation button")) {
+    button.classList.add("practice-control");
+  }
   return panel;
 }
 
@@ -944,7 +878,10 @@ function updatePractice(snap) {
   set("practice-message", active && snap.ended ? "Phrase heard, including its rests. Try notes or hear it again." : practice.message);
   set("practice-bpm", `Practice tempo: ${practice.tempo} BPM`);
   set("practice-restart", practice.mode === "try" && attempt.complete ? "Retry notes" : "Restart phrase");
+  document.getElementById("practice-restart").hidden = practice.mode === "ready" || !phrase.events.length;
+  document.getElementById("practice-tak").hidden = practice.mode !== "try" || !phrase.events.some((event) => event.notes.includes(TAK));
   const pause = document.getElementById("practice-pause");
+  pause.hidden = !active;
   pause.disabled = !active || !phrase.events.length;
   pause.textContent = snap.playing || practice.pending ? "Pause" : "Resume";
   document.getElementById("practice-previous").disabled = practice.at === 0;
@@ -952,6 +889,7 @@ function updatePractice(snap) {
   for (const mode of ["hear", "try", "repeat"]) {
     const button = document.getElementById(`practice-${mode}`);
     button.setAttribute("aria-pressed", String(practice.mode === mode));
+    button.classList.toggle("is-main", practice.mode === "ready" && mode === "hear");
     button.disabled = !phrase.events.length;
   }
 }
@@ -978,13 +916,25 @@ function renderLearn(pattern) {
   const name = document.createElement("div");
   name.className = "learn-title";
   name.append(title, about);
-  head.append(back, thumbFor(pattern, 48), name);
+  head.append(back, name);
+  const modes = document.createElement("nav");
+  modes.className = "piece-modes";
+  modes.setAttribute("aria-label", "Piece mode");
+  for (const mode of ["play", "learn"]) {
+    const link = document.createElement("a");
+    link.className = "mode-link";
+    link.href = `#/p/${pattern.id}/${mode}`;
+    link.textContent = mode === "learn" ? "Learn" : "Play";
+    if ((mode === "learn") === !!practice) link.setAttribute("aria-current", "page");
+    modes.append(link);
+  }
+  head.append(modes);
 
   const warn = document.createElement("p");
   warn.className = "mirror-note";
   warn.hidden = !mirrored;
   warn.textContent =
-    "Mirror is on, so swap left and right in the paragraph above. The drawing and the hands on each note already match the flipped pan.";
+    "Mirror on · hand labels match the flipped pan.";
 
   const transport = document.createElement("div");
   transport.className = "transport";
@@ -998,7 +948,7 @@ function renderLearn(pattern) {
   playMark.textContent = "Play";
   play.append(playMark);
   play.addEventListener("click", () => {
-    leavePractice();
+    if (learnMode()) return;
     if (player.playing) {
       player.pause();
       return;
@@ -1015,14 +965,14 @@ function renderLearn(pattern) {
   previous.className = "stepper is-prev";
   previous.setAttribute("aria-label", "Previous note");
   previous.title = "Previous note";
-  previous.addEventListener("click", () => { leavePractice(); player.step(-1, listener.on); });
+  previous.addEventListener("click", () => { if (!learnMode()) player.step(-1, listener.on); });
 
   const next = document.createElement("button");
   next.type = "button";
   next.className = "stepper is-next";
   next.setAttribute("aria-label", "Next note");
   next.title = "Next note";
-  next.addEventListener("click", () => { leavePractice(); player.step(1, listener.on); });
+  next.addEventListener("click", () => { if (!learnMode()) player.step(1, listener.on); });
 
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
@@ -1055,8 +1005,8 @@ function renderLearn(pattern) {
   loop.className = "loop";
   loop.textContent = "Loop";
   loop.addEventListener("click", () => {
-    leavePractice();
-    if (player.range && !onStep(pattern, player.range)) clearRange();
+    if (learnMode()) return;
+    if (player.range) clearRange();
     else player.setLoop(!player.loop);
   });
 
@@ -1070,7 +1020,7 @@ function renderLearn(pattern) {
   const keys = document.createElement("p");
   keys.className = "keys";
   keys.textContent =
-    "Space plays and pauses. Arrows move one note. Click a bar number to loop that bar, and a second bar number to extend the loop. With Listen on, the page waits until you strike the lit note. Learn in steps takes a piece one part at a time, then joins the parts.";
+    "Space plays or pauses. Arrows move one note. Select bar numbers to loop a range. Microphone waits for the lit note on your instrument.";
 
   transport.append(play, previous, next, loop, ranged, tempoLabel);
 
@@ -1083,12 +1033,13 @@ function renderLearn(pattern) {
   deck.append(transport, guide);
 
   document.body.classList.toggle("is-practicing", !!practice);
-  const panel = practicePanel(pattern);
   const notation = sheetNode(pattern, sheet);
-  dock.append(head, warn, panel, deck, legend());
-  if (practice) panel.querySelector("#practice-next").after(notation);
-  else dock.append(notation);
-  dock.append(keys);
+  dock.append(head, warn);
+  if (practice) {
+    const panel = practicePanel();
+    panel.querySelector("#practice-next").after(notation);
+    dock.append(panel);
+  } else dock.append(deck, legend(), notation, keys);
   fillGuide(pattern);
   focusSheet(pattern);
   updatePractice(player.snapshot());
@@ -1104,90 +1055,13 @@ function textButton(className, text) {
 
 function fillGuide(pattern) {
   const guide = document.getElementById("guide");
-  if (!guide) return;
-  lastScroll = -2;
-  const hadFocus = guide.contains(document.activeElement);
-  guide.replaceChildren();
-  const steps = stepsOf(pattern);
-  if (steps.length === 0) return;
-  const step = stepOf(pattern);
-  guide.classList.toggle("is-stepping", !!step);
-  if (!step) {
-    const done = steps.filter((item) => isLearned(pattern, item.key)).length;
-    const label =
-      done === steps.length
-        ? "All steps done. Review"
-        : done
-          ? `Continue steps, ${done} of ${steps.length} done`
-          : "Learn in steps";
-    const open = textButton("step-btn is-main", label);
-    open.id = "steps-open";
-    open.addEventListener("click", () => {
-      const next = steps.findIndex((item) => !isLearned(pattern, item.key));
-      openStep(pattern, next < 0 ? 0 : next);
-    });
-    guide.append(open, partMap(pattern, sheetOf(pattern)));
-    if (hadFocus) open.focus({ preventScroll: true });
-    return;
-  }
-  const at = stepAt[pattern.id];
-  const last = at === steps.length - 1;
-  const done = isLearned(pattern, step.key);
-
-  const head = document.createElement("div");
-  head.className = "step-head";
-  const count = document.createElement("strong");
-  count.textContent = `Step ${at + 1} of ${steps.length}`;
-  const what = document.createElement("span");
-  what.className = "step-what";
-  what.textContent = `${step.label}, ${barSpan(step.first, step.end)}`;
-
-  const back = textButton("step-btn", "Previous step");
-  back.disabled = at === 0;
-  back.addEventListener("click", () => openStep(pattern, at - 1));
-
-  const passText = done ? (last ? "Finish" : "Next step") : last ? "Got it, finish" : "Got it, next";
-  const pass = textButton("step-btn is-main", passText);
-  pass.id = "step-pass";
-  pass.addEventListener("click", () => {
-    if (!done) markLearned(pattern, step.key, true);
-    openStep(pattern, last ? null : at + 1);
-  });
-
-  head.append(count, what, back, pass);
-  if (done) {
-    const undo = textButton("step-btn", "Unmark");
-    undo.addEventListener("click", () => markLearned(pattern, step.key, false));
-    head.append(undo);
-  }
-  const leave = textButton("step-btn", "Exit steps");
-  leave.id = "steps-close";
-  leave.addEventListener("click", () => openStep(pattern, null));
-  head.append(leave);
-
-  const map = document.createElement("div");
-  map.className = "partmap";
-  map.setAttribute("role", "group");
-  map.setAttribute("aria-label", "Steps for this piece");
-  steps.forEach((item, i) => {
-    const chip = textButton("step-chip", item.short);
-    chip.title = `${item.label}, ${barSpan(item.first, item.end)}`;
-    chip.classList.toggle("is-learned", isLearned(pattern, item.key));
-    chip.classList.toggle("is-current", i === at);
-    if (i === at) chip.setAttribute("aria-current", "step");
-    chip.addEventListener("click", () => openStep(pattern, i));
-    map.append(chip);
-  });
-  guide.append(head, map);
-  const current = map.querySelector(".is-current");
-  if (current) map.scrollLeft += current.getBoundingClientRect().left - map.getBoundingClientRect().left - 8;
-  if (hadFocus) pass.focus({ preventScroll: true });
+  if (guide && !practice) guide.replaceChildren(partMap(pattern, sheetOf(pattern)));
 }
 
 function focusSheet(pattern) {
   const sheet = document.getElementById("sheet");
   if (!sheet) return;
-  const step = practice?.pattern.id === pattern.id ? practice.phrases[practice.at] : stepOf(pattern);
+  const step = practice?.pattern.id === pattern.id ? practice.phrases[practice.at] : null;
   sheet.classList.toggle("is-focus", !!step);
   for (const part of sheet.querySelectorAll(".part")) {
     let shown = 0;
@@ -1200,33 +1074,13 @@ function focusSheet(pattern) {
   }
 }
 
-function placeStep(pattern, step) {
-  const beats = barBeats(pattern);
-  player.setRange({ from: step.first * beats, to: step.end * beats });
-  const first = eventsOf(pattern).find((event) => event.beat >= step.first * beats - 0.001);
-  if (first) player.seek(first.index, false, true);
-}
-
-function openStep(pattern, at) {
-  leavePractice();
-  const playing = player.playing;
-  if (at === null) delete stepAt[pattern.id];
-  else stepAt[pattern.id] = at;
-  writeStore(STEP_KEY, stepAt);
-  fillGuide(pattern);
-  focusSheet(pattern);
-  const step = stepOf(pattern);
-  if (!step) clearRange();
-  else if (playing) loopBars(pattern, step.first, step.end);
-  else placeStep(pattern, step);
-}
-
 function partMap(pattern, sheet) {
   const map = document.createElement("div");
   map.className = "partmap";
   map.setAttribute("role", "group");
   map.setAttribute("aria-label", "Parts of this piece");
   sheet.sections.forEach((section, i) => {
+    if (!section.name) return;
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "part-chip";
@@ -1235,7 +1089,7 @@ function partMap(pattern, sheet) {
     chip.textContent = section.name;
     chip.classList.toggle("is-learned", isLearned(pattern, section.name));
     chip.addEventListener("click", () => {
-      leavePractice();
+      if (learnMode()) return;
       const first = section.bars.flatMap((bar) => bar.slots).find(Boolean);
       if (first) player.seek(first.index, player.playing, listener.on);
       const target = document.querySelector(`.part[data-section="${i}"]`);
@@ -1291,7 +1145,14 @@ function slotNode(pattern, sheet, bar, slot, event) {
   const names = event.notes.map((id) => `${spokenName(id)}, ${flipHand(event.hands[id])} hand`);
   node.setAttribute("aria-label", `Bar ${bar + 1}, count ${beatLabel(beat, pattern)}: ${names.join(" and ")}`);
   for (const id of event.notes) node.append(noteNode(id, event.hands[id]));
-  node.addEventListener("click", () => { leavePractice(); player.seek(event.index, player.playing, listener.on); });
+  node.addEventListener("click", () => {
+    if (learnMode()) return;
+    player.seek(event.index, player.playing, listener.on);
+  });
+  if (practice) {
+    node.disabled = true;
+    node.setAttribute("aria-label", `${node.getAttribute("aria-label")}. Play these notes on the pan.`);
+  }
   return node;
 }
 
@@ -1345,7 +1206,8 @@ function sheetNode(pattern, sheet) {
       number.type = "button";
       number.className = "bar-num";
       number.textContent = String(bar.bar + 1);
-      number.setAttribute("aria-label", `Loop bar ${bar.bar + 1}`);
+      number.setAttribute("aria-label", `${practice ? "Current phrase, bar" : "Loop bar"} ${bar.bar + 1}`);
+      number.disabled = !!practice;
       const slots = document.createElement("div");
       slots.className = "slots";
       bar.slots.forEach((event, slot) => slots.append(slotNode(pattern, sheet, bar.bar, slot, event)));
@@ -1359,11 +1221,13 @@ function sheetNode(pattern, sheet) {
   let dragFrom = null;
   let dragged = false;
   node.addEventListener("pointerdown", (event) => {
+    if (learnMode()) return;
     const number = event.target.closest(".bar-num");
     dragFrom = number ? Number(number.parentElement.dataset.bar) : null;
     dragged = false;
   });
   node.addEventListener("pointerup", (event) => {
+    if (learnMode()) return;
     if (dragFrom === null) return;
     const under = document.elementFromPoint(event.clientX, event.clientY);
     const bar = under && under.closest(".bar");
@@ -1375,6 +1239,7 @@ function sheetNode(pattern, sheet) {
     dragFrom = null;
   });
   node.addEventListener("click", (event) => {
+    if (learnMode()) return;
     const number = event.target.closest(".bar-num");
     if (!number || dragged) return;
     pickBar(pattern, Number(number.parentElement.dataset.bar));
@@ -1383,26 +1248,23 @@ function sheetNode(pattern, sheet) {
 }
 
 function loopBars(pattern, first, end) {
-  leavePractice();
+  if (learnMode()) return;
   const beats = barBeats(pattern);
   player.setRange({ from: first * beats, to: end * beats });
   player.play(pattern, first * beats, { keepTempo: true });
 }
 
 function clearRange() {
-  leavePractice();
-  const pattern = player.pattern;
-  const step = pattern ? stepOf(pattern) : null;
-  const beats = pattern ? barBeats(pattern) : 4;
+  if (learnMode()) return;
   const playing = player.playing;
   const at = player.index;
-  player.setRange(step ? { from: step.first * beats, to: step.end * beats } : null);
+  player.setRange(null);
   if (playing) player.seek(at, true);
 }
 
 function pickBar(pattern, bar) {
   const bars = barsOf(pattern, player.range);
-  if (!bars || onStep(pattern, player.range)) loopBars(pattern, bar, bar + 1);
+  if (!bars) loopBars(pattern, bar, bar + 1);
   else if (bar >= bars.first && bar < bars.end) clearRange();
   else loopBars(pattern, Math.min(bars.first, bar), Math.max(bars.end, bar + 1));
 }
@@ -1427,55 +1289,51 @@ function keepInView(node, toTop) {
 function route() {
   setTools(false);
   const pattern = patternFromHash();
-  if (practice && practice.pattern.id !== pattern?.id) leavePractice(false);
-  if (location.hash.startsWith("#/p/") && !pattern) {
+  const learning = learnMode();
+  const changed = routed !== pattern?.id;
+  const modeChanged = learning !== !!practice;
+  if (!pattern && location.hash && location.hash !== "#/") {
     location.hash = "#/";
     return;
   }
+  if (practice && (changed || !learning)) leavePractice();
+  if (changed || modeChanged) {
+    player.pause();
+    stopListening("");
+  }
   document.body.classList.toggle("is-learn", !!pattern);
   if (!document.getElementById("find")) renderList();
+  updateResume();
   const learn = document.getElementById("learn");
   if (!pattern) {
     document.title = "Alamut | A courtyard for sound";
-    learn.innerHTML = "";
-    const key = document.createElement("p");
-    key.className = "key";
-    key.textContent = "0 is the ding. 1 to 9 climb in pitch around the rim. Brass numbers are the left hand, ivory the right.";
-    learn.append(key);
+    learn.replaceChildren();
     paint(player.snapshot());
-    const left = routed ? document.querySelector(`.row[data-pattern="${routed}"]`) : null;
+    const left = routed ? document.querySelector(`.row[data-pattern="${routed}"] .open`) : null;
     if (left) {
-      left.querySelector(".open").focus({ preventScroll: true });
-      left.scrollIntoView({ block: "center" });
-    }
+      left.focus({ preventScroll: true });
+      left.scrollIntoView({ block: "nearest" });
+    } else if (routed) document.getElementById("find").focus({ preventScroll: true });
     routed = "";
+    drawMic();
     return;
   }
-  renderLearn(pattern);
-  if (routed !== null && routed !== pattern.id) document.querySelector("#learn h1").focus({ preventScroll: true });
-  routed = pattern.id;
-  if (window.scrollY !== 0) window.scrollTo(0, 0);
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
-  if (practiceRequest?.pattern.id === pattern.id) {
-    const request = practiceRequest;
-    practiceRequest = null;
-    enterPractice(pattern, request.saved);
-    const first = document.getElementById("practice-hear");
-    (first?.disabled ? document.getElementById("practice-position") : first)?.focus({ preventScroll: true });
-    return;
+  if (learning && !practice) {
+    enterPractice(pattern, practiceSaved?.patternId === pattern.id ? practiceSaved : null);
+  } else {
+    if (modeChanged) {
+      player.setRange(null);
+      player.setLoop(pattern.loop !== false);
+      player.setTempo(pattern.bpm);
+    }
+    renderLearn(pattern);
   }
-  if (practice) {
-    focusSheet(pattern);
-    paint(player.snapshot());
-    return;
-  }
-  const step = stepOf(pattern);
-  const bars = barsOf(pattern, player.range);
-  if (step && !(bars && bars.first >= step.first && bars.end <= step.end)) {
-    if (player.playing) loopBars(pattern, step.first, step.end);
-    else placeStep(pattern, step);
-  }
-  else paint(player.snapshot());
+  drawMic();
+  if (routed !== null && (changed || modeChanged)) document.querySelector("#learn h1").focus({ preventScroll: true });
+  routed = pattern.id;
+  if (changed && window.scrollY !== 0) window.scrollTo(0, 0);
+  paint(player.snapshot());
 }
 
 function paint(snap) {
@@ -1540,6 +1398,7 @@ function paint(snap) {
   if (snap.index >= 0 && snap.index !== lastScroll) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
+    if (slot) scrollStrip(slot.parentElement, slot);
     if (slot && !practice) {
       if (settled) keepInView(slot.closest(".bar"));
       settled = true;
@@ -1551,8 +1410,6 @@ function paint(snap) {
         else chip.removeAttribute("aria-current");
       }
     }
-    const chip = document.querySelector(".mini-hit.is-on, .mini-hit.is-place");
-    if (chip) scrollStrip(chip.parentElement, chip);
   }
   const node = caption();
   const text = captionText(snap);
@@ -1561,15 +1418,6 @@ function paint(snap) {
   const say = micNote || (listener.on && !snap.playing ? text : "");
   if (status && status.textContent !== say) status.textContent = say;
 
-  document.querySelectorAll(".row-play").forEach((button) => {
-    const active = snap.playing && button.dataset.play === snap.patternId;
-    button.dataset.state = active ? "playing" : "paused";
-    const label = active ? "Pause" : "Play";
-    const mark = button.querySelector(".mark");
-    if (mark.textContent !== label) mark.textContent = label;
-    const title = PATTERNS.find((pattern) => pattern.id === button.dataset.play);
-    button.setAttribute("aria-label", `${label} ${title ? title.title : ""}`.trim());
-  });
   document.querySelectorAll(".row").forEach((row) => {
     row.classList.toggle("is-current", !!snap.patternId && row.dataset.pattern === snap.patternId);
   });
@@ -1605,9 +1453,7 @@ function paint(snap) {
   const loop = document.getElementById("loop");
   if (loop) {
     loop.setAttribute("aria-pressed", snap.loop ? "true" : "false");
-    const shown = PATTERNS.find((item) => item.id === snap.patternId);
-    const stepped = !!shown && onStep(shown, snap.range);
-    loop.textContent = stepped ? "Loop step" : snap.range ? "Loop bars" : "Loop";
+    loop.textContent = snap.range ? "Loop bars" : "Loop";
   }
   const warn = document.querySelector(".mirror-note");
   if (warn) warn.hidden = !mirrored;
@@ -1616,16 +1462,15 @@ function paint(snap) {
 function paintRange(snap) {
   const pattern = PATTERNS.find((item) => item.id === snap.patternId);
   const bars = pattern ? barsOf(pattern, snap.range) : null;
-  const stepped = !!pattern && onStep(pattern, snap.range);
   const first = bars ? bars.first : -1;
   const end = bars ? bars.end : -1;
-  const key = `${snap.patternId} ${first} ${end} ${stepped}`;
+  const key = `${snap.patternId} ${first} ${end}`;
   const sheet = document.getElementById("sheet");
   if (!sheet || sheet.dataset.range === key) return;
   sheet.dataset.range = key;
   for (const bar of sheet.querySelectorAll(".bar")) {
     const n = Number(bar.dataset.bar);
-    bar.classList.toggle("in-range", !stepped && n >= first && n < end);
+    bar.classList.toggle("in-range", n >= first && n < end);
   }
   for (const button of sheet.querySelectorAll(".part-loop")) {
     const whole = Number(button.dataset.from) === first && Number(button.dataset.to) === end;
@@ -1633,7 +1478,7 @@ function paintRange(snap) {
   }
   const ranged = document.getElementById("range");
   if (ranged) {
-    ranged.hidden = first < 0 || stepped;
+    ranged.hidden = first < 0;
     ranged.textContent = end - first === 1 ? `Bar ${first + 1} loops. Clear` : `Bars ${first + 1} to ${end} loop. Clear`;
   }
 }
@@ -1737,19 +1582,15 @@ window.addEventListener("keydown", (event) => {
       play.click();
       return;
     }
-    const current = document.querySelector(".row.is-current .row-play") || document.querySelector(".row-play");
-    if (current) current.click();
     return;
   }
   if (!document.body.classList.contains("is-learn")) return;
   if (event.code === "ArrowRight") {
     event.preventDefault();
-    leavePractice();
-    player.step(1, listener.on);
+    if (!learnMode()) player.step(1, listener.on);
   } else if (event.code === "ArrowLeft") {
     event.preventDefault();
-    leavePractice();
-    player.step(-1, listener.on);
+    if (!learnMode()) player.step(-1, listener.on);
   }
 });
 
@@ -1802,7 +1643,10 @@ function drawMic() {
   if (micState === "error") setMicText(micNote);
   const button = document.getElementById("listen");
   button.setAttribute("aria-pressed", listener.on ? "true" : "false");
-  button.textContent = listener.on ? "Listening" : "Listen";
+  button.disabled = learnMode();
+  button.textContent = listener.on ? "Microphone on" : "Microphone";
+  button.title = learnMode() ? "Learn uses screen notes. Switch to Play to use a microphone." : "Use the microphone to hear your handpan";
+  document.getElementById("mic-context").hidden = !learnMode();
 }
 
 async function fillMicList() {
@@ -1835,7 +1679,7 @@ function meterLoop() {
 }
 
 async function startListening(deviceId) {
-  leavePractice();
+  if (learnMode()) return;
   const generation = ++micGeneration;
   if (micPending) {
     try { await micPending; } catch { void 0; }
@@ -1889,10 +1733,11 @@ function stopListening(note) {
 }
 
 function onMicEnded() {
-  stopListening("The input disconnected. Press Listen to start again.");
+  stopListening("The input disconnected. Press Microphone to start again.");
 }
 
 async function toggleListen() {
+  if (learnMode()) return;
   if (listener.on || micState === "asking") {
     stopListening("");
     return;
@@ -1912,15 +1757,14 @@ if (navigator.mediaDevices) {
   });
 }
 
-function trackStickHeight() {
-  const stick = document.querySelector(".pan-stick");
-  const apply = () => document.documentElement.style.setProperty("--stick-h", `${stick.offsetHeight}px`);
-  new ResizeObserver(apply).observe(stick);
-  apply();
-}
-
-trackStickHeight();
-initExplore({ onOpen: () => { leavePractice(); player.pause(); } });
+initExplore({ onOpen: () => {
+  if (practice) {
+    practice.pending = false;
+    practice.run += 1;
+  }
+  player.pause();
+  stopListening("");
+} });
 drawPan();
 route();
 bootStage();

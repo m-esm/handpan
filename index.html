@@ -26,7 +26,8 @@
       <a class="brand" href="#/" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span>Alamut</span></a>
       <button id="tools-toggle" type="button" aria-expanded="false" aria-controls="tools">Tools</button>
       <div id="tools" class="tools">
-        <button id="listen" type="button" aria-pressed="false" title="Use the microphone to hear your handpan">Listen</button>
+        <button id="listen" type="button" aria-pressed="false" aria-describedby="mic-context" title="Use the microphone to hear your handpan">Microphone</button>
+        <span id="mic-context" class="tool-context" hidden>Learn uses screen notes. Microphone is available in Play.</span>
         <button id="mirror" type="button" aria-pressed="false" title="Swap the left and right sides of the handpan">Mirror</button>
         <div class="motion-controls" hidden><button id="motion-toggle" type="button" aria-pressed="false">Enable motion</button><button id="motion-center" type="button" hidden>Recenter</button></div>
         <label class="scene-pick"><span class="sr">Landscape</span><select id="environment"><option value="auto">Follow the music</option></select></label>
