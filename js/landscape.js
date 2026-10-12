@@ -5,13 +5,13 @@ export function createLandscape() {
   const textureCanvas = document.createElement("canvas");
   textureCanvas.width = textureCanvas.height = 256;
   const pen = textureCanvas.getContext("2d");
-  pen.fillStyle = "#b4aaa0";
+  pen.fillStyle = "#a99e8e";
   pen.fillRect(0, 0, 256, 256);
   for (let y = 0; y < 256; y += 16) {
     for (let x = -24; x < 256; x += 48) {
-      const shade = 140 + (Math.sin(x * 9 + y * 5) + 1) * 26;
+      const shade = 172 + (Math.sin(x * 9 + y * 5) + 1) * 9;
       pen.fillStyle = `rgb(${shade},${shade - 5},${shade - 12})`;
-      pen.fillRect(x + (y % 32 ? 24 : 0), y, 46, 14);
+      pen.fillRect(x + (y % 32 ? 24 : 0), y, 47, 15);
     }
   }
   const masonry = new THREE.CanvasTexture(textureCanvas);
@@ -21,8 +21,8 @@ export function createLandscape() {
   const rock = new THREE.MeshStandardMaterial({ color: 0x80634e, roughness: 1 });
   const grass = new THREE.MeshStandardMaterial({ color: 0x5b7141, roughness: 1 });
   const leaf = new THREE.MeshStandardMaterial({ color: 0x304b32, roughness: 1 });
-  const stone = new THREE.MeshStandardMaterial({ color: 0xb49a77, roughness: 1, map: masonry, bumpMap: masonry, bumpScale: 0.13 });
-  const water = new THREE.MeshStandardMaterial({ color: 0x315d6b, metalness: 0.45, roughness: 0.27 });
+  const stone = new THREE.MeshStandardMaterial({ color: 0xb6a58e, roughness: 0.94, map: masonry });
+  const water = new THREE.MeshStandardMaterial({ color: 0x315d6b, metalness: 0.12, roughness: 0.42 });
   const mesh = (geometry, material, position, scale = [1, 1, 1]) => {
     const item = new THREE.Mesh(geometry, material);
     item.position.set(...position);
@@ -88,8 +88,14 @@ export function createLandscape() {
     block(x, 17 + h / 2, z, 4.2, h, 4.6);
     for (const dx of [-1.7, 0, 1.7]) for (const dz of [-1.9, 1.9]) block(x + dx, 17 + h + 0.5, z + dz, 0.7, 1, 0.8);
   }
-  const trees = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 9, 8), leaf, 100);
+  const crown = [[0, -1], [0.45, -0.9], [0.78, -0.65], [0.96, -0.3], [1, 0], [0.87, 0.35], [0.62, 0.66], [0.3, 0.9], [0, 1.08]];
+  const trees = new THREE.InstancedMesh(new THREE.LatheGeometry(crown.map(([r, y]) => new THREE.Vector2(r, y)), 12), leaf, 100);
+  const bark = new THREE.MeshStandardMaterial({ color: 0x665c49, roughness: 1 });
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.12, 1, 6), bark, 100);
+  trunks.castShadow = true;
+  trunks.receiveShadow = true;
   trees.castShadow = true;
+  trees.receiveShadow = true;
   const matrix = new THREE.Matrix4();
   const rotation = new THREE.Quaternion();
   for (let i = 0; i < 100; i += 1) {
@@ -97,11 +103,15 @@ export function createLandscape() {
     const x = side * (18 + (Math.sin(i * 3.7) + 1) * 16);
     const z = 22 - (i % 50) * 1.8;
     const height = 2.5 + (Math.sin(i * 13) + 1) * 1.6;
-    matrix.compose(new THREE.Vector3(x, height - 1.6, z), rotation, new THREE.Vector3(0.8, height, 0.8));
+    rotation.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.sin(i * 2.3) * 0.045);
+    const width = 0.72 + (Math.cos(i * 7) + 1) * 0.12;
+    matrix.compose(new THREE.Vector3(x, height - 0.95, z), rotation, new THREE.Vector3(width, height * 0.88, width));
     trees.setMatrixAt(i, matrix);
     trees.setColorAt(i, new THREE.Color().setHSL(0.24 + Math.sin(i) * 0.03, 0.25, 0.55 + Math.cos(i * 4) * 0.12));
+    matrix.compose(new THREE.Vector3(x, -0.7, z), rotation, new THREE.Vector3(1, 2.2, 1));
+    trunks.setMatrixAt(i, matrix);
   }
-  group.add(trees);
+  group.add(trees, trunks);
   for (let i = 0; i < 9; i += 1) {
     const terrace = mesh(new THREE.BoxGeometry(18, 0.6, 3), grass, [-30, i * 0.55 - 1, -14 - i * 3.3]);
     terrace.rotation.y = -0.16;

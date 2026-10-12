@@ -46,45 +46,18 @@ function radialTexture(stops) {
   return texture;
 }
 
-function labelTexture(text, color, outline) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 160;
-  canvas.height = 160;
-  const pen = canvas.getContext("2d");
-  pen.font = '600 104px Sora, "Avenir Next", sans-serif';
-  pen.textAlign = "center";
-  pen.textBaseline = "middle";
-  if (outline) {
-    pen.lineWidth = 14;
-    pen.lineJoin = "round";
-    pen.strokeStyle = "rgba(10, 7, 5, 0.6)";
-    pen.strokeText(text, 80, 86);
-  }
-  pen.fillStyle = color;
-  pen.fillText(text, 80, 86);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
-function grainTexture() {
+function labelTexture(text, color) {
   const canvas = document.createElement("canvas");
   canvas.width = 256;
   canvas.height = 256;
   const pen = canvas.getContext("2d");
-  const image = pen.createImageData(256, 256);
-  for (let i = 0; i < image.data.length; i += 4) {
-    const shade = 150 + Math.random() * 90;
-    image.data[i] = shade;
-    image.data[i + 1] = shade;
-    image.data[i + 2] = shade;
-    image.data[i + 3] = 255;
-  }
-  pen.putImageData(image, 0, 0);
+  pen.font = `600 180px ${getComputedStyle(document.body).fontFamily}`;
+  pen.textAlign = "center";
+  pen.textBaseline = "middle";
+  pen.fillStyle = color;
+  pen.fillText(text, 128, 138);
   const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(8, 4);
+  texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
@@ -104,11 +77,9 @@ function studio(renderer) {
     mesh.lookAt(0, 0, 0);
     room.add(mesh);
   };
-  card(1, 0.74, 0.44, 7, 6, 5, -5, 6, 3);
-  card(0.24, 0.82, 0.72, 5, 3, 7, 6, 2, -5);
-  card(1, 0.95, 0.88, 2.2, 8, 8, 0, 9, 0);
-  card(1, 1, 1, 9, 0.5, 6, 3, 5, 6);
-  card(0.9, 0.42, 0.2, 3, 5, 2, 0, 1.2, 8);
+  card(1, 0.94, 0.85, 2.8, 9, 8, -5, 6, 3);
+  card(0.86, 0.92, 1, 1.2, 7, 8, 6, 3, -5);
+  card(1, 0.98, 0.94, 1.8, 10, 10, 0, 9, 0);
   const maker = new THREE.PMREMGenerator(renderer);
   const texture = maker.fromScene(room, 0.03).texture;
   maker.dispose();
@@ -164,9 +135,9 @@ function domeGeometry(frames) {
       point.set(r * Math.cos(t), DOME * Math.cos(a), r * Math.sin(t));
       flat.push(point.x / RADIUS, point.z / RADIUS);
       const rim = r / RADIUS;
-      let red = 0.66 - rim * 0.24;
-      let green = 0.42 - rim * 0.18;
-      let blue = 0.2 - rim * 0.07;
+      let red = 0.31 - rim * 0.06;
+      let green = 0.23 - rim * 0.05;
+      let blue = 0.16 - rim * 0.035;
       for (const frame of frames) {
         const e = reach(frame, point);
         if (e > 1.45) continue;
@@ -175,10 +146,10 @@ function domeGeometry(frames) {
         let shade = 1;
         if (frame.ding) {
           const inside = e < 1 ? Math.cos((e * Math.PI) / 2) ** 2 : 0;
-          lift = 0.1 * inside + 0.012 * Math.exp(-(((e - 1.08) / 0.07) ** 2));
-          shade = 1 - 0.2 * smooth(1.05, 0.7, e) + 0.3 * Math.exp(-(((e - 1.08) / 0.06) ** 2));
+          lift = 0.1 * inside + 0.006 * Math.exp(-(((e - 1.08) / 0.16) ** 2));
+          shade = 1 - 0.08 * smooth(1.05, 0.7, e);
         } else {
-          const w = 1 - smooth(0.82, 1.16, e);
+          const w = 1 - smooth(0.65, 1.3, e);
           const dx = point.x - frame.center.x;
           const dy = point.y - frame.center.y;
           const dz = point.z - frame.center.z;
@@ -186,9 +157,9 @@ function domeGeometry(frames) {
           lift =
             -off * w -
             0.014 * w +
-            0.016 * Math.exp(-(((e - 1.04) / 0.085) ** 2)) -
-            0.034 * Math.exp(-((e / 0.24) ** 2));
-          shade = 1 - 0.3 * w + 0.34 * Math.exp(-(((e - 1.04) / 0.07) ** 2));
+            0.007 * Math.exp(-(((e - 1.04) / 0.18) ** 2)) -
+            0.022 * Math.exp(-((e / 0.32) ** 2));
+          shade = 1 - 0.12 * w;
         }
         point.addScaledVector(n, lift);
         red *= shade;
@@ -213,6 +184,16 @@ function domeGeometry(frames) {
   geometry.setAttribute("uv", new THREE.Float32BufferAttribute(flat, 2));
   geometry.setIndex(index);
   geometry.computeVertexNormals();
+  const normals = geometry.attributes.normal;
+  const seam = new THREE.Vector3();
+  for (let i = 0; i <= RINGS; i += 1) {
+    const first = i * row;
+    const last = first + SPOKES;
+    seam.fromBufferAttribute(normals, first).add(new THREE.Vector3().fromBufferAttribute(normals, last)).normalize();
+    normals.setXYZ(first, seam.x, seam.y, seam.z);
+    normals.setXYZ(last, seam.x, seam.y, seam.z);
+  }
+  for (let j = 0; j <= SPOKES; j += 1) normals.setXYZ(j, 0, 1, 0);
   return geometry;
 }
 
@@ -243,36 +224,30 @@ function createDrum(host, onHit, onStrike) {
   renderer.setClearColor(0x000000, 0);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 60);
 
-  const key = new THREE.DirectionalLight(0xffdcb0, 1.6);
+  const key = new THREE.DirectionalLight(0xfff1df, 1.5);
   key.position.set(-3, 6, 2.5);
   const strike = new THREE.PointLight(BRASS, 0, 3.4, 1.5);
   scene.add(key, strike);
 
   const drum = new THREE.Group();
   scene.add(drum);
-  const grain = grainTexture();
   const metal = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
-    metalness: 1,
-    roughness: 0.62,
-    roughnessMap: grain,
-    bumpMap: grain,
-    bumpScale: 0.014,
-    clearcoat: 0.16,
-    clearcoatRoughness: 0.35,
+    metalness: 0.94,
+    roughness: 0.44,
+    clearcoat: 0,
     envMapIntensity: 0.85,
   });
   const under = new THREE.MeshPhysicalMaterial({
-    color: 0x7a4c28,
-    metalness: 1,
-    roughness: 0.34,
-    roughnessMap: grain,
-    envMapIntensity: 1.1,
+    color: 0x65513e,
+    metalness: 0.88,
+    roughness: 0.5,
+    envMapIntensity: 0.78,
   });
   const lip = new THREE.Mesh(
     new THREE.TorusGeometry(RADIUS + 0.035, 0.026, 14, 160),
-    new THREE.MeshStandardMaterial({ color: 0x5c3b20, metalness: 1, roughness: 0.26, emissive: BRASS, emissiveIntensity: 0 }),
+    new THREE.MeshStandardMaterial({ color: 0x554635, metalness: 0.9, roughness: 0.48, emissive: BRASS, emissiveIntensity: 0 }),
   );
   lip.rotation.x = Math.PI / 2;
   lip.position.y = -0.035;
@@ -280,17 +255,9 @@ function createDrum(host, onHit, onStrike) {
   let dome = null;
 
   const pedestal = new THREE.Group();
-  const pedestalStone = new THREE.MeshStandardMaterial({ color: 0x4c5e5c, roughness: 0.82, metalness: 0.08, bumpMap: grain, bumpScale: 0.02 });
-  const pedestalTrim = new THREE.MeshStandardMaterial({ color: 0xa68852, roughness: 0.46, metalness: 0.78 });
-  for (const [radius, height, y, material] of [[2.15, 0.22, -0.92, pedestalStone], [2.22, 0.055, -0.79, pedestalTrim], [2.18, 0.055, -1.05, pedestalTrim]]) {
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 96), material);
-    base.position.y = y;
-    pedestal.add(base);
-  }
-  const inlay = new THREE.Mesh(new THREE.CircleGeometry(2.13, 96), new THREE.MeshStandardMaterial({ map: mosaicTexture(), roughness: 0.58, metalness: 0.18 }));
-  inlay.rotation.x = -Math.PI / 2;
-  inlay.position.y = -0.759;
-  pedestal.add(inlay);
+  const pedestalStone = new THREE.MeshStandardMaterial({ color: 0x414947, roughness: 0.92, metalness: 0 });
+  const pedestalProfile = [[0, -1.07], [2.08, -1.07], [2.14, -1.055], [2.18, -1.02], [2.18, -0.82], [2.16, -0.785], [2.12, -0.76], [0, -0.76]];
+  pedestal.add(new THREE.Mesh(new THREE.LatheGeometry(pedestalProfile.map(([r, y]) => new THREE.Vector2(r, y)), 96), pedestalStone));
   scene.add(pedestal);
 
   const shadow = new THREE.Mesh(
@@ -329,22 +296,6 @@ function createDrum(host, onHit, onStrike) {
     return mesh;
   };
   const halo = line(2.02, 0.009, BRASS, 0.3, 0, Math.PI * 2);
-  line(2.09, 0.006, BRASS, 0.35, 0, Math.PI * 2);
-  const dial = new THREE.Group();
-  floor.add(dial);
-  for (let k = 0; k < 24; k += 1) {
-    const arc = new THREE.Mesh(
-      new THREE.RingGeometry(1.95, 2, 6, 1, (k / 24) * Math.PI * 2, 0.03),
-      new THREE.MeshBasicMaterial({
-        color: BRASS,
-        transparent: true,
-        opacity: k % 6 === 0 ? 0.8 : 0.3,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      }),
-    );
-    dial.add(arc);
-  }
   const wave = line(1.7, 0.03, BRASS, 0, 0, Math.PI * 2);
   let waveAt = 1;
 
@@ -404,11 +355,12 @@ function createDrum(host, onHit, onStrike) {
       }),
     );
     flare.scale.set(1.5, 1.5, 1);
-    const tint = spec.hand === "left" ? "#f0bd68" : "#fbefe0";
-    const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.text, tint, true), depthTest: false, transparent: true });
-    const dark = new THREE.SpriteMaterial({ map: labelTexture(spec.text, INK, false), depthTest: false, transparent: true });
+    const styles = getComputedStyle(document.documentElement);
+    const tint = styles.getPropertyValue(spec.hand === "left" ? "--brass-2" : "--mist").trim();
+    const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.text, tint), depthTest: false, transparent: true, toneMapped: false });
+    const dark = new THREE.SpriteMaterial({ map: labelTexture(spec.text, INK), depthTest: false, transparent: true, toneMapped: false });
     const label = new THREE.Sprite(plain);
-    const size = spec.ding ? 0.56 : 0.4;
+    const size = spec.ding ? 0.66 : 0.5;
     label.scale.set(size, size, 1);
     label.position.z = 0.05;
     label.renderOrder = 6;
@@ -582,7 +534,6 @@ function createDrum(host, onHit, onStrike) {
     renderer.render(scene, camera);
   }
 
-  document.fonts.ready.then(() => layout(specs));
   new IntersectionObserver(([entry]) => { inView = entry.isIntersecting; if (inView) pendingFrames = 40; }).observe(host);
 
   return {
@@ -696,7 +647,6 @@ function createWorld() {
   const amber = new THREE.DirectionalLight(0xe9b16f, 1.2);
   amber.position.set(12, 6, 10);
   scene.add(amber);
-  const grain = grainTexture();
   const stoneCanvas = document.createElement("canvas");
   stoneCanvas.width = stoneCanvas.height = 256;
   const stonePen = stoneCanvas.getContext("2d");
@@ -705,7 +655,7 @@ function createWorld() {
     for (let x = 0; x < 256; x += 1) {
       const i = (y * 256 + x) * 4;
       const cloud = Math.sin(x * 0.08 + Math.sin(y * 0.05) * 2) * 6 + Math.sin(y * 0.12) * 4;
-      const value = 188 + cloud + Math.random() * 22;
+      const value = 198 + cloud * 0.5;
       pixels.data[i] = value;
       pixels.data[i + 1] = value - 9;
       pixels.data[i + 2] = value - 21;
@@ -715,11 +665,11 @@ function createWorld() {
   stonePen.putImageData(pixels, 0, 0);
   const stoneMap = new THREE.CanvasTexture(stoneCanvas);
   stoneMap.colorSpace = THREE.SRGBColorSpace;
-  const stone = new THREE.MeshStandardMaterial({ color: 0xa89b85, map: stoneMap, roughness: 0.94, bumpMap: grain, bumpScale: 0.04 });
-  const pale = new THREE.MeshStandardMaterial({ color: 0xc4b99d, map: stoneMap, roughness: 0.87, bumpMap: grain, bumpScale: 0.025 });
+  const stone = new THREE.MeshStandardMaterial({ color: 0xa89b85, map: stoneMap, roughness: 0.94 });
+  const pale = new THREE.MeshStandardMaterial({ color: 0xc4b99d, map: stoneMap, roughness: 0.9 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x374749, roughness: 0.9 });
-  const gold = new THREE.MeshStandardMaterial({ color: 0xa9874a, metalness: 0.75, roughness: 0.43 });
-  const tile = new THREE.MeshStandardMaterial({ map: mosaicTexture(), roughness: 0.4, metalness: 0.15, color: 0xadc7c2 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0x897455, metalness: 0.72, roughness: 0.6 });
+  const tile = new THREE.MeshStandardMaterial({ map: mosaicTexture(), roughness: 0.76, metalness: 0, color: 0xadc7c2 });
   const box = (w, h, d, x, y, z, material = stone, parent = scene) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
     mesh.position.set(x, y, z);
@@ -743,7 +693,7 @@ function createWorld() {
       shape.lineTo(side * (half + 0.63), spring);
       shape.bezierCurveTo(side * (half + 0.65), spring + rise * 0.58, side * half * 0.55, spring + rise + 0.45, 0, spring + rise + 0.64);
       shape.closePath();
-      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 }), pale);
+      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.035, bevelSegments: 2, steps: 1, curveSegments: 24 }), pale);
       mesh.position.z = -depth / 2;
       group.add(mesh);
       const curve = new THREE.CubicBezierCurve3(
@@ -773,7 +723,7 @@ function createWorld() {
   scene.add(paving);
   const runnerMap = mosaicTexture();
   runnerMap.repeat.set(2, 12);
-  const runner = new THREE.MeshStandardMaterial({ map: runnerMap, roughness: 0.48, metalness: 0.18 });
+  const runner = new THREE.MeshStandardMaterial({ map: runnerMap, roughness: 0.8, metalness: 0 });
   box(4.5, 0.08, 28, 3, 0.07, -9, runner);
   for (const x of [0.65, 5.35]) box(0.08, 0.1, 28, x, 0.07, -9, gold);
   for (let i = 0; i < 3; i += 1) box(18 - i * 0.7, 0.18, 9 - i * 0.7, 1, i * 0.18 + 0.06, -22, stone);
