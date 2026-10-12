@@ -21,8 +21,6 @@ export function createWorldInterface({ onAction }) {
   const sun = new THREE.DirectionalLight(0xffd392, 3);
   sun.position.set(-4, 8, 10);
   scene.add(sun);
-  const ray = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
   let objects = [];
   let page = 0;
   let place = "all";
@@ -36,6 +34,9 @@ export function createWorldInterface({ onAction }) {
   let tools = false;
   let previousPatternId = "";
   let objectCursor = 0;
+  let lastSongId = "";
+  let noticeText = "";
+  let noticeTimer;
   const brass = new THREE.MeshStandardMaterial({ color: 0xb9924f, metalness: 0.75, roughness: 0.36 });
   const stone = new THREE.MeshStandardMaterial({ color: 0x223b43, roughness: 0.85, metalness: 0.12 });
   const pale = new THREE.MeshStandardMaterial({ color: 0x81968c, roughness: 0.75 });
@@ -57,7 +58,16 @@ export function createWorldInterface({ onAction }) {
       const fontSize = (i ? 10 : pixelHeight > 70 ? 25 : 17) * 256 / pixelHeight;
       ctx.font = `${i ? "400" : "600"} ${fontSize}px ${i ? "Sora, sans-serif" : "Georgia, serif"}`;
       ctx.fillStyle = i ? "#d5be91" : "#fff0d2";
-      ctx.fillText(line, canvas.width / 2, lines.length === 1 ? 128 : 92 + i * 91, canvas.width - 32);
+      const words = String(line).split(" ");
+      const rows = [""];
+      for (const word of words) {
+        const candidate = `${rows.at(-1)} ${word}`.trim();
+        if (ctx.measureText(candidate).width > canvas.width - 32 && rows.at(-1)) rows.push(word);
+        else rows[rows.length - 1] = candidate;
+      }
+      const lineHeight = fontSize * 1.08;
+      const center = lines.length === 1 ? 128 : i ? 204 : 86;
+      rows.slice(0, 2).forEach((row, rowIndex, visible) => ctx.fillText(row, canvas.width / 2, center + (rowIndex - (visible.length - 1) / 2) * lineHeight, canvas.width - 32));
     });
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
@@ -83,12 +93,13 @@ export function createWorldInterface({ onAction }) {
     group.add(edge);
     body.visible = !!action;
     edge.visible = !!action;
-    const text = inscription(subtitle ? [label, subtitle] : [label], w * wide * 0.94, h * tall * 0.90, h * height * 0.90);
+    const visibleSubtitle = height < 540 && width > height && action && action.type !== "play" ? "" : subtitle;
+    const text = inscription(visibleSubtitle ? [label, visibleSubtitle] : [label], w * wide * 0.94, h * tall * 0.90, h * height * 0.90);
     text.position.z = 0.14;
     group.add(text);
     if (pedestal) {
       const column = new THREE.Mesh(new THREE.CylinderGeometry(w * wide * 0.27, w * wide * 0.4, h * tall * 1.1, 8), pale);
-      column.position.set(0, -h * tall * 0.8, -0.22);
+      column.position.set(0, -h * tall * 1.08, -0.22);
       group.add(column);
       const ring = new THREE.Mesh(new THREE.TorusGeometry(w * wide * 0.19, 0.035, 6, 40), brass);
       ring.position.set(0, h * tall * 1.35, 0);
@@ -117,19 +128,26 @@ export function createWorldInterface({ onAction }) {
     const right = Math.max(...projected.map((point) => (point.x + 1) * 50));
     const top = Math.min(...projected.map((point) => (1 - point.y) * 50));
     const bottom = Math.max(...projected.map((point) => (1 - point.y) * 50));
-    button.style.cssText = `left:${left}%;top:${top}%;width:${right - left}%;height:${bottom - top}%;`;
-    button.addEventListener("click", (event) => {
-      pointer.set((event.clientX / width) * 2 - 1, -(event.clientY / height) * 2 + 1);
-      ray.setFromCamera(pointer, camera);
-      if (event.detail && !ray.intersectObject(group, true).length) return;
-      activate(action);
+    const targetWidth = Math.max(44, (right - left) * width / 100);
+    const targetHeight = Math.max(44, (bottom - top) * height / 100);
+    button.style.cssText = `left:${(left + right) * width / 200 - targetWidth / 2}px;top:${(top + bottom) * height / 200 - targetHeight / 2}px;width:${targetWidth}px;height:${targetHeight}px;`;
+    button.disabled = !!action.disabled;
+    if (button.disabled) group.traverse((node) => {
+      if (!node.isMesh) return;
+      node.material = node.material.clone();
+      node.material.transparent = true;
+      node.material.opacity = 0.4;
     });
-    button.addEventListener("pointerenter", () => { body.material = brass; render(); });
-    button.addEventListener("pointerleave", () => { body.material = stone; render(); });
+    button.addEventListener("click", () => activate(action));
+    if (!button.disabled) {
+      button.addEventListener("pointerenter", () => { body.material = brass; render(); });
+      button.addEventListener("pointerleave", () => { body.material = stone; render(); });
+    }
     host.append(button);
   }
 
   function activate(action) {
+    if (action.disabled) return;
     if (action.type === "page") page += action.delta;
     else if (action.type === "place") {
       const keys = ["all", ...Object.keys(VIEWS)];
@@ -165,48 +183,65 @@ export function createWorldInterface({ onAction }) {
       previousPatternId = pattern?.id || "";
     }
     document.body.classList.toggle("world-song", !!pattern);
-    const key = JSON.stringify([pattern?.id, next.playing, next.bpm, next.loop, next.notes, next.nextNotes, page, place, tools, width, height, next.practice, next.hasPractice, next.mirrored, next.listening, next.motion]);
+    document.body.classList.toggle("world-tools", tools);
+    const key = JSON.stringify([pattern?.id, next.playing, next.bpm, next.loop, next.notes, next.nextNotes, page, place, tools, width, height, next.practice, next.hasPractice, next.practiceIndex, next.practiceCount, next.practiceDone, next.canRecenter, next.mirrored, next.listening, next.motion]);
     if (key === previousKey) return;
     previousKey = key;
     const activeAction = document.activeElement?.classList.contains("world-target") ? document.activeElement.dataset.action : "";
     objectCursor = 0;
-    const portrait = width < 700;
+    const compact = height < 540 && width > height;
+    const portrait = width < 700 && !compact;
     if (!pattern) {
       const available = place === "all" ? PATTERNS : PATTERNS.filter((item) => viewFor(item.id) === place);
-      const count = portrait ? 1 : 3;
+      const count = portrait ? 1 : width < 1000 ? 2 : 3;
       const pages = Math.max(1, Math.ceil(available.length / count));
       page = (page + pages) % pages;
       heading.textContent = "Alamut. Discover music in the landscape.";
       object("ALAMUT", "A world to listen to", 0.5, 0.105, portrait ? 0.72 : 0.34, 0.10, null);
       object(place === "all" ? "All paths" : VIEWS[place].name.replace("Alamut · ", ""), "Touch to travel", 0.5, 0.25, portrait ? 0.76 : 0.32, 0.10, { type: "place" });
       available.slice(page * count, page * count + count).forEach((item, i) => {
-        object(item.title, item.kind, portrait ? 0.5 : 0.22 + i * 0.28, portrait ? 0.60 : 0.60, portrait ? 0.78 : 0.25, portrait ? 0.11 : 0.12, { type: "song", id: item.id }, true);
+        object(item.title, compact ? "" : item.kind, portrait ? 0.5 : (i + 0.5) / count, 0.60, portrait ? 0.78 : 0.82 / count, Math.max(0.12, 64 / height), { type: "song", id: item.id }, true);
       });
-      object("←", "Previous path", 0.18, 0.91, portrait ? 0.22 : 0.13, 0.07, { type: "page", delta: -1 });
-      object("→", "Next path", 0.82, 0.91, portrait ? 0.22 : 0.13, 0.07, { type: "page", delta: 1 });
+      object("←", "Previous path", 0.18, 0.89, portrait ? 0.22 : 0.13, Math.max(0.07, 44 / height), { type: "page", delta: -1 });
+      object("→", "Next path", 0.82, 0.89, portrait ? 0.22 : 0.13, Math.max(0.07, 44 / height), { type: "page", delta: 1 });
       mark.textContent = `${page + 1} / ${pages} · Choose a melody stone`;
     } else {
       heading.textContent = pattern.title;
-      object("← Alamut", "Return to the paths", portrait ? 0.21 : 0.12, 0.055, portrait ? 0.35 : 0.18, 0.06, { type: "home" });
-      object("✧", "Tools", portrait ? 0.89 : 0.93, 0.055, portrait ? 0.14 : 0.09, 0.06, { type: "tools" });
-      object(pattern.title, VIEWS[viewFor(pattern.id)].name.replace("Alamut · ", ""), 0.5, 0.16, portrait ? 0.88 : 0.5, 0.105, null);
+      object("← Alamut", "Return to the paths", portrait ? 0.21 : 0.12, compact ? 0.09 : 0.055, portrait ? 0.35 : 0.18, Math.max(0.06, 44 / height), { type: "home" });
+      object(tools ? "×" : "✧", tools ? "Close tools" : "Tools", portrait ? 0.89 : 0.93, compact ? 0.09 : 0.055, portrait ? 0.14 : 0.09, Math.max(0.06, 44 / height), { type: "tools" });
+      object(pattern.title, compact ? "" : VIEWS[viewFor(pattern.id)].name.replace("Alamut · ", ""), 0.5, compact ? 0.10 : 0.16, portrait ? 0.88 : 0.5, Math.max(0.105, 44 / height), null);
       const now = (next.notes || []).map(numberOf).join(" · ") || "Listen";
       const upcoming = (next.nextNotes || []).map(numberOf).join(" · ");
+      if (!tools && compact) {
+        object(now, upcoming ? `Then ${upcoming}` : "Touch the handpan", 0.35, 0.86, 0.35, 0.15, null);
+        object(next.playing ? "Ⅱ Pause" : "▷ Play", `${next.bpm} bpm`, 0.78, 0.32, 0.28, 0.16, { type: "play" });
+        object("‹", "Previous note", 0.67, 0.52, 0.12, 0.12, { type: "step", delta: -1 });
+        object("›", "Next note", 0.89, 0.52, 0.12, 0.12, { type: "step", delta: 1 });
+        object("−", "Slower", 0.67, 0.72, 0.12, 0.12, { type: "tempo", delta: -4, disabled: next.bpm <= 48 });
+        object("+", "Faster", 0.89, 0.72, 0.12, 0.12, { type: "tempo", delta: 4, disabled: next.bpm >= 140 });
+        object(next.loop ? "∞ Loop on" : "∞ Loop off", "Repeat the melody", 0.78, 0.89, 0.27, 0.12, { type: "loop" });
+      } else if (!tools) {
       object(now, upcoming ? `Then ${upcoming}` : "Touch the handpan", 0.5, 0.68, portrait ? 0.56 : 0.25, 0.085, null);
       object("‹", "Previous note", 0.22, 0.80, portrait ? 0.19 : 0.11, 0.08, { type: "step", delta: -1 });
       object(next.playing ? "Ⅱ Pause" : "▷ Play", `${next.bpm} bpm`, 0.5, 0.80, portrait ? 0.30 : 0.18, 0.09, { type: "play" });
       object("›", "Next note", 0.78, 0.80, portrait ? 0.19 : 0.11, 0.08, { type: "step", delta: 1 });
-      object("−", "Slower", 0.18, 0.92, portrait ? 0.18 : 0.10, 0.065, { type: "tempo", delta: -4 });
+      object("−", "Slower", 0.18, 0.92, portrait ? 0.18 : 0.10, 0.065, { type: "tempo", delta: -4, disabled: next.bpm <= 48 });
       object(next.loop ? "∞ Loop on" : "∞ Loop off", "Repeat the melody", 0.5, 0.92, portrait ? 0.32 : 0.21, 0.07, { type: "loop" });
-      object("+", "Faster", 0.82, 0.92, portrait ? 0.18 : 0.10, 0.065, { type: "tempo", delta: 4 });
+      object("+", "Faster", 0.82, 0.92, portrait ? 0.18 : 0.10, 0.065, { type: "tempo", delta: 4, disabled: next.bpm >= 140 });
+      }
       if (tools) {
-        const actions = [[next.motion ? "Tilt on" : "Tilt off", "Phone motion", "motion"], ["Center", "Recenter motion", "center"], [next.mirrored ? "Mirror on" : "Mirror off", "Swap hands", "mirror"], [next.listening ? "Listening" : "Listen", "Use microphone", "listen"]];
-        if (next.hasPractice) actions.push([next.practice ? "Got it, next" : "Practice", "Learn in steps", "practice"]);
-        if (next.practice) actions.push(["Previous step", "Repeat this part", "practice-back"], ["Leave practice", "Keep your progress", "practice-exit"]);
-        actions.forEach(([label, sub, type], i) => object(label, sub, portrait ? 0.27 + (i % 2) * 0.46 : 0.88, portrait ? 0.30 + Math.floor(i / 2) * 0.095 : 0.25 + i * 0.065, portrait ? 0.40 : 0.20, 0.062, { type }));
+        const actions = [[next.motion ? "Tilt on" : "Tilt off", "Phone motion", "motion"]];
+        if (next.canRecenter) actions.push(["Center", "Recenter motion", "center"]);
+        actions.push([next.mirrored ? "Mirror on" : "Mirror off", "Swap hands", "mirror"], [next.listening ? "Listening" : "Listen", "Use microphone", "listen"]);
+        if (next.hasPractice) actions.push([next.practice ? next.practiceIndex === next.practiceCount - 1 ? "Finish practice" : "Got it, next" : next.practiceDone ? "Continue" : "Practice", "Learn in steps", "practice"]);
+        if (next.practiceIndex > 0) actions.push(["Previous step", "Repeat this part", "practice-back"]);
+        if (next.practice) actions.push(["Leave practice", "Keep your progress", "practice-exit"]);
+        const cols = compact ? 3 : 2;
+        actions.forEach(([label, sub, type], i) => object(label, sub, (i % cols + 0.5) / cols, compact ? 0.32 + Math.floor(i / cols) * 0.23 : 0.32 + Math.floor(i / cols) * 0.15, compact ? 0.28 : 0.40, Math.max(compact ? 0.14 : 0.09, 48 / height), { type }));
       }
       mark.textContent = next.practice || "Brass · left hand     Ivory · right hand";
     }
+    if (noticeText) mark.textContent = noticeText;
     for (let i = objectCursor; i < objects.length; i += 1) dispose(objects[i]);
     objects.length = objectCursor;
     render();
@@ -240,5 +275,20 @@ export function createWorldInterface({ onAction }) {
   }, true);
   document.body.classList.add("world-mode");
   resize();
-  return { update, notice(text) { mark.textContent = text; } };
+  return {
+    update,
+    galleryEnvironment() { return place === "all" ? "courtyard" : place; },
+    focusRoute(previousSongId) {
+      const action = pattern ? { type: "play" } : { type: "song", id: previousSongId || lastSongId };
+      if (pattern) lastSongId = pattern.id;
+      const target = [...host.querySelectorAll("button")].find((button) => button.dataset.action === JSON.stringify(action));
+      (target || host.querySelector("button"))?.focus({ preventScroll: true });
+    },
+    notice(text) {
+      clearTimeout(noticeTimer);
+      noticeText = text;
+      mark.textContent = text;
+      noticeTimer = setTimeout(() => { noticeText = ""; previousKey = ""; update(snapshot); }, 7000);
+    }
+  };
 }
