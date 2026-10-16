@@ -1,0 +1,187 @@
+/* Front door and features page. The practice app keeps css/app.css. */
+
+body.site {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  background:
+    radial-gradient(1100px 520px at 50% -8%, rgba(217, 183, 122, 0.18), transparent 58%),
+    radial-gradient(720px 420px at 100% 100%, rgba(111, 207, 176, 0.08), transparent 46%),
+    var(--night);
+}
+
+body.site:has(.site-hero) {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.site-top {
+  display: flex;
+  align-items: center;
+  width: min(960px, 100%);
+  margin: 0 auto;
+  min-height: 64px;
+  padding: 12px var(--pad) 0;
+}
+
+.site-hero,
+.site-page {
+  align-self: center;
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 28px var(--pad) 64px;
+}
+
+.site-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.site-kicker {
+  margin: 0 0 14px;
+  color: var(--brass);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.site-hero h1,
+.site-page h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  color: var(--mist);
+}
+
+.site-hero h1 { font-size: clamp(56px, 11vw, 96px); }
+
+.site-page h1 { font-size: clamp(40px, 7vw, 68px); }
+
+.site-lead {
+  max-width: 42ch;
+  margin: 18px 0 0;
+  color: var(--soft);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.site-page h2 {
+  margin: 36px 0 8px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.site-note {
+  max-width: 62ch;
+  margin: 0 0 14px;
+  color: var(--soft);
+  line-height: 1.5;
+}
+
+.site-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-list li {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--r);
+  box-shadow: var(--lift);
+}
+
+.site-list strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--mist);
+  font-size: 16px;
+  letter-spacing: -0.015em;
+}
+
+.site-list span {
+  display: block;
+  color: var(--soft);
+  line-height: 1.45;
+}
+
+.site-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.site-primary,
+.site-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 18px;
+  border-radius: var(--r-s);
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
+.site-primary {
+  background: linear-gradient(180deg, #e9cc94, #cfa96a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 8px 18px -10px rgba(217, 183, 122, 0.85);
+  color: var(--ink);
+}
+
+.site-secondary {
+  background: var(--fill);
+  box-shadow: var(--ring);
+  color: var(--mist);
+}
+
+@media (min-width: 800px) {
+  .site-list { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .site-hero,
+  .site-page { padding-top: 28px; }
+  .site-lead { font-size: 17px; }
+  .site-actions { flex-direction: column; align-items: stretch; }
+  .site-actions a { width: 100%; }
+}
+
+@media (max-height: 520px) and (min-width: 600px) {
+  .site-top { min-height: 52px; }
+  .site-hero,
+  .site-page { padding-top: 12px; padding-bottom: 28px; }
+  .site-hero h1 { font-size: 52px; }
+  .site-lead { margin-top: 10px; font-size: 16px; }
+  .site-actions { margin-top: 16px; }
+  .site-page h2 { margin-top: 22px; }
+}
+
+@media (hover: hover) {
+  .site-secondary:hover { background: var(--fill-2); }
+  .site-primary:hover { filter: brightness(1.05); }
+}

@@ -466,7 +466,17 @@ function renderList() {
   rows.id = "rows";
   const libraryHead = document.createElement("div");
   libraryHead.className = "library-head";
-  libraryHead.append(heading, find, chips);
+  const siteNav = document.createElement("nav");
+  siteNav.className = "library-site-nav";
+  siteNav.setAttribute("aria-label", "Site pages");
+  const about = document.createElement("a");
+  about.href = "landing.html";
+  about.textContent = "About Alamut";
+  const features = document.createElement("a");
+  features.href = "features.html";
+  features.textContent = "Features";
+  siteNav.append(about, features);
+  libraryHead.append(heading, siteNav, find, chips);
   const resultCount = document.createElement("p");
   resultCount.id = "result-count";
   resultCount.className = "result-count";

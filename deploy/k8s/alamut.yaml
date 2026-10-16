@@ -1,0 +1,76 @@
+# Static Alamut site.
+# Build from the repository root, then import the image into the cluster
+# containerd before the pod is scheduled:
+#   docker build -t alamut-site:local .
+# Namespace tenant-moshes-lab is the namespace this company's Flux
+# Kustomization named tenant applies. Do not put these objects in another tenant.
+# Host alamut.example.invalid is a placeholder. No TLS is attached.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alamut
+  namespace: tenant-moshes-lab
+  labels:
+    app.kubernetes.io/name: alamut
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alamut
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alamut
+    spec:
+      containers:
+        - name: alamut
+          image: alamut-site:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alamut
+  namespace: tenant-moshes-lab
+  labels:
+    app.kubernetes.io/name: alamut
+spec:
+  selector:
+    app.kubernetes.io/name: alamut
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alamut
+  namespace: tenant-moshes-lab
+  labels:
+    app.kubernetes.io/name: alamut
+spec:
+  rules:
+    - host: alamut.example.invalid
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: alamut
+                port:
+                  name: http
