@@ -65,8 +65,8 @@ function studio(renderer) {
   const room = new THREE.Scene();
   room.add(
     new THREE.Mesh(
-      new THREE.SphereGeometry(30, 24, 12),
-      new THREE.MeshBasicMaterial({ color: 0x0b0907, side: THREE.BackSide }),
+      new THREE.SphereGeometry(30, 32, 16),
+      new THREE.MeshBasicMaterial({ color: 0x2a1c12, side: THREE.BackSide }),
     ),
   );
   const card = (r, g, b, power, width, height, x, y, z) => {
@@ -77,9 +77,11 @@ function studio(renderer) {
     mesh.lookAt(0, 0, 0);
     room.add(mesh);
   };
-  card(1, 0.94, 0.85, 2.8, 9, 8, -5, 6, 3);
-  card(0.86, 0.92, 1, 1.2, 7, 8, 6, 3, -5);
-  card(1, 0.98, 0.94, 1.8, 10, 10, 0, 9, 0);
+  card(1, 0.9, 0.72, 4.4, 16, 9, -7, 8, 5);
+  card(0.75, 0.84, 0.98, 1.5, 10, 12, 8, 3.2, -4);
+  card(1, 0.97, 0.9, 2.6, 18, 6, 0, 12, 1);
+  card(1, 0.78, 0.48, 1.1, 14, 4, 0, -4, 8);
+  card(1, 0.94, 0.8, 3.2, 2.2, 10, 1.5, 4, -9);
   const maker = new THREE.PMREMGenerator(renderer);
   const texture = maker.fromScene(room, 0.03).texture;
   maker.dispose();
@@ -119,53 +121,124 @@ function reach(frame, point) {
   return Math.hypot(du / frame.along, dv / frame.across);
 }
 
+// Move each note along its own normal. Tangent coordinates, and the hit test that uses them, stay put.
+function noteLift(frame, point) {
+  const e = reach(frame, point);
+  if (frame.ding) {
+    if (e > 1.45) return 0;
+    const cap = Math.exp(-((e / 0.58) ** 2));
+    const neck = Math.exp(-(((e - 0.96) / 0.13) ** 2));
+    return 0.105 * cap - 0.02 * neck;
+  }
+  if (e > 1.28) return 0;
+  const off =
+    (point.x - frame.center.x) * frame.normal.x +
+    (point.y - frame.center.y) * frame.normal.y +
+    (point.z - frame.center.z) * frame.normal.z;
+  const settle = 1 - smooth(0.2, 1.18, e);
+  const dish = Math.exp(-((e / 0.6) ** 2));
+  const rim = Math.exp(-(((e - 1) / 0.16) ** 2));
+  return -off * 0.82 * settle - 0.058 * dish + 0.02 * rim;
+}
+
+function steelColor(cavity, crown, edge, salt) {
+  return [
+    Math.min(1, Math.max(0, 0.84 + crown * 0.08 - cavity * 0.14 - edge * 0.08 + salt * 0.03)),
+    Math.min(1, Math.max(0, 0.52 + crown * 0.06 - cavity * 0.1 - edge * 0.06 + salt * 0.02)),
+    Math.min(1, Math.max(0, 0.2 + crown * 0.03 - cavity * 0.05 - edge * 0.03 + salt * 0.012)),
+  ];
+}
+
+function nitrideNormal() {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const pen = canvas.getContext("2d");
+  const image = pen.createImageData(size, size);
+  const height = new Float32Array(size * size);
+  const hash = (x, y) => {
+    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return n - Math.floor(n);
+  };
+  const noise = (x, y) => {
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const fx = x - x0;
+    const fy = y - y0;
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
+    const a = hash(x0, y0);
+    const b = hash(x0 + 1, y0);
+    const c = hash(x0, y0 + 1);
+    const d = hash(x0 + 1, y0 + 1);
+    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+  };
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      height[y * size + x] = noise(x * 0.45, y * 0.45) * 0.65 + noise(x * 1.15, y * 1.15) * 0.35;
+    }
+  }
+  const strength = 1.15;
+  for (let y = 0; y < size; y += 1) {
+    const ym = (y - 1 + size) % size;
+    const yp = (y + 1) % size;
+    for (let x = 0; x < size; x += 1) {
+      const xm = (x - 1 + size) % size;
+      const xp = (x + 1) % size;
+      const dx = height[y * size + xp] - height[y * size + xm];
+      const dy = height[yp * size + x] - height[ym * size + x];
+      const nx = -dx * strength;
+      const ny = -dy * strength;
+      const len = Math.hypot(nx, ny, 1);
+      const i = (y * size + x) * 4;
+      image.data[i] = (nx / len * 0.5 + 0.5) * 255;
+      image.data[i + 1] = (ny / len * 0.5 + 0.5) * 255;
+      image.data[i + 2] = (1 / len * 0.5 + 0.5) * 255;
+      image.data[i + 3] = 255;
+    }
+  }
+  pen.putImageData(image, 0, 0);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.LinearSRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3.5, 3.5);
+  return texture;
+}
+
 function domeGeometry(frames) {
-  const RINGS = 64;
-  const SPOKES = 192;
+  const RINGS = 112;
+  const SPOKES = 224;
   const spots = [];
   const colors = [];
   const flat = [];
   const index = [];
   const point = new THREE.Vector3();
+  const base = new THREE.Vector3();
+  const shift = new THREE.Vector3();
   for (let i = 0; i <= RINGS; i += 1) {
     const a = (i / RINGS) * (Math.PI / 2);
     const r = RADIUS * Math.sin(a);
     for (let j = 0; j <= SPOKES; j += 1) {
       const t = (j / SPOKES) * Math.PI * 2;
-      point.set(r * Math.cos(t), DOME * Math.cos(a), r * Math.sin(t));
-      flat.push(point.x / RADIUS, point.z / RADIUS);
-      const rim = r / RADIUS;
-      let red = 0.31 - rim * 0.06;
-      let green = 0.23 - rim * 0.05;
-      let blue = 0.16 - rim * 0.035;
+      base.set(r * Math.cos(t), DOME * Math.cos(a), r * Math.sin(t));
+      flat.push(base.x / RADIUS, base.z / RADIUS);
+      shift.set(0, 0, 0);
+      let cavity = 0;
+      let crown = 0;
       for (const frame of frames) {
-        const e = reach(frame, point);
-        if (e > 1.45) continue;
-        const n = frame.normal;
-        let lift = 0;
-        let shade = 1;
+        const lift = noteLift(frame, base);
+        if (!lift) continue;
+        shift.addScaledVector(frame.normal, lift);
+        const e = reach(frame, base);
         if (frame.ding) {
-          const inside = e < 1 ? Math.cos((e * Math.PI) / 2) ** 2 : 0;
-          lift = 0.1 * inside + 0.006 * Math.exp(-(((e - 1.08) / 0.16) ** 2));
-          shade = 1 - 0.08 * smooth(1.05, 0.7, e);
-        } else {
-          const w = 1 - smooth(0.65, 1.3, e);
-          const dx = point.x - frame.center.x;
-          const dy = point.y - frame.center.y;
-          const dz = point.z - frame.center.z;
-          const off = dx * n.x + dy * n.y + dz * n.z;
-          lift =
-            -off * w -
-            0.014 * w +
-            0.007 * Math.exp(-(((e - 1.04) / 0.18) ** 2)) -
-            0.022 * Math.exp(-((e / 0.32) ** 2));
-          shade = 1 - 0.12 * w;
-        }
-        point.addScaledVector(n, lift);
-        red *= shade;
-        green *= shade;
-        blue *= shade;
+          crown = Math.max(crown, Math.exp(-((e / 0.62) ** 2)));
+          cavity = Math.max(cavity, Math.exp(-(((e - 0.98) / 0.16) ** 2)) * 0.65);
+        } else cavity = Math.max(cavity, Math.exp(-((e / 0.6) ** 2)));
       }
+      point.copy(base).add(shift);
+      const edge = smooth(0.86, 1, r / RADIUS);
+      const salt = Math.sin(base.x * 19.2 + Math.sin(base.z * 16.4) * 2.4) * 0.5 + Math.sin(base.z * 8.1 + base.x * 6.4) * 0.25;
+      const [red, green, blue] = steelColor(cavity, crown, edge, salt);
       spots.push(point.x, point.y, point.z);
       colors.push(red, green, blue);
     }
@@ -198,12 +271,25 @@ function domeGeometry(frames) {
 }
 
 function bowlGeometry() {
-  const points = [new THREE.Vector2(RADIUS, 0), new THREE.Vector2(RADIUS + 0.05, -0.035), new THREE.Vector2(RADIUS, -0.1)];
-  for (let i = 1; i <= 20; i += 1) {
-    const a = (i / 20) * (Math.PI / 2);
-    points.push(new THREE.Vector2(0.3 + (RADIUS - 0.3) * Math.cos(a), -0.1 - 0.52 * Math.sin(a)));
+  const points = [
+    new THREE.Vector2(RADIUS, -0.006),
+    new THREE.Vector2(RADIUS + 0.01, -0.018),
+    new THREE.Vector2(RADIUS + 0.004, -0.04),
+  ];
+  const hole = 0.38;
+  const depth = 0.62;
+  for (let i = 0; i <= 26; i += 1) {
+    const a = (i / 26) * (Math.PI / 2);
+    points.push(new THREE.Vector2(hole + (RADIUS - 0.04 - hole) * Math.cos(a), -0.055 - depth * Math.sin(a)));
   }
-  return new THREE.LatheGeometry(points, 96);
+  const tube = 0.022;
+  const cx = hole + tube;
+  const cy = -0.055 - depth;
+  for (let i = 1; i <= 7; i += 1) {
+    const ang = Math.PI + (i / 7) * Math.PI * 0.65;
+    points.push(new THREE.Vector2(cx + Math.cos(ang) * tube, cy + Math.sin(ang) * tube));
+  }
+  return new THREE.LatheGeometry(points, 128);
 }
 
 function createDrum(host, onHit, onStrike) {
@@ -213,7 +299,7 @@ function createDrum(host, onHit, onStrike) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.92;
+  renderer.toneMappingExposure = 0.9;
   const canvas = renderer.domElement;
   canvas.className = "pan-3d";
   canvas.setAttribute("aria-hidden", "true");
@@ -224,33 +310,47 @@ function createDrum(host, onHit, onStrike) {
   renderer.setClearColor(0x000000, 0);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 60);
 
-  const key = new THREE.DirectionalLight(0xfff1df, 1.5);
-  key.position.set(-3, 6, 2.5);
+  const key = new THREE.DirectionalLight(0xfff3e2, 1.45);
+  key.position.set(-3.4, 7.2, 2.4);
+  const fill = new THREE.DirectionalLight(0xd5e2f2, 0.22);
+  fill.position.set(5.5, 2.6, -2.2);
+  const kicker = new THREE.DirectionalLight(0xffe2b8, 0.28);
+  kicker.position.set(0.8, 3.4, -6);
   const strike = new THREE.PointLight(BRASS, 0, 3.4, 1.5);
-  scene.add(key, strike);
+  scene.add(key, fill, kicker, strike);
 
   const drum = new THREE.Group();
   scene.add(drum);
+  const grain = nitrideNormal();
+  grain.anisotropy = renderer.capabilities.getMaxAnisotropy();
   const metal = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
-    metalness: 0.94,
-    roughness: 0.44,
-    clearcoat: 0,
-    envMapIntensity: 0.85,
+    metalness: 1,
+    roughness: 0.42,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.45,
+    envMapIntensity: 0.92,
+    normalMap: grain,
+    normalScale: new THREE.Vector2(0.16, 0.16),
   });
   const under = new THREE.MeshPhysicalMaterial({
-    color: 0x65513e,
-    metalness: 0.88,
-    roughness: 0.5,
-    envMapIntensity: 0.78,
+    color: 0xe0b15c,
+    metalness: 1,
+    roughness: 0.44,
+    clearcoat: 0.06,
+    clearcoatRoughness: 0.48,
+    envMapIntensity: 1.05,
+    normalMap: grain,
+    normalScale: new THREE.Vector2(0.14, 0.14),
+    side: THREE.DoubleSide,
   });
   const lip = new THREE.Mesh(
-    new THREE.TorusGeometry(RADIUS + 0.035, 0.026, 14, 160),
-    new THREE.MeshStandardMaterial({ color: 0x554635, metalness: 0.9, roughness: 0.48, emissive: BRASS, emissiveIntensity: 0 }),
+    new THREE.TorusGeometry(RADIUS + 0.004, 0.012, 12, 180),
+    new THREE.MeshStandardMaterial({ color: 0xb57a3a, metalness: 1, roughness: 0.52, emissive: BRASS, emissiveIntensity: 0, envMapIntensity: 0.85 }),
   );
   lip.rotation.x = Math.PI / 2;
-  lip.position.y = -0.035;
+  lip.position.y = -0.008;
   drum.add(new THREE.Mesh(bowlGeometry(), under), lip);
   let dome = null;
 
@@ -323,7 +423,7 @@ function createDrum(host, onHit, onStrike) {
   function build(spec) {
     const frame = fieldFrame(spec.deg, spec.ding);
     const group = new THREE.Group();
-    const lift = spec.ding ? 0.115 : 0.006;
+    const lift = noteLift(frame, frame.center) + (spec.ding ? 0.042 : 0.016);
     group.position.copy(frame.center).addScaledVector(frame.normal, lift);
     group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(frame.u, frame.v, frame.normal));
     const additive = (map) =>
