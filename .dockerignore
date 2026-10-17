@@ -1,9 +1,8 @@
 .git
+.github
 .claude
 .paperclip
 Agents.md
-CLAUDE.md
 Dockerfile
-.dockerignore
 deploy/k8s
-**/*.md
+*.md

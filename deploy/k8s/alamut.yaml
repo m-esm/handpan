@@ -1,11 +1,9 @@
 # Static Alamut site.
-# Build from the repository root, then import the image into the cluster
-# containerd before the pod is scheduled:
-#   docker build -t alamut-site:local .
-# Namespace tenant-moshes-lab is the namespace this company's Flux
-# Kustomization named tenant applies. Do not put these objects in another tenant.
-# Host alamut.moshes.io was chosen on MOSA-30. No TLS is attached
-# until that name points at the cluster. Do not copy credentials here.
+# Flux applies the live copy from m-esm/cluster-moshes-lab under
+# apps/tenant-moshes-lab/alamut. This file is the in-repo shape.
+# Image tags on the cluster are ghcr.io/m-esm/handpan:<git-sha>.
+# Namespace tenant-moshes-lab was chosen on MOSA-30.
+# Host alamut.moshes.io was chosen on MOSA-30. TLS is on the cluster IngressRoute.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,14 +21,26 @@ spec:
       labels:
         app.kubernetes.io/name: alamut
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: alamut
-          image: alamut-site:local
+          image: ghcr.io/m-esm/handpan:local
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
           readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          livenessProbe:
             httpGet:
               path: /
               port: http
@@ -38,8 +48,32 @@ spec:
             requests:
               cpu: 20m
               memory: 32Mi
+              ephemeral-storage: 64Mi
             limits:
               memory: 128Mi
+              ephemeral-storage: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /var/run
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+        - name: cache
+          emptyDir:
+            sizeLimit: 16Mi
+        - name: run
+          emptyDir:
+            sizeLimit: 8Mi
 ---
 apiVersion: v1
 kind: Service
