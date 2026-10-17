@@ -4,7 +4,8 @@
 #   docker build -t alamut-site:local .
 # Namespace tenant-moshes-lab is the namespace this company's Flux
 # Kustomization named tenant applies. Do not put these objects in another tenant.
-# Host alamut.example.invalid is a placeholder. No TLS is attached.
+# Host alamut.moshes.io was chosen on MOSA-30. No TLS is attached
+# until that name points at the cluster. Do not copy credentials here.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -64,7 +65,7 @@ metadata:
     app.kubernetes.io/name: alamut
 spec:
   rules:
-    - host: alamut.example.invalid
+    - host: alamut.moshes.io
       http:
         paths:
           - path: /
