@@ -9,11 +9,16 @@ const TEAL = 0x6fcfb0;
 const RED = 0xd9735c;
 const INK = "#1a140f";
 const RADIUS = 1.6;
-const DOME = 0.44;
-const RING_AT = 1.1;
-const ACROSS = 0.3;
-const ALONG = 0.245;
-const DING = 0.47;
+// Both shells are spherical caps, so they meet at the rim in a sharp edge, as on a real pan.
+const DOME = 0.56;
+const SHELL = (RADIUS ** 2 + DOME ** 2) / (2 * DOME);
+const BELLY = 0.66;
+const BELLY_SHELL = (RADIUS ** 2 + BELLY ** 2) / (2 * BELLY);
+const GU = 0.37;
+const RING_AT = 1.08;
+const ALONG = 0.3;
+const ACROSS = 0.25;
+const DING = 0.44;
 const UP = new THREE.Vector3(0, 1, 0);
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const profiling = new URLSearchParams(location.search).has("perf");
@@ -88,7 +93,10 @@ function studio(renderer) {
   return texture;
 }
 
-function fieldFrame(deg, ding) {
+const shellY = (r) => Math.sqrt(SHELL ** 2 - r * r) - (SHELL - DOME);
+
+// Lower notes get larger fields, as on a real pan.
+function fieldFrame(deg, ding, pitch = 5) {
   if (ding) {
     const center = new THREE.Vector3(0, DOME, 0);
     return {
@@ -101,16 +109,19 @@ function fieldFrame(deg, ding) {
       ding: true,
     };
   }
+  const size = 1.1 - (Math.min(9, Math.max(1, pitch)) - 1) * 0.03;
   const a = (deg * Math.PI) / 180 - Math.PI / 2;
   const x = Math.cos(a) * RING_AT;
   const z = Math.sin(a) * RING_AT;
-  const y = DOME * Math.sqrt(1 - (RING_AT / RADIUS) ** 2);
-  const normal = new THREE.Vector3(x / RADIUS ** 2, y / DOME ** 2, z / RADIUS ** 2).normalize();
+  const y = shellY(RING_AT);
+  const normal = new THREE.Vector3(x, y + SHELL - DOME, z).normalize();
   const out = new THREE.Vector3(x, 0, z).normalize();
   const u = out.clone().addScaledVector(normal, -out.dot(normal)).normalize();
   const v = new THREE.Vector3().crossVectors(normal, u);
-  return { center: new THREE.Vector3(x, y, z), normal, u, v, along: ALONG, across: ACROSS, ding: false };
+  return { center: new THREE.Vector3(x, y, z), normal, u, v, along: ALONG * size, across: ACROSS * size, ding: false };
 }
+
+const frameOf = (spec) => fieldFrame(spec.deg, spec.ding, Number(spec.text));
 
 function reach(frame, point) {
   const dx = point.x - frame.center.x;
@@ -125,89 +136,102 @@ function reach(frame, point) {
 function noteLift(frame, point) {
   const e = reach(frame, point);
   if (frame.ding) {
-    if (e > 1.45) return 0;
-    const cap = Math.exp(-((e / 0.58) ** 2));
-    const neck = Math.exp(-(((e - 0.96) / 0.13) ** 2));
-    return 0.105 * cap - 0.02 * neck;
+    if (e > 1.4) return 0;
+    const cap = 1 - smooth(0, 1.02, e) ** 1.6;
+    const neck = Math.exp(-(((e - 1.04) / 0.07) ** 2));
+    return 0.1 * cap - 0.014 * neck;
   }
-  if (e > 1.28) return 0;
+  if (e > 1.3) return 0;
+  // The pressed field is a flat plate at the height of its own border, so it sits just below the shell.
   const off =
     (point.x - frame.center.x) * frame.normal.x +
     (point.y - frame.center.y) * frame.normal.y +
     (point.z - frame.center.z) * frame.normal.z;
-  const settle = 1 - smooth(0.2, 1.18, e);
-  const dish = Math.exp(-((e / 0.6) ** 2));
-  const rim = Math.exp(-(((e - 1) / 0.16) ** 2));
-  return -off * 0.82 * settle - 0.058 * dish + 0.02 * rim;
+  const plate = (off / Math.max(e * e, 1e-4) - off) * (1 - smooth(0.62, 1, e));
+  const bowl = Math.max(0, 1 - (e / 0.44) ** 2);
+  const crease = Math.exp(-(((e - 1) / 0.05) ** 2));
+  const shoulder = Math.exp(-(((e - 1.13) / 0.09) ** 2));
+  return plate - 0.05 * bowl ** 0.65 - 0.003 * crease + 0.006 * shoulder;
 }
 
-function steelColor(cavity, crown, edge, salt) {
-  return [
-    Math.min(1, Math.max(0, 0.84 + crown * 0.08 - cavity * 0.14 - edge * 0.08 + salt * 0.03)),
-    Math.min(1, Math.max(0, 0.52 + crown * 0.06 - cavity * 0.1 - edge * 0.06 + salt * 0.02)),
-    Math.min(1, Math.max(0, 0.2 + crown * 0.03 - cavity * 0.05 - edge * 0.03 + salt * 0.012)),
-  ];
+const tone = (hex) => new THREE.Color(hex);
+const SKIN = {
+  shell: tone(0x5c3f26),
+  edge: tone(0x3a281a),
+  field: tone(0x8a6238),
+  dimple: tone(0x43301f),
+  temper: tone(0x4c5266),
+  crown: tone(0x93693c),
+};
+
+function fieldNoise(x, z) {
+  return (
+    Math.sin(x * 2.3 + Math.sin(z * 1.7) * 1.6) * 0.5 +
+    Math.sin(z * 3.1 - x * 1.2 + Math.sin(x * 4.4) * 0.8) * 0.3 +
+    Math.sin((x + z) * 7.3) * 0.2
+  );
 }
 
-function nitrideNormal() {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const pen = canvas.getContext("2d");
-  const image = pen.createImageData(size, size);
+// A tileable map of overlapping hammer dents. Red/green hold the normal; blue holds roughness.
+function hammerMaps() {
+  const size = 512;
   const height = new Float32Array(size * size);
-  const hash = (x, y) => {
-    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-    return n - Math.floor(n);
+  let seed = 7;
+  const random = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
   };
-  const noise = (x, y) => {
-    const x0 = Math.floor(x);
-    const y0 = Math.floor(y);
-    const fx = x - x0;
-    const fy = y - y0;
-    const ux = fx * fx * (3 - 2 * fx);
-    const uy = fy * fy * (3 - 2 * fy);
-    const a = hash(x0, y0);
-    const b = hash(x0 + 1, y0);
-    const c = hash(x0, y0 + 1);
-    const d = hash(x0 + 1, y0 + 1);
-    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
-  };
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      height[y * size + x] = noise(x * 0.45, y * 0.45) * 0.65 + noise(x * 1.15, y * 1.15) * 0.35;
+  for (let n = 0; n < 520; n += 1) {
+    const cx = random() * size;
+    const cy = random() * size;
+    const r = 14 + random() * 26;
+    const depth = 0.5 + random() * 0.5;
+    for (let y = Math.floor(cy - r); y <= cy + r; y += 1) {
+      for (let x = Math.floor(cx - r); x <= cx + r; x += 1) {
+        const d = Math.hypot(x - cx, y - cy) / r;
+        if (d >= 1) continue;
+        const i = ((y + size) % size) * size + ((x + size) % size);
+        const dent = depth * (1 - d * d) ** 2;
+        height[i] = Math.min(height[i], -dent) * 0.6 + height[i] * 0.4 - dent * 0.15;
+      }
     }
   }
-  const strength = 1.15;
-  for (let y = 0; y < size; y += 1) {
-    const ym = (y - 1 + size) % size;
-    const yp = (y + 1) % size;
-    for (let x = 0; x < size; x += 1) {
-      const xm = (x - 1 + size) % size;
-      const xp = (x + 1) % size;
-      const dx = height[y * size + xp] - height[y * size + xm];
-      const dy = height[yp * size + x] - height[ym * size + x];
-      const nx = -dx * strength;
-      const ny = -dy * strength;
-      const len = Math.hypot(nx, ny, 1);
-      const i = (y * size + x) * 4;
-      image.data[i] = (nx / len * 0.5 + 0.5) * 255;
-      image.data[i + 1] = (ny / len * 0.5 + 0.5) * 255;
-      image.data[i + 2] = (1 / len * 0.5 + 0.5) * 255;
-      image.data[i + 3] = 255;
+  const make = (fill) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const pen = canvas.getContext("2d");
+    const image = pen.createImageData(size, size);
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) fill(image.data, (y * size + x) * 4, x, y);
     }
-  }
-  pen.putImageData(image, 0, 0);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.LinearSRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(3.5, 3.5);
-  return texture;
+    pen.putImageData(image, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    return texture;
+  };
+  const at = (x, y) => height[((y + size) % size) * size + ((x + size) % size)];
+  const normal = make((data, i, x, y) => {
+    const nx = -(at(x + 1, y) - at(x - 1, y)) * 2.2;
+    const ny = -(at(x, y + 1) - at(x, y - 1)) * 2.2;
+    const len = Math.hypot(nx, ny, 1);
+    data[i] = (nx / len * 0.5 + 0.5) * 255;
+    data[i + 1] = (ny / len * 0.5 + 0.5) * 255;
+    data[i + 2] = (1 / len * 0.5 + 0.5) * 255;
+    data[i + 3] = 255;
+  });
+  const rough = make((data, i, x, y) => {
+    const slope = Math.hypot(at(x + 1, y) - at(x - 1, y), at(x, y + 1) - at(x, y - 1));
+    const value = Math.min(255, 96 + slope * 200 + (at(x, y) + 0.5) * 24);
+    data[i] = data[i + 1] = data[i + 2] = value;
+    data[i + 3] = 255;
+  });
+  return { normal, rough };
 }
 
 function domeGeometry(frames) {
-  const RINGS = 112;
-  const SPOKES = 224;
+  const RINGS = 150;
+  const SPOKES = 300;
   const spots = [];
   const colors = [];
   const flat = [];
@@ -215,15 +239,19 @@ function domeGeometry(frames) {
   const point = new THREE.Vector3();
   const base = new THREE.Vector3();
   const shift = new THREE.Vector3();
+  const paint = new THREE.Color();
+  const reachEdge = Math.asin(RADIUS / SHELL);
   for (let i = 0; i <= RINGS; i += 1) {
-    const a = (i / RINGS) * (Math.PI / 2);
-    const r = RADIUS * Math.sin(a);
+    const a = (i / RINGS) * reachEdge;
+    const r = SHELL * Math.sin(a);
     for (let j = 0; j <= SPOKES; j += 1) {
       const t = (j / SPOKES) * Math.PI * 2;
-      base.set(r * Math.cos(t), DOME * Math.cos(a), r * Math.sin(t));
+      base.set(r * Math.cos(t), shellY(r), r * Math.sin(t));
       flat.push(base.x / RADIUS, base.z / RADIUS);
       shift.set(0, 0, 0);
-      let cavity = 0;
+      let field = 0;
+      let dimple = 0;
+      let temper = 0;
       let crown = 0;
       for (const frame of frames) {
         const lift = noteLift(frame, base);
@@ -231,16 +259,23 @@ function domeGeometry(frames) {
         shift.addScaledVector(frame.normal, lift);
         const e = reach(frame, base);
         if (frame.ding) {
-          crown = Math.max(crown, Math.exp(-((e / 0.62) ** 2)));
-          cavity = Math.max(cavity, Math.exp(-(((e - 0.98) / 0.16) ** 2)) * 0.65);
-        } else cavity = Math.max(cavity, Math.exp(-((e / 0.6) ** 2)));
+          crown = Math.max(crown, 1 - smooth(0.5, 1.05, e));
+        } else {
+          field = Math.max(field, 1 - smooth(0.85, 1.08, e));
+          dimple = Math.max(dimple, 1 - smooth(0.36, 0.46, e));
+          temper = Math.max(temper, Math.exp(-(((e - 0.62) / 0.2) ** 2)));
+        }
       }
       point.copy(base).add(shift);
-      const edge = smooth(0.86, 1, r / RADIUS);
-      const salt = Math.sin(base.x * 19.2 + Math.sin(base.z * 16.4) * 2.4) * 0.5 + Math.sin(base.z * 8.1 + base.x * 6.4) * 0.25;
-      const [red, green, blue] = steelColor(cavity, crown, edge, salt);
+      const mottle = fieldNoise(base.x, base.z);
+      paint.copy(SKIN.shell).lerp(SKIN.edge, smooth(0.8, 1, r / RADIUS) * 0.8);
+      paint.lerp(SKIN.field, field * 0.55);
+      paint.lerp(SKIN.temper, temper * field * 0.14);
+      paint.lerp(SKIN.dimple, dimple * 0.6);
+      paint.lerp(SKIN.crown, crown * 0.6);
+      paint.multiplyScalar(1 + mottle * 0.12);
       spots.push(point.x, point.y, point.z);
-      colors.push(red, green, blue);
+      colors.push(paint.r, paint.g, paint.b);
     }
   }
   const row = SPOKES + 1;
@@ -270,26 +305,21 @@ function domeGeometry(frames) {
   return geometry;
 }
 
+// The lower shell, from the rim to the gu, which rolls inward into a short neck.
 function bowlGeometry() {
-  const points = [
-    new THREE.Vector2(RADIUS, -0.006),
-    new THREE.Vector2(RADIUS + 0.01, -0.018),
-    new THREE.Vector2(RADIUS + 0.004, -0.04),
-  ];
-  const hole = 0.38;
-  const depth = 0.62;
-  for (let i = 0; i <= 26; i += 1) {
-    const a = (i / 26) * (Math.PI / 2);
-    points.push(new THREE.Vector2(hole + (RADIUS - 0.04 - hole) * Math.cos(a), -0.055 - depth * Math.sin(a)));
+  const points = [];
+  const drop = (r) => -(Math.sqrt(BELLY_SHELL ** 2 - r * r) - (BELLY_SHELL - BELLY));
+  for (let i = 0; i <= 40; i += 1) {
+    const r = RADIUS - (i / 40) * (RADIUS - GU - 0.03);
+    points.push(new THREE.Vector2(r, drop(r)));
   }
-  const tube = 0.022;
-  const cx = hole + tube;
-  const cy = -0.055 - depth;
-  for (let i = 1; i <= 7; i += 1) {
-    const ang = Math.PI + (i / 7) * Math.PI * 0.65;
-    points.push(new THREE.Vector2(cx + Math.cos(ang) * tube, cy + Math.sin(ang) * tube));
+  const floor = drop(GU + 0.03);
+  for (let i = 1; i <= 8; i += 1) {
+    const a = -Math.PI / 2 - (i / 8) * (Math.PI / 2);
+    points.push(new THREE.Vector2(GU + 0.03 + Math.cos(a) * 0.03, floor + 0.03 + Math.sin(a) * 0.03));
   }
-  return new THREE.LatheGeometry(points, 128);
+  points.push(new THREE.Vector2(GU, floor + 0.12));
+  return new THREE.LatheGeometry(points.reverse(), 128);
 }
 
 function createDrum(host, onHit, onStrike) {
@@ -321,41 +351,51 @@ function createDrum(host, onHit, onStrike) {
 
   const drum = new THREE.Group();
   scene.add(drum);
-  const grain = nitrideNormal();
-  grain.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const hammer = hammerMaps();
+  for (const map of [hammer.normal, hammer.rough]) {
+    map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    map.repeat.set(1.8, 1.8);
+  }
   const metal = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
     metalness: 1,
-    roughness: 0.42,
-    clearcoat: 0.08,
-    clearcoatRoughness: 0.45,
-    envMapIntensity: 0.92,
-    normalMap: grain,
-    normalScale: new THREE.Vector2(0.16, 0.16),
+    roughness: 1,
+    roughnessMap: hammer.rough,
+    envMapIntensity: 1.25,
+    normalMap: hammer.normal,
+    normalScale: new THREE.Vector2(0.3, 0.3),
+    iridescence: 0.1,
+    iridescenceIOR: 1.6,
+    iridescenceThicknessRange: [180, 420],
   });
-  const under = new THREE.MeshPhysicalMaterial({
-    color: 0xe0b15c,
-    metalness: 1,
-    roughness: 0.44,
-    clearcoat: 0.06,
-    clearcoatRoughness: 0.48,
-    envMapIntensity: 1.05,
-    normalMap: grain,
-    normalScale: new THREE.Vector2(0.14, 0.14),
-    side: THREE.DoubleSide,
-  });
+  const bellyNormal = hammer.normal.clone();
+  const bellyRough = hammer.rough.clone();
+  for (const map of [bellyNormal, bellyRough]) map.repeat.set(10, 1.4);
+  const under = metal.clone();
+  under.vertexColors = false;
+  under.color.setHex(0x4a3320);
+  under.normalMap = bellyNormal;
+  under.roughnessMap = bellyRough;
+  under.side = THREE.DoubleSide;
   const lip = new THREE.Mesh(
-    new THREE.TorusGeometry(RADIUS + 0.004, 0.012, 12, 180),
-    new THREE.MeshStandardMaterial({ color: 0xb57a3a, metalness: 1, roughness: 0.52, emissive: BRASS, emissiveIntensity: 0, envMapIntensity: 0.85 }),
+    new THREE.TorusGeometry(RADIUS + 0.004, 0.022, 14, 220),
+    new THREE.MeshStandardMaterial({ color: 0x5e4129, metalness: 1, roughness: 0.38, emissive: BRASS, emissiveIntensity: 0, envMapIntensity: 1.1 }),
   );
   lip.rotation.x = Math.PI / 2;
-  lip.position.y = -0.008;
+  lip.scale.z = 0.65;
+  const cushion = new THREE.Mesh(
+    new THREE.TorusGeometry(0.7, 0.09, 16, 96),
+    new THREE.MeshStandardMaterial({ color: 0x241914, roughness: 0.86, metalness: 0 }),
+  );
+  cushion.rotation.x = Math.PI / 2;
+  cushion.position.y = -0.67;
   drum.add(new THREE.Mesh(bowlGeometry(), under), lip);
+  scene.add(cushion);
   let dome = null;
 
   const pedestal = new THREE.Group();
-  const pedestalStone = new THREE.MeshStandardMaterial({ color: 0x414947, roughness: 0.92, metalness: 0 });
+  const pedestalStone = new THREE.MeshStandardMaterial({ color: 0x34302b, roughness: 0.92, metalness: 0 });
   const pedestalProfile = [[0, -1.07], [2.08, -1.07], [2.14, -1.055], [2.18, -1.02], [2.18, -0.82], [2.16, -0.785], [2.12, -0.76], [0, -0.76]];
   pedestal.add(new THREE.Mesh(new THREE.LatheGeometry(pedestalProfile.map(([r, y]) => new THREE.Vector2(r, y)), 96), pedestalStone));
   scene.add(pedestal);
@@ -421,7 +461,7 @@ function createDrum(host, onHit, onStrike) {
   let tak = false;
 
   function build(spec) {
-    const frame = fieldFrame(spec.deg, spec.ding);
+    const frame = frameOf(spec);
     const group = new THREE.Group();
     const lift = noteLift(frame, frame.center) + (spec.ding ? 0.042 : 0.016);
     group.position.copy(frame.center).addScaledVector(frame.normal, lift);
@@ -460,7 +500,7 @@ function createDrum(host, onHit, onStrike) {
     const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.text, tint), depthTest: false, transparent: true, toneMapped: false });
     const dark = new THREE.SpriteMaterial({ map: labelTexture(spec.text, INK), depthTest: false, transparent: true, toneMapped: false });
     const label = new THREE.Sprite(plain);
-    const size = spec.ding ? 0.66 : 0.5;
+    const size = spec.ding ? 0.56 : 0.44;
     label.scale.set(size, size, 1);
     label.position.z = 0.05;
     label.renderOrder = 6;
@@ -492,7 +532,7 @@ function createDrum(host, onHit, onStrike) {
         drum.remove(dome);
         dome.geometry.dispose();
       }
-      dome = new THREE.Mesh(domeGeometry(specs.map((spec) => fieldFrame(spec.deg, spec.ding))), metal);
+      dome = new THREE.Mesh(domeGeometry(specs.map(frameOf)), metal);
       drum.add(dome);
     }
     for (const item of fields.values()) {
