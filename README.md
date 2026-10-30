@@ -9,7 +9,19 @@ The Songs filter includes **Nothing Else Matters (Intro)** by Metallica: the who
 The Traditional filter holds fourteen public-domain melodies ported from the Tonalics letter notes (https://tonalics.com/songs), the only openly published handpan-playable notation found: Frère Jacques, Going Home, Hot Cross Buns, Jingle Bells, Jolly Old Saint Nicholas, Lightly Row, London Bridge, Mary Had a Little Lamb, Ode to Joy, Old MacDonald, Sakura Sakura, Twinkle Twinkle Little Star, Up on the Housetop and When the Saints Go Marching In. Each is the melody alone in 4/4, as written or moved by a fifth so that every note sits on the pan, with the tempo taken from the source's stated length. Tonalics' 36 melodies were all tested by code against the pan's ten notes in every key; the other 22 need at least one note it lacks, and Row, Row, Row Your Boat is in 6/8 with half beats the eighths meter cannot hold, so they were left out. Every other handpan notation found online (Master the Handpan, HandpanPal, Handpan ChordBook, Instruments du Monde, ChordU) is paid or all rights reserved and was not copied.
 
 Four public-domain carols follow, with their pitches taken from the engraved scores at piano.org and their rhythm checked against Paul Hardy's Christmas tunebook on abcnotation.com. Both were found through You.com search. A script tested each piano.org melody against the pan's ten notes in every key: **Good King Wenceslas** in F major (`#/p/good-king-wenceslas`), **O Come, O Come, Emmanuel** in D minor (`#/p/o-come-o-come-emmanuel`), **We Three Kings** in 6/8 with the verse in D minor and the refrain in F major (`#/p/we-three-kings`), and **In the Bleak Midwinter** in C major (`#/p/in-the-bleak-midwinter`). C on 9 stands in for every B-flat above A, and one low B in Bleak Midwinter moves up to D. The pieces carry no lyrics. Tested and left out because they need several missing notes: Coventry Carol, God Rest Ye Merry Gentlemen, O Little Town of Bethlehem, Silent Night, Brahms' Lullaby, Shenandoah, Auld Lang Syne, The First Noel and Bach's Minuet in G.
-https://m-esm.github.io/handpan/
+Live site: https://handpan.moshes.io (landing page at `/`, features at `/features`, the practice app at `/app/`). `alamut.moshes.io` is an alias of the same deployment. The GitHub Pages copy at https://m-esm.github.io/handpan/ serves the repo root as is.
+
+## Deployment
+
+Every push to `main` deploys itself. The `image` workflow builds `Dockerfile` (nginx-unprivileged serving the repo with `deploy/nginx.conf`) for `linux/amd64` and pushes it to `ghcr.io/m-esm/handpan` under two tags: the full commit sha and `main-<run_number>-<sha7>`. On the k3s cluster ha3, Flux image automation in `m-esm/cluster-moshes-lab` (`apps/alamut/images/`) watches that package, picks the highest run number, commits the new tag into `apps/alamut/deployment.yaml` as `fluxcdbot`, and rolls the `alamut` Deployment in namespace `alamut`. Merge to live takes the Actions build plus up to about ten minutes of Flux polling. Check the chain with:
+
+```bash
+gh run list --workflow image --limit 3
+KUBECONFIG=~/.kube/ha3.yaml flux get images all -n tenant-moshes-lab
+KUBECONFIG=~/.kube/ha3.yaml kubectl -n alamut get deploy alamut -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+Pin a version by removing the `$imagepolicy` setter marker in the tenant repo in the same PR that sets the tag. Pause the automation with `kubectl -n tenant-moshes-lab patch imageupdateautomation alamut --type merge -p '{"spec":{"suspend":true}}'`. Hosts, certificate, route and rollout settings live only in the tenant repo; this repo owns the image. The infra inventory is `m-esm/infra` `services/README.md`.
 
 Play the handpan from the Library, Play, or Learn with number keys 0–9 (including the numeric keypad); 0 is the ding and T plays tak. Multiple keys can be struck together. Held keys do not repeat, and shortcuts leave search, form inputs, and Explore controls alone.
 
