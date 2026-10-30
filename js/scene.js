@@ -1569,8 +1569,8 @@ function createWorld() {
     const seconds = time / 1000;
     const drift = still ? 0 : 1;
     if (exploring) {
-      camera.position.set(Math.sin(orbit) * 64, 24, Math.cos(orbit) * 64 - 8);
-      camera.lookAt(-5, 11, -24);
+      camera.position.set(Math.sin(orbit) * 54, 25, Math.cos(orbit) * 54 - 10);
+      camera.lookAt(-6, 15, -26);
     } else {
       camera.position.set(
         view.eye[0] + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,

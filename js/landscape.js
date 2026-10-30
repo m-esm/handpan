@@ -156,7 +156,11 @@ export function createLandscape(textures) {
   const steppeSet = textures("meadow");
   const steppe = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, ...steppeSet, normalScale: new THREE.Vector2(0.4, 0.4), roughness: 1 });
   const leaf = new THREE.MeshStandardMaterial({ color: 0x4d6e3c, roughness: 1, ...textures("foliage", [6, 7]), normalScale: new THREE.Vector2(1.4, 1.4) });
-  const plaster = worldScale(new THREE.MeshStandardMaterial({ color: 0xd8c3a0, roughness: 1, ...textures("limestone"), normalScale: new THREE.Vector2(0.6, 0.6) }), 1.7);
+  const plaster = worldScale(new THREE.MeshStandardMaterial({ color: 0xe9ddc6, roughness: 1, ...textures("limestone"), normalScale: new THREE.Vector2(0.5, 0.5) }), 1.7);
+  const brick = worldScale(new THREE.MeshStandardMaterial({ color: 0xb07a5c, roughness: 1, ...textures("ashlar"), normalScale: new THREE.Vector2(0.8, 0.8) }), 0.8);
+  const tile = worldScale(new THREE.MeshStandardMaterial({ color: 0x5cc4b8, roughness: 0.5, ...textures("zellige"), normalScale: new THREE.Vector2(0.5, 0.5) }), 0.5);
+  const pennantCloth = new THREE.MeshBasicMaterial({ color: 0xf4efe4, side: THREE.DoubleSide });
+  const pennants = [];
   const rubble = worldScale(new THREE.MeshStandardMaterial({ color: 0xa27d66, roughness: 1, ...textures("ashlar"), normalScale: new THREE.Vector2(1, 1) }), 1.9);
   const mud = worldScale(new THREE.MeshStandardMaterial({ color: 0xb8926a, roughness: 1, ...textures("limestone"), normalScale: new THREE.Vector2(0.5, 0.5) }), 2.2);
   const turquoise = new THREE.MeshStandardMaterial({ color: 0x2f9d9a, roughness: 0.55, metalness: 0 });
@@ -357,6 +361,7 @@ export function createLandscape(textures) {
   bar.receiveShadow = true;
   group.add(bar);
 
+  const H = 1.35;
   const topAt = (x, z) => ridge(x, z);
   const rimZ = (x, side, inset) => spineZ(x) + side * (piecewise(WIDTH, x) - inset);
   const block = (x, z, w, h, d, material = plaster, lift = 0, rotation = 0, sink = 1.4) => mesh(new THREE.BoxGeometry(w, h + sink, d), material, [x, topAt(x, z) + lift + h / 2 - sink / 2, z], rotation);
@@ -368,6 +373,7 @@ export function createLandscape(textures) {
     }
   };
   const curtain = (x0, x1, side, height, thickness = 0.55, inset = 0.25, material = plaster) => {
+    height *= H;
     const steps = Math.max(2, Math.round((x1 - x0) / 0.8));
     for (let k = 0; k < steps; k += 1) {
       const a = x0 + (k / steps) * (x1 - x0);
@@ -382,12 +388,14 @@ export function createLandscape(textures) {
     }
   };
   const wallAcross = (x, z0, z1, height, thickness = 0.6, material = plaster) => {
+    height *= H;
     const zm = (z0 + z1) / 2;
     block(x, zm, thickness, height, Math.abs(z1 - z0), material, -0.3);
     block(x, zm, thickness + 0.1, 0.1, Math.abs(z1 - z0), rubble, height - 0.65, 0, 0.02);
     merlons(x, zm, Math.abs(z1 - z0), height - 0.3, thickness, Math.PI / 2);
   };
   const tower = (x, z, radius, height, material = rubble) => {
+    height *= H;
     const base = topAt(x, z);
     const drum = mesh(new THREE.CylinderGeometry(radius * 0.9, radius * 1.06, height + 1.4, 20), material, [x, base + height / 2 - 1, z]);
     mesh(new THREE.CylinderGeometry(radius * 0.98, radius * 0.9, 0.14, 20), plaster, [x, base + height - 0.7, z]);
@@ -401,11 +409,13 @@ export function createLandscape(textures) {
   };
   const opening = (x, z, w, h, d, rotation = 0, lift = 0) => mesh(new THREE.BoxGeometry(w, h, d), dark, [x, topAt(x, z) + h / 2 + lift - 0.05, z], rotation);
   const arch = (x, z, w, h, d, rotation = 0, lift = 0) => {
+    h *= H;
     opening(x, z, w, h - w / 2, d, rotation, lift);
     const head = mesh(new THREE.CylinderGeometry(w / 2, w / 2, d, 14, 1, false, 0, Math.PI), dark, [x, topAt(x, z) + h - w / 2 + lift - 0.05, z], rotation);
     head.rotation.set(Math.PI / 2, 0, rotation);
   };
   const hall = (x, z, w, h, d, rotation = 0, windows = 3, material = plaster) => {
+    h *= H;
     block(x, z, w, h, d, material, 0, rotation);
     block(x, z, w + 0.16, 0.22, d + 0.16, rubble, h, rotation, 0.02);
     const spread = (w - 0.8) / Math.max(1, windows - 1);
@@ -425,61 +435,121 @@ export function createLandscape(textures) {
     mesh(new THREE.BoxGeometry(w, 0.06, d), new THREE.MeshStandardMaterial({ color: 0x15232a, roughness: 0.18 }), [x, topAt(x, z) + 0.16, z]).userData.keepSeparate = true;
   };
 
-  curtain(-26, -9.4, 1, 2.3);
-  curtain(-26, -9.4, -1, 2.3);
-  curtain(-34, -26, 1, 0.9, 0.4, 0.15, rubble);
-  curtain(-34, -26, -1, 0.9, 0.4, 0.15, rubble);
-  block(-30.5, spineZ(-30.5) - 0.9, 1.3, 1.3, 1.3, rubble, -0.6);
-  opening(-30.5, spineZ(-30.5) - 0.9 - 0.66, 0.35, 0.5, 0.08, 0, 0.1);
-  tower(-26.2, spineZ(-26.2), 0.95, 3.6);
-  tower(-16, rimZ(-16, -1, -0.3), 0.85, 3.4);
-  tower(-21.5, rimZ(-21.5, 1, 0.3), 1, 3.8);
-  wallAcross(-9.4, rimZ(-9.4, -1, -0.2), rimZ(-9.4, 1, -0.2), 2.8, 0.75);
-  tower(-9.2, rimZ(-9.2, -1, 0.8), 0.9, 3.9);
-  arch(-9.4, spineZ(-9.4) + 1.4, 0.9, 1.6, 1.0);
-  hall(-14.3, spineZ(-14.3) + 0.3, 4.6, 2.1, 3.4, 0, 4);
-  arch(-14.3, spineZ(-14.3) + 0.3 + 1.74, 1.1, 1.9, 0.12, 0);
-  block(-14.3, spineZ(-14.3) + 0.3 + 1.72, 1.6, 2.5, 0.2, plaster, -0.1, 0, 0.3);
-  block(-14.3, spineZ(-14.3) + 0.3 + 1.8, 1.3, 0.12, 0.08, turquoise, 2.0, 0, 0.0);
-  const drumY = topAt(-14.3, spineZ(-14.3) + 0.3) + 2.32;
-  const drum = mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.55, 28), plaster, [-14.3, drumY + 0.27, spineZ(-14.3) + 0.3]);
-  mesh(new THREE.CylinderGeometry(1.55, 1.55, 0.14, 28), turquoise, [-14.3, drumY + 0.6, spineZ(-14.3) + 0.3]);
-  const dome = mesh(new THREE.SphereGeometry(1.5, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), plaster, [-14.3, drumY + 0.64, spineZ(-14.3) + 0.3]);
-  dome.castShadow = true;
-  mesh(new THREE.SphereGeometry(0.14, 10, 8), turquoise, [-14.3, drumY + 2.2, spineZ(-14.3) + 0.3]);
-  hall(-19.8, spineZ(-19.8) - 1.7, 4.8, 2.4, 2.2, 0, 3);
-  hall(-12, spineZ(-12) - 2.3, 2.6, 2.6, 2.2, 0, 1);
-  for (const dz of [-0.6, 0, 0.6]) opening(-10.72, spineZ(-12) - 2.3 + dz, 0.08, 0.5, 0.2, 0, 1.3);
-  hall(-21.8, spineZ(-21.8) + 2.5, 5.2, 1.2, 1.3, 0, 4);
-  hall(-16, spineZ(-16) + 3.3, 6, 1.1, 1.1, 0, 4);
-  hall(-17.8, spineZ(-17.8) - 3.6, 5, 1.3, 1.2, 0, 3);
-  cistern(-23.5, spineZ(-23.5) + 0.4, 1.6, 1.0);
-  cistern(-11.5, spineZ(-11.5) + 1.9, 1.2, 0.9);
+  const vault = (x, z, length, width, height, rotation = 0, material = plaster) => {
+    height *= H;
+    block(x, z, rotation ? width : length, height, rotation ? length : width, material, 0, 0);
+    const arc = new THREE.CylinderGeometry(width / 2, width / 2, length, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2);
+    if (!rotation) arc.rotateY(Math.PI / 2);
+    mesh(arc, material, [x, topAt(x, z) + height, z]);
+  };
+  const pennant = (x, y, z) => {
+    mesh(new THREE.CylinderGeometry(0.025, 0.035, 1.1, 6), dark, [x, y + 0.5, z]);
+    const cloth = new THREE.BufferGeometry();
+    cloth.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0.7, -0.1, 0, 0, -0.32, 0], 3));
+    cloth.computeVertexNormals();
+    const flag = new THREE.Mesh(cloth, pennantCloth);
+    flag.position.set(x, y + 1.02, z);
+    flag.userData.keepSeparate = true;
+    group.add(flag);
+    pennants.push(flag);
+  };
+  const stair = (x, side, count) => {
+    for (let k = 0; k < count; k += 1) {
+      const z = rimZ(x, side, -0.2) + side * k * 0.42;
+      mesh(new THREE.BoxGeometry(0.9, 0.22, 0.5), rubble, [x, ridge(x, z) + 0.05, z]);
+    }
+  };
+  const nest = (x) => {
+    const z = rimZ(x, -1, -0.45);
+    const y = topAt(x, spineZ(x)) - 0.9;
+    mesh(new THREE.BoxGeometry(1.1, 0.9, 0.8), rubble, [x, y, z]);
+    mesh(new THREE.BoxGeometry(1.3, 0.14, 1.0), plaster, [x, y + 0.5, z]);
+    mesh(new THREE.BoxGeometry(0.22, 0.34, 0.06), dark, [x, y + 0.1, z - 0.42]);
+  };
 
-  curtain(-8.4, 5.6, 1, 1.4, 0.45);
-  curtain(-8.4, 5.6, -1, 1.4, 0.45);
-  wallAcross(-1.5, rimZ(-1.5, -1, 0.4), rimZ(-1.5, 1, 0.4), 1.2, 0.45);
-  hall(1.6, spineZ(1.6) - 1.4, 5, 2.0, 1.7, 0, 4);
-  hall(2.4, spineZ(2.4) + 1.9, 3.6, 1.3, 1.5, 0, 3);
-  cistern(-4.5, spineZ(-4.5) - 0.8, 1.8, 1.1);
-  cistern(-3.5, spineZ(-3.5) + 1.6, 1.0, 1.0);
-  wallAcross(6, rimZ(6, -1, -0.3), rimZ(6, 1, -0.1), 4.1, 0.95, rubble);
-  tower(6.1, rimZ(6.1, -1, -0.4), 1.05, 4.8);
-  tower(6.1, rimZ(6.1, 1, 0), 1.05, 4.8);
-  arch(6.1, rimZ(6.1, -1, -0.75), 1.1, 1.7, 1.1);
-  block(6.1, rimZ(6.1, -1, -0.75) - 0.2, 1.8, 2.3, 0.3, rubble, -0.1, 0, 0.3);
-  arch(6.1, rimZ(6.1, -1, -0.75) - 0.22, 1.1, 1.7, 0.4);
+  curtain(-40.5, -34, 1, 0.45, 0.3, 0.1, rubble);
+  curtain(-40.5, -34, -1, 0.45, 0.3, 0.1, rubble);
+  nest(-36.5);
+  stair(-20, 1, 9);
+  stair(-4, 1, 8);
+
+  curtain(-32, -9.4, 1, 1.25);
+  curtain(-32, -9.4, -1, 1.25);
+  tower(-33, spineZ(-33), 0.95, 2.5);
+  pennant(-33, topAt(-33, spineZ(-33)) + 2.5 * H, spineZ(-33));
+  tower(-18, rimZ(-18, -1, 0.3), 1.0, 2.7);
+  pennant(-18, topAt(-18, rimZ(-18, -1, 0.3)) + 2.7 * H, rimZ(-18, -1, 0.3));
+  tower(-24.5, rimZ(-24.5, 1, 0.35), 1.05, 2.7);
+  pennant(-24.5, topAt(-24.5, rimZ(-24.5, 1, 0.35)) + 2.7 * H, rimZ(-24.5, 1, 0.35));
+  for (let k = 0; k < 4; k += 1) vault(-29 + k * 1.75, rimZ(-29 + k * 1.75, -1, 1.1), 1.6, 1.3, 0.7, 1);
+  hall(-27.5, rimZ(-27.5, 1, 1.3), 3.2, 1.2, 1.4, 0, 3);
+  hall(-21.5, rimZ(-21.5, -1, 1.5), 5.2, 1.5, 2.2, 0, 5);
+  hall(-21.5, rimZ(-21.5, 1, 1.2), 4.4, 1.1, 1.3, 0, 4);
+  hall(-15, spineZ(-15) + 0.2, 5.2, 2.0, 3.4, 0, 4, brick);
+  block(-15, spineZ(-15) + 0.2 + 1.72, 1.9, 2.7 * H, 0.26, brick, -0.1, 0, 0.3);
+  arch(-15, spineZ(-15) + 0.2 + 1.86, 1.2, 2.1, 0.14, 0);
+  block(-15, spineZ(-15) + 0.2 + 1.86, 2.1, 0.24, 0.1, tile, 2.42 * H, 0, 0);
+  for (const dx of [-1.15, 1.15]) block(-15 + dx, spineZ(-15) + 0.2 + 1.86, 0.2, 2.5 * H, 0.1, tile, -0.05, 0, 0.3);
+  const drumY = topAt(-15, spineZ(-15) + 0.2) + 2.0 * H + 0.3;
+  mesh(new THREE.CylinderGeometry(1.55, 1.65, 0.7, 28), brick, [-15, drumY + 0.35, spineZ(-15) + 0.2]);
+  mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.2, 28), tile, [-15, drumY + 0.62, spineZ(-15) + 0.2]);
+  const dome = mesh(new THREE.SphereGeometry(1.55, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2), brick, [-15, drumY + 0.75, spineZ(-15) + 0.2]);
+  dome.castShadow = true;
+  mesh(new THREE.CylinderGeometry(0.12, 0.2, 0.3, 10), tile, [-15, drumY + 2.4, spineZ(-15) + 0.2]);
+  mesh(new THREE.SphereGeometry(0.12, 10, 8), tile, [-15, drumY + 2.6, spineZ(-15) + 0.2]);
+  hall(-18.6, spineZ(-18.6) + 0.3, 2.4, 1.6, 2.4, 0, 2, brick);
+  const minorY = topAt(-18.6, spineZ(-18.6) + 0.3) + 1.6 * H + 0.15;
+  mesh(new THREE.CylinderGeometry(0.95, 1.0, 0.3, 20), brick, [-18.6, minorY + 0.15, spineZ(-18.6) + 0.3]);
+  const minor = mesh(new THREE.SphereGeometry(0.95, 24, 14, 0, Math.PI * 2, 0, Math.PI / 2), brick, [-18.6, minorY + 0.3, spineZ(-18.6) + 0.3]);
+  minor.castShadow = true;
+  hall(-11.6, rimZ(-11.6, 1, 1.3), 1.9, 2.7, 1.9, -Math.PI / 5, 3);
+  cistern(-25, spineZ(-25) - 0.3, 1.6, 1.0);
+  cistern(-11.5, spineZ(-11.5) - 1.2, 1.2, 0.9);
+  wallAcross(-9.4, rimZ(-9.4, -1, -0.2), rimZ(-9.4, 1, -0.2), 1.7, 0.6);
+  arch(-9.4, spineZ(-9.4) + 0.6, 0.9, 1.4, 0.9);
+
+  curtain(-9, -3, 1, 0.9, 0.45);
+  curtain(-9, -3, -1, 0.9, 0.45);
+  cistern(-6.5, spineZ(-6.5) - 1.1, 2.0, 1.2);
+  cistern(-5, spineZ(-5) + 1.4, 1.1, 1.1);
+  vault(-7.2, rimZ(-7.2, -1, 1.2), 1.8, 1.2, 0.6, 1);
+  wallAcross(-3, rimZ(-3, -1, 0.3), rimZ(-3, 1, 0.3), 1.0, 0.45);
+  arch(-3, spineZ(-3) - 0.4, 0.8, 1.1, 0.7);
+
+  curtain(-3, 5.7, 1, 1.15, 0.5);
+  curtain(-3, 5.7, -1, 1.15, 0.5);
+  hall(0.6, rimZ(0.6, -1, 1.5), 4.6, 1.5, 1.9, 0, 4);
+  hall(2.6, rimZ(2.6, 1, 1.4), 3.4, 1.3, 1.5, 0, 3);
+  vault(-0.9, rimZ(-0.9, 1, 1.2), 2.2, 1.3, 0.6, 1);
+  cistern(3.2, spineZ(3.2) - 0.4, 1.0, 0.9);
+  wallAcross(6, rimZ(6, -1, -0.5), rimZ(6, 1, -0.3), 1.95, 0.5, plaster);
+  for (const side of [-1, 1]) {
+    const z = rimZ(6, side, side < 0 ? -0.5 : -0.3);
+    block(6.05, z, 1.0, 2.5 * H, 1.0, rubble, -0.3);
+    block(6.05, z, 1.12, 0.12, 1.12, plaster, 2.15 * H, 0, 0.02);
+    merlons(6.05, z, 1.0, 2.2 * H, 1.0, 0);
+  }
+  tower(5.0, rimZ(5.0, -1, 0.75), 1.05, 2.9);
+  pennant(5.0, topAt(5.0, rimZ(5.0, -1, 0.75)) + 2.9 * H, rimZ(5.0, -1, 0.75));
+  arch(6.3, rimZ(6.3, -1, -0.9), 1.0, 1.6, 1.1);
+  block(6.9, rimZ(6.9, -1, -1.0), 1.4, 2.2 * H, 1.0, rubble, -0.2, 0, 0.3);
+  arch(6.9, rimZ(6.9, -1, -1.0) - 0.5, 1.0, 1.6, 0.3);
   for (let k = 0; k < 7; k += 1) {
-    const x = 7.2 + k * 0.5;
-    const z = rimZ(6.1, -1, -0.75) - 0.6 - k * 0.55;
+    const x = 7.6 + k * 0.5;
+    const z = rimZ(6.1, -1, -0.75) - 0.8 - k * 0.55;
     mesh(new THREE.BoxGeometry(1.2, 0.3, 0.55), rubble, [x, topAt(x, z) + 0.1, z]);
   }
-  block(7.6, spineZ(7.6) - 1.3, 1.6, 0.9, 1.4, rubble, 0.05);
-  hall(12.5, spineZ(12.5) + 0.4, 3.4, 1.1, 1.6, 0, 2, rubble);
-  hall(12.5, spineZ(12.5) - 1.9, 2.6, 0.9, 1.1, 0, 1, rubble);
+  curtain(7.2, 9.5, 1, 0.5, 0.35, 0.1, rubble);
+  curtain(7.2, 9.5, -1, 0.5, 0.35, 0.1, rubble);
+  curtain(9.5, 15.5, 1, 0.8, 0.4, 0.15, rubble);
+  curtain(9.5, 15.5, -1, 0.8, 0.4, 0.15, rubble);
+  for (let k = 0; k < 3; k += 1) vault(11 + k * 1.6, spineZ(11 + k * 1.6) + 0.6, 1.4, 1.1, 0.5, 1, rubble);
+  hall(12.6, spineZ(12.6) - 1.8, 2.6, 0.9, 1.1, 0, 2, rubble);
   arch(10.4, spineZ(10.4) + 2.6, 0.9, 1.3, 0.7);
   arch(10.4, spineZ(10.4) - 2.5, 0.9, 1.3, 0.7);
-  for (const [x, dz] of [[14.6, 2.1], [15.6, 0.3], [15.2, -1.6]]) block(x, spineZ(x) + dz, 1.1, 0.5, 1, rubble, -0.1);
+  block(15.2, spineZ(15.2), 1.3, 1.2, 1.1, rubble, -0.1);
+  merlons(15.2, spineZ(15.2), 1.3, 1.1, 1.1, 0);
+
 
   const house = (x, z, w, h, d, rotation) => {
     const y = ground(x, z);
@@ -638,10 +708,10 @@ export function createLandscape(textures) {
   });
   const lamp = new THREE.MeshBasicMaterial({ color: 0xffb765 });
   const windows = new THREE.Group();
-  for (const [x, dz, lift] of [[-14.3, 2.05, 1.3], [-19.8, -2.85, 1.4], [-12, -3.45, 1.5], [1.6, -2.3, 1.15], [-21.8, 3.2, 0.7], [-26.2, 0.9, 2.1], [6.1, -4.6, 2.5]]) {
+  for (const [x, dz, lift] of [[-15, 1.95, 1.1], [-15, 1.95, 1.6], [-21.5, -3.1, 0.9], [-21.5, 2.9, 0.6], [-27.5, 2.6, 0.7], [-11.2, 2.9, 1.5], [0.6, -3.1, 0.9], [2.6, 2.6, 0.7], [-33, -0.95, 1.4], [5.0, -3.9, 1.6]]) {
     const z = spineZ(x) + dz;
     const glow = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.22), lamp);
-    glow.position.set(x, topAt(x, z) + lift, z);
+    glow.position.set(x, topAt(x, z) + lift * H, z);
     windows.add(glow);
   }
   windows.visible = false;
@@ -675,6 +745,10 @@ export function createLandscape(textures) {
         eagles.setMatrixAt(i, matrix);
       }
       eagles.instanceMatrix.needsUpdate = true;
+      pennants.forEach((flag, i) => {
+        flag.rotation.y = 0.4 + Math.sin(seconds * 1.7 + i) * 0.35;
+        flag.rotation.z = Math.sin(seconds * 5 + i * 2) * 0.06;
+      });
       plumes.forEach((plume, i) => {
         plume.rotation.z = 0.25 + Math.sin(seconds * 0.4 + i) * 0.08;
         plume.rotation.x = Math.sin(seconds * 0.3 + i * 2) * 0.06;
@@ -688,7 +762,8 @@ export function createLandscape(textures) {
       ranges.color.setHex(cold ? 0xffffff : key === "dawn" ? 0xffd2b8 : key === "lake" ? 0xb8c4dc : 0xf2eee8);
       scree.color.copy(rockMaterial.color).multiplyScalar(0.62);
       leaf.color.setHex(cold ? 0x8a8378 : key === "dawn" ? 0x6a7a3a : key === "storm" ? 0x3f5a38 : key === "lake" ? 0x3d5a4a : 0x4d6e3c);
-      plaster.color.setHex(cold ? 0xe6e2da : key === "dawn" ? 0xf0c79a : 0xd8c3a0);
+      plaster.color.setHex(cold ? 0xeeebe4 : key === "dawn" ? 0xf6d8b8 : key === "lake" ? 0xc9ccd4 : 0xe9ddc6);
+      brick.color.setHex(cold ? 0xc0988a : key === "dawn" ? 0xc9815c : 0xb07a5c);
       mud.color.setHex(cold ? 0xd9cfbf : 0xb8926a);
       water.color.setHex(key === "lake" ? 0x12263a : cold ? 0x4a5d66 : key === "storm" ? 0x3f4d52 : 0x3f6b74);
       sun.visible = key !== "storm" && key !== "winter";
