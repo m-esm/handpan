@@ -19,10 +19,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - id: tag
+        run: echo "sha7=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
           provenance: false
           push: true
-          tags: ghcr.io/m-esm/handpan:${{ github.sha }}
+          tags: |
+            ghcr.io/m-esm/handpan:${{ github.sha }}
+            ghcr.io/m-esm/handpan:main-${{ github.run_number }}-${{ steps.tag.outputs.sha7 }}
