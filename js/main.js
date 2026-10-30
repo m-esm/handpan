@@ -387,7 +387,7 @@ async function bootStage() {
       return;
     }
     document.body.classList.add("has-3d");
-    document.fonts.load(lang === "fa" ? "700 200px \"Aref Ruqaa\"" : "400 200px \"Pinyon Script\"", digits("0123456789") + "\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
+    document.fonts.load(lang === "fa" ? "700 200px \"Vazirmatn\"" : "700 200px Georgia", digits("0123456789") + "\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());
