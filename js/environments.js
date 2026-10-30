@@ -1,7 +1,7 @@
 export const VIEWS = {
   courtyard: { name: "The lantern courtyard", sky: 0x17324a, eye: [1, 4.2, 15], target: [1, 5.5, -20], zenith: 0x040a18, horizon: 0x1c3a52, ground: 0x0b1318, glow: 0x6d86b0, cloud: 0x2a3d52, cover: 0.32, stars: 1 },
-  dawn: { name: "Alamut · Eagle’s ridge", sky: 0xd9b396, eye: [28, 13, 40], target: [-5, 16, -28], zenith: 0x5a74a6, horizon: 0xf2c3a0, ground: 0x7a6454, glow: 0xffb070, cloud: 0xf7dcc6, cover: 0.28, stars: 0 },
-  valley: { name: "Alamut · The green valley", sky: 0xb7d0de, eye: [-30, 10, 32], target: [2, 14, -32], zenith: 0x3a72b0, horizon: 0xc4dae6, ground: 0x5f7356, glow: 0xfff0cc, cloud: 0xfdfcf8, cover: 0.4, stars: 0 },
+  dawn: { name: "Alamut · Eagle’s ridge", sky: 0xdcc0a8, eye: [28, 13, 40], target: [-5, 16, -28], zenith: 0x3f5f9c, horizon: 0xf6cfae, ground: 0x7a6454, glow: 0xffb070, cloud: 0xfbe6d4, cover: 0.22, stars: 0 },
+  valley: { name: "Alamut · The green valley", sky: 0xc6dbe8, eye: [-30, 10, 32], target: [2, 14, -32], zenith: 0x2f64aa, horizon: 0xd4e5ee, ground: 0x5f7356, glow: 0xfff6dd, cloud: 0xffffff, cover: 0.34, stars: 0 },
   lake: { name: "Alamut · Moonwater", sky: 0x1d3c5a, eye: [0, 7, 44], target: [4, 14, -28], zenith: 0x030919, horizon: 0x1f4466, ground: 0x0b1622, glow: 0x88a2cf, cloud: 0x2a4462, cover: 0.3, stars: 1 },
   winter: { name: "Alamut · Winter silence", sky: 0xb4c2cd, eye: [22, 20, 24], target: [-6, 18, -38], zenith: 0x71889e, horizon: 0xc6d1da, ground: 0x9aa7b0, glow: 0xf3f6ff, cloud: 0xdce2e9, cover: 0.68, stars: 0 },
   storm: { name: "Alamut · Before the rain", sky: 0x56656b, eye: [-32, 14, 28], target: [0, 18, -32], zenith: 0x222c35, horizon: 0x5f6e73, ground: 0x2a3236, glow: 0xa7b6bd, cloud: 0x48545a, cover: 0.86, stars: 0 },

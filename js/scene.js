@@ -1237,7 +1237,7 @@ function batchArchitecture(scene) {
 function createWorld() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.info.autoReset = false;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.shadowMap.enabled = true;
@@ -1644,9 +1644,19 @@ function createWorld() {
         paintSky(view, land.sun.position);
       }
       scene.fog.color.setHex(view.sky);
-      scene.fog.density = key === "courtyard" ? 0.015 : 0.0048;
+      scene.fog.density = key === "courtyard" ? 0.015 : key === "storm" ? 0.0052 : 0.0034;
       moonlight.color.setHex(key === "dawn" ? 0xffc28b : key === "valley" ? 0xffeed2 : 0xb9d7ed);
       moonlight.intensity = key === "lake" ? 1.2 : 2.5;
+      const wide = key !== "courtyard";
+      if (wide) moonlight.position.copy(landscape.sun.position).setY(Math.max(landscape.sun.position.y, 60)).normalize().multiplyScalar(130);
+      else moonlight.position.set(-12, 24, -5);
+      const extent = wide ? 78 : 32;
+      moonlight.shadow.camera.left = -extent;
+      moonlight.shadow.camera.right = extent;
+      moonlight.shadow.camera.top = extent;
+      moonlight.shadow.camera.bottom = -extent;
+      moonlight.shadow.camera.far = wide ? 260 : 90;
+      moonlight.shadow.camera.updateProjectionMatrix();
       skyBase = key === "courtyard" ? 1.2 : key === "lake" ? 0.9 : 1.4;
       renderer.shadowMap.needsUpdate = true;
       pendingFrames = 30;

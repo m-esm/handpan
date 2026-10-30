@@ -6,8 +6,8 @@ const SPINE_Z = -31;
 const WATER_Y = -3.35;
 const SOUTH_SLOPE = Math.tan((56 * Math.PI) / 180);
 const NORTH_SLOPE = Math.tan((70 * Math.PI) / 180);
-const TOP = [[-41, 6], [-37, 17], [-33, 21.5], [-29, 22.6], [-25, 23.8], [-22.5, 26.8], [-15, 27.5], [-9.5, 26.8], [-8.5, 25.1], [-2, 25.3], [4.5, 24.9], [6.5, 23.2], [8, 22.4], [9.5, 23.6], [12.5, 25], [15.5, 23.8], [18, 19], [21.5, 8]];
-const WIDTH = [[-41, 0.3], [-37, 0.7], [-33, 1], [-25, 1.2], [-23, 2.8], [-18, 4.6], [-13, 4.8], [-9, 4.2], [-6, 3.8], [0, 3.7], [4.5, 3.9], [6.5, 2], [8, 1.8], [9.5, 2.7], [12.5, 3.3], [15.5, 2.4], [18, 1.2], [21.5, 0.3]];
+const TOP = [[-44, -6], [-41, 9], [-37, 17], [-33, 21.5], [-29, 22.6], [-25, 23.8], [-22.5, 26.8], [-15, 27.5], [-9.5, 26.8], [-8.5, 25.1], [-2, 25.3], [4.5, 24.9], [6.5, 23.2], [8, 22.4], [9.5, 23.6], [12.5, 25], [15.5, 23.8], [18, 19], [21.5, 10], [24.5, -6]];
+const WIDTH = [[-44, 0.2], [-41, 0.3], [-37, 0.7], [-33, 1], [-25, 1.2], [-23, 2.8], [-18, 4.6], [-13, 4.8], [-9, 4.2], [-6, 3.8], [0, 3.7], [4.5, 3.9], [6.5, 2], [8, 1.8], [9.5, 2.7], [12.5, 3.3], [15.5, 2.4], [18, 1.2], [21.5, 0.4], [24.5, 0.2]];
 
 const lerp = THREE.MathUtils.lerp;
 const smooth = THREE.MathUtils.smoothstep;
@@ -80,6 +80,9 @@ function ground(x, z) {
   const far = Math.max(0, x - 30);
   y += Math.pow(far / 30, 1.4) * 7 * smooth(26 - Math.abs(z + 31), 0, 14);
   y -= 2.3 * Math.exp(-((dz / 5.5) ** 2));
+  const dSpine = z - spineZ(x);
+  const beyond = Math.max(0, Math.abs(dSpine) - piecewise(WIDTH, x));
+  y += 4.5 * (1 - smooth(beyond, 2, 18)) * smooth(x, -48, -40) * (1 - smooth(x, 20, 27));
   const terraceMask = smooth(x, -64, -58) * (1 - smooth(x, -24, -18)) * smooth(-dz, 8, 13) * (1 - smooth(-dz, 36, 44));
   if (terraceMask > 0) y = lerp(y, Math.floor(y / 0.55) * 0.55 + 0.12, terraceMask);
   return y;
@@ -90,6 +93,7 @@ function terraceIndex(x, z) {
   return mask > 0.5 ? Math.floor(ground(x, z) / 0.55) : -1;
 }
 
+const dSpineAt = (x, z) => z - spineZ(x);
 function ridge(x, z) {
   const top = piecewise(TOP, x);
   const width = piecewise(WIDTH, x);
@@ -101,11 +105,13 @@ function ridge(x, z) {
   const plain = top - round * slope;
   let h = plain;
   const sideness = smooth(over, 0, 1.4);
-  h += (fbm(x * 0.09, z * 0.09) - 0.5) * 1.8 * sideness;
-  h += (fbm(x * 0.3, z * 0.3) - 0.5) * 0.35 * sideness;
-  const dip = (plain - d * 0.42 + x * 0.12) * 0.13;
-  const ledge = dip - Math.floor(dip);
-  h += smooth(ledge, 0.7, 0.95) * 0.28 * sideness * smooth(fbm(x * 0.07 + 3, z * 0.07), 0.4, 0.55);
+  const buttress = 1 - Math.abs(2 * fbm(x * 0.13 + d * 0.015, d > 0 ? 2.1 : 7.4, 3) - 1);
+  h -= buttress * buttress * 1.7 * sideness * smooth(over, 1, 6);
+  h += (fbm(x * 0.07 + 11, z * 0.07) - 0.5) * 1.2 * sideness;
+  h += (fbm(x * 0.4, z * 0.4, 3) - 0.5) * 0.3 * sideness;
+  const bed = (plain - d * 0.42 + x * 0.12) * 0.11;
+  const seam = bed - Math.floor(bed);
+  h += smooth(seam, 0.8, 0.98) * 0.1 * sideness;
   if (d > 0) {
     const level = h / top;
     const groove = smooth(level, 0.43, 0.455) * (1 - smooth(level, 0.475, 0.5)) * smooth(x, -25, -19) * (1 - smooth(x, 5, 9));
@@ -113,11 +119,17 @@ function ridge(x, z) {
   }
   return h;
 }
+const SKIRT = 2.6;
+function skirt(h, floor) {
+  const gap = h - floor;
+  const soft = gap > 30 ? gap : SKIRT * Math.log1p(Math.exp(gap / SKIRT));
+  return floor + soft - 0.8 * (1 - smooth(gap, -7, -1.5));
+}
 function isRock(x, z) {
   return ridge(x, z) > ground(x, z) + 0.4;
 }
 export function heightAt(x, z) {
-  return Math.max(ground(x, z), ridge(x, z));
+  return Math.max(ground(x, z), skirt(ridge(x, z), ground(x, z)));
 }
 
 function warpedPlane(segmentsX, segmentsZ, centre, spanX, spanZ, concentrate) {
@@ -162,7 +174,7 @@ export function createLandscape(textures) {
     return item;
   };
 
-  const terrain = warpedPlane(300, 230, [-9, -31], [330, 330], [300, 260], 0.09);
+  const terrain = warpedPlane(240, 180, [-9, -31], [330, 330], [300, 260], 0.09);
   const terrainPoints = terrain.attributes.position;
   const terrainUv = terrain.attributes.uv;
   const seasonColours = new Float32Array(terrainPoints.count * 3);
@@ -203,6 +215,8 @@ export function createLandscape(textures) {
       const edge = Math.min(Math.abs(((x + z * 0.32) / 5.5) % 1), Math.abs(((z - x * 0.18) / 4) % 1));
       if (edge < 0.07) colour.lerp(tintB.setHex(0x6b6a4a), field * 0.6);
     }
+    const toRock = piecewise(TOP, x) - Math.max(0, Math.abs(dSpineAt(x, z)) - piecewise(WIDTH, x)) * SOUTH_SLOPE - y;
+    colour.lerp(tintB.setHex(0x9b8068), smooth(toRock, -6, -0.5) * 0.7);
     const track = Math.min(pathDistance(x, z, TRACK), pathDistance(x, z, LANE));
     colour.lerp(tintB.setHex(0xd9ccb0), (1 - smooth(track, 0.35, 0.8)) * 0.75);
     if (Math.abs(dz) < 5) colour.setHex(0x9c9484).lerp(tintB.setHex(0x6c8f44), smooth(Math.abs(dz), 3.2, 5));
@@ -218,26 +232,38 @@ export function createLandscape(textures) {
   const land = mesh(terrain, steppe);
   land.castShadow = false;
 
-  const rock = new THREE.PlaneGeometry(1, 1, 200, 120);
+  const rock = new THREE.PlaneGeometry(1, 1, 260, 150);
   rock.rotateX(-Math.PI / 2);
   const rockPoints = rock.attributes.position;
   const rockUv = rock.attributes.uv;
   const rockSeason = new Float32Array(rockPoints.count * 3);
   const rockSnow = new Float32Array(rockPoints.count * 3);
+  const rockCols = 261;
+  const rockRows = 151;
+  const heights = new Float32Array(rockPoints.count);
+  for (let i = 0; i < rockPoints.count; i += 1) heights[i] = ridge(-9 + rockPoints.getX(i) * 70, -31 + rockPoints.getZ(i) * 46);
+  const heightAtCell = (col, row) => heights[Math.min(rockRows - 1, Math.max(0, row)) * rockCols + Math.min(rockCols - 1, Math.max(0, col))];
   for (let i = 0; i < rockPoints.count; i += 1) {
+    const col = i % rockCols;
+    const row = Math.floor(i / rockCols);
     const x = -9 + rockPoints.getX(i) * 70;
     const z = -31 + rockPoints.getZ(i) * 46;
     const floor = ground(x, z);
-    const h = ridge(x, z);
-    const y = Math.max(h, floor - 0.7);
+    const h = heights[i];
+    const y = skirt(h, floor);
     rockPoints.setXYZ(i, x, y, z);
     const d = z - spineZ(x);
     rockUv.setXY(i, x / 26 + z / 60, (y - d * 0.42 + x * 0.12) / 26);
-    const band = fbm((y - d * 0.42 + x * 0.12) * 0.3, x * 0.06, 3);
-    const grit = fbm(x * 0.9, z * 0.9, 2);
-    tintA.setHex(0x87685a).lerp(tintB.setHex(0x7f7876), smooth(band, 0.4, 0.62));
-    tintA.lerp(tintB.setHex(0xa98b80), Math.max(0, grit - 0.58) * 1.4);
     const top = piecewise(TOP, x);
+    const bedCoord = (y - d * 0.42 + x * 0.12) * 0.11;
+    const band = fbm(bedCoord * 1.3, x * 0.03, 3);
+    const seam = bedCoord - Math.floor(bedCoord);
+    const grit = fbm(x * 0.9, z * 0.9, 2);
+    tintA.setHex(0x8f6a58).lerp(tintB.setHex(0x9a8779), smooth(band, 0.45, 0.6) * 0.55);
+    tintA.lerp(tintB.setHex(0x5f4a44), smooth(seam, 0.9, 0.97) * (1 - smooth(seam, 0.985, 1)) * 0.3);
+    tintA.lerp(tintB.setHex(0xb49a86), Math.max(0, grit - 0.6) * 1.2);
+    const streak = fbm(x * 0.45 + d * 0.05, 1.7, 3);
+    tintA.lerp(tintB.setHex(0x4a3b36), smooth(streak, 0.6, 0.78) * smooth(y, top * 0.3, top * 0.8) * 0.55);
     const summit = smooth(y, top - 0.9, top - 0.15) * (1 - smooth(Math.abs(d), piecewise(WIDTH, x) - 0.4, piecewise(WIDTH, x) + 0.6));
     tintA.lerp(tintB.setHex(0x8f8a62), summit * 0.75);
     if (d > 0) {
@@ -245,14 +271,12 @@ export function createLandscape(textures) {
       const groove = smooth(level, 0.43, 0.455) * (1 - smooth(level, 0.475, 0.5)) * smooth(x, -25, -19) * (1 - smooth(x, 5, 9));
       tintA.lerp(tintB.setHex(0x3a302c), groove * 0.75);
     }
-    const around = (ridge(x + 0.7, z) + ridge(x - 0.7, z) + ridge(x, z + 0.7) + ridge(x, z - 0.7)) / 4 - h;
-    tintA.multiplyScalar(1 - Math.min(0.5, Math.max(0, around) * 0.9) + Math.min(0.18, Math.max(0, -around) * 0.5));
-    const lit = smooth(ridge(x, z + 0.6) - h, -0.9, 0.2);
-    tintA.multiplyScalar(0.82 + lit * 0.26);
+    const around = (heightAtCell(col + 4, row) + heightAtCell(col - 4, row) + heightAtCell(col, row + 4) + heightAtCell(col, row - 4)) / 4 - h;
+    tintA.multiplyScalar(1 - Math.min(0.3, Math.max(0, around) * 0.25) + Math.min(0.12, Math.max(0, -around) * 0.2));
     if (y > floor + 0.5) tintA.lerp(tintB.setHex(0xc9bca2), (1 - smooth(pathDistance(x, z, TRACK), 0.12, 0.3)) * 0.4);
-    if (h < floor + 0.6) tintA.lerp(tintB.setHex(0xa8977a), 0.7);
+    tintA.lerp(tintB.setHex(0xa8977a), 1 - smooth(y - floor, 0.2, 4));
     rockSeason.set([tintA.r, tintA.g, tintA.b], i * 3);
-    const ledgeSnow = smooth(1 - Math.min(1, Math.abs(h - ridge(x, z + 0.4)) / 0.4), 0.35, 0.9);
+    const ledgeSnow = smooth(1 - Math.min(1, Math.abs(h - heightAtCell(col, row + 1)) / 0.4), 0.35, 0.9);
     tintA.lerp(tintB.setHex(0xe9eef2), Math.max(summit, ledgeSnow * 0.8) * 0.9);
     rockSnow.set([tintA.r, tintA.g, tintA.b], i * 3);
   }
@@ -266,7 +290,7 @@ export function createLandscape(textures) {
   const rangeSnow = [];
   const crest = (x, z) => 1 - Math.abs(2 * fbm(x, z, 4) - 1);
   for (let layer = 0; layer < 5; layer += 1) {
-    const geometry = new THREE.PlaneGeometry(760, 120, 300, 60);
+    const geometry = new THREE.PlaneGeometry(760, 120, 190, 32);
     geometry.rotateX(-Math.PI / 2);
     const vertices = geometry.attributes.position;
     const uv = geometry.attributes.uv;
@@ -334,86 +358,134 @@ export function createLandscape(textures) {
   group.add(bar);
 
   const topAt = (x, z) => ridge(x, z);
-  const block = (x, z, w, h, d, material = plaster, lift = 0, rotation = 0) => mesh(new THREE.BoxGeometry(w, h + 1.4, d), material, [x, topAt(x, z) + lift + h / 2 - 0.7, z], rotation);
-  const tower = (x, z, radius, height, material = rubble) => {
-    const base = topAt(x, z);
-    const drum = mesh(new THREE.CylinderGeometry(radius * 0.92, radius, height + 1.4, 20), material, [x, base + height / 2 - 1, z]);
-    mesh(new THREE.CylinderGeometry(radius * 1.02, radius * 0.92, 0.35, 20), plaster, [x, base + height - 0.3, z]);
-    for (let k = 0; k < 8; k += 1) {
-      const angle = (k / 8) * Math.PI * 2;
-      mesh(new THREE.BoxGeometry(0.34, 0.42, 0.34), material, [x + Math.cos(angle) * radius * 0.9, base + height - 0.1, z + Math.sin(angle) * radius * 0.9]);
+  const rimZ = (x, side, inset) => spineZ(x) + side * (piecewise(WIDTH, x) - inset);
+  const block = (x, z, w, h, d, material = plaster, lift = 0, rotation = 0, sink = 1.4) => mesh(new THREE.BoxGeometry(w, h + sink, d), material, [x, topAt(x, z) + lift + h / 2 - sink / 2, z], rotation);
+  const merlons = (x, z, length, top, thickness, angle) => {
+    const count = Math.max(1, Math.round(length / 0.62));
+    for (let m = 0; m < count; m += 1) {
+      const t = (m + 0.5) / count - 0.5;
+      block(x + Math.cos(angle) * t * length, z - Math.sin(angle) * t * length, 0.3, 0.34, thickness + 0.06, rubble, top, angle, 0.04);
     }
-    return drum;
   };
-  const wallAlong = (x0, x1, side, height, thickness = 0.5, inset = 0.25, material = plaster) => {
+  const curtain = (x0, x1, side, height, thickness = 0.55, inset = 0.25, material = plaster) => {
     const steps = Math.max(2, Math.round((x1 - x0) / 0.8));
     for (let k = 0; k < steps; k += 1) {
       const a = x0 + (k / steps) * (x1 - x0);
       const b = x0 + ((k + 1) / steps) * (x1 - x0);
       const xm = (a + b) / 2;
-      const z = spineZ(xm) + side * (piecewise(WIDTH, xm) - inset);
-      const angle = -Math.atan2(spineZ(b) + side * (piecewise(WIDTH, b) - inset) - (spineZ(a) + side * (piecewise(WIDTH, a) - inset)), b - a);
-      const length = Math.hypot(b - a, 0.4) + 0.08;
+      const z = rimZ(xm, side, inset);
+      const angle = -Math.atan2(rimZ(b, side, inset) - rimZ(a, side, inset), b - a);
+      const length = Math.hypot(b - a, rimZ(b, side, inset) - rimZ(a, side, inset)) + 0.06;
       block(xm, z, length, height, thickness, material, -0.25, angle);
-      block(xm, z, 0.3, 0.3, thickness + 0.04, material, height - 0.25, angle);
+      block(xm, z, length, 0.1, thickness + 0.1, rubble, height - 0.6, angle, 0.02);
+      merlons(xm, z, length, height - 0.25, thickness, angle);
     }
   };
   const wallAcross = (x, z0, z1, height, thickness = 0.6, material = plaster) => {
     const zm = (z0 + z1) / 2;
     block(x, zm, thickness, height, Math.abs(z1 - z0), material, -0.3);
-    for (let z = Math.min(z0, z1) + 0.3; z < Math.max(z0, z1); z += 0.6) block(x, z, thickness + 0.04, 0.32, 0.3, material, height - 0.3);
+    block(x, zm, thickness + 0.1, 0.1, Math.abs(z1 - z0), rubble, height - 0.65, 0, 0.02);
+    merlons(x, zm, Math.abs(z1 - z0), height - 0.3, thickness, Math.PI / 2);
   };
-  const opening = (x, z, w, h, d, rotation = 0) => mesh(new THREE.BoxGeometry(w, h, d), dark, [x, topAt(x, z) + h / 2 - 0.05, z], rotation);
+  const tower = (x, z, radius, height, material = rubble) => {
+    const base = topAt(x, z);
+    const drum = mesh(new THREE.CylinderGeometry(radius * 0.9, radius * 1.06, height + 1.4, 20), material, [x, base + height / 2 - 1, z]);
+    mesh(new THREE.CylinderGeometry(radius * 0.98, radius * 0.9, 0.14, 20), plaster, [x, base + height - 0.7, z]);
+    mesh(new THREE.CylinderGeometry(radius * 1.0, radius * 0.92, 0.3, 20), plaster, [x, base + height - 0.3, z]);
+    for (let k = 0; k < 9; k += 1) {
+      const angle = (k / 9) * Math.PI * 2;
+      mesh(new THREE.BoxGeometry(0.3, 0.36, 0.3), rubble, [x + Math.cos(angle) * radius * 0.86, base + height, z + Math.sin(angle) * radius * 0.86], -angle);
+    }
+    for (const angle of [0.6, 2.4, 4.2]) mesh(new THREE.BoxGeometry(0.1, 0.5, 0.05), dark, [x + Math.cos(angle) * radius * 0.92, base + height * 0.55, z + Math.sin(angle) * radius * 0.92], -angle);
+    return drum;
+  };
+  const opening = (x, z, w, h, d, rotation = 0, lift = 0) => mesh(new THREE.BoxGeometry(w, h, d), dark, [x, topAt(x, z) + h / 2 + lift - 0.05, z], rotation);
+  const arch = (x, z, w, h, d, rotation = 0, lift = 0) => {
+    opening(x, z, w, h - w / 2, d, rotation, lift);
+    const head = mesh(new THREE.CylinderGeometry(w / 2, w / 2, d, 14, 1, false, 0, Math.PI), dark, [x, topAt(x, z) + h - w / 2 + lift - 0.05, z], rotation);
+    head.rotation.set(Math.PI / 2, 0, rotation);
+  };
+  const hall = (x, z, w, h, d, rotation = 0, windows = 3, material = plaster) => {
+    block(x, z, w, h, d, material, 0, rotation);
+    block(x, z, w + 0.16, 0.22, d + 0.16, rubble, h, rotation, 0.02);
+    const spread = (w - 0.8) / Math.max(1, windows - 1);
+    for (let k = 0; k < windows; k += 1) {
+      const t = windows === 1 ? 0 : -(w - 0.8) / 2 + k * spread;
+      const face = d / 2 + 0.02;
+      opening(x + Math.cos(rotation) * t + Math.sin(rotation) * face, z - Math.sin(rotation) * t + Math.cos(rotation) * face, 0.22, 0.5, 0.06, rotation, h * 0.55);
+    }
+    for (let k = 0; k < Math.round(w / 0.5); k += 1) {
+      const t = -(w / 2) + 0.3 + k * 0.5;
+      const face = d / 2 + 0.02;
+      mesh(new THREE.BoxGeometry(0.09, 0.09, 0.06), dark, [x + Math.cos(rotation) * t + Math.sin(rotation) * face, topAt(x, z) + h * 0.3, z - Math.sin(rotation) * t + Math.cos(rotation) * face], rotation);
+    }
+  };
+  const cistern = (x, z, w, d) => {
+    block(x, z, w + 0.3, 0.14, d + 0.3, rubble, 0, 0, 0.3);
+    mesh(new THREE.BoxGeometry(w, 0.06, d), new THREE.MeshStandardMaterial({ color: 0x15232a, roughness: 0.18 }), [x, topAt(x, z) + 0.16, z]).userData.keepSeparate = true;
+  };
 
-  wallAlong(-24.5, -9.5, 1, 2.2);
-  wallAlong(-24.5, -9.5, -1, 2.2);
-  wallAlong(-33, -25, 1, 0.5, 0.35, 0.15, rubble);
-  wallAlong(-33, -25, -1, 0.5, 0.35, 0.15, rubble);
-  block(-29.5, spineZ(-29.5) - 1.05, 1.1, 1.1, 1.1, rubble, -0.6);
-  tower(-24.8, spineZ(-24.8), 0.85, 3.1);
-  tower(-16, spineZ(-16) - piecewise(WIDTH, -16) + 0.3, 0.75, 2.9);
-  tower(-21, spineZ(-21) + piecewise(WIDTH, -21) - 0.4, 0.9, 3.2);
-  wallAcross(-9.4, spineZ(-9.4) - piecewise(WIDTH, -9.4) + 0.2, spineZ(-9.4) + piecewise(WIDTH, -9.4) - 0.2, 2.6, 0.7);
-  tower(-9.2, spineZ(-9.2) - piecewise(WIDTH, -9.2) + 0.9, 0.8, 3.4);
-  opening(-9.4, spineZ(-9.4) + 1.6, 0.85, 1.3, 0.9);
-  block(-14.5, spineZ(-14.5) + 0.4, 4.2, 1.9, 3.2);
-  const drum = mesh(new THREE.CylinderGeometry(1.45, 1.55, 0.5, 24), plaster, [-14.5, topAt(-14.5, spineZ(-14.5) + 0.4) + 2.15, spineZ(-14.5) + 0.4]);
-  mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.14, 24), turquoise, [-14.5, drum.position.y + 0.3, spineZ(-14.5) + 0.4]);
-  const dome = mesh(new THREE.SphereGeometry(1.45, 24, 14, 0, Math.PI * 2, 0, Math.PI / 2), plaster, [-14.5, drum.position.y + 0.33, spineZ(-14.5) + 0.4]);
+  curtain(-26, -9.4, 1, 2.3);
+  curtain(-26, -9.4, -1, 2.3);
+  curtain(-34, -26, 1, 0.9, 0.4, 0.15, rubble);
+  curtain(-34, -26, -1, 0.9, 0.4, 0.15, rubble);
+  block(-30.5, spineZ(-30.5) - 0.9, 1.3, 1.3, 1.3, rubble, -0.6);
+  opening(-30.5, spineZ(-30.5) - 0.9 - 0.66, 0.35, 0.5, 0.08, 0, 0.1);
+  tower(-26.2, spineZ(-26.2), 0.95, 3.6);
+  tower(-16, rimZ(-16, -1, -0.3), 0.85, 3.4);
+  tower(-21.5, rimZ(-21.5, 1, 0.3), 1, 3.8);
+  wallAcross(-9.4, rimZ(-9.4, -1, -0.2), rimZ(-9.4, 1, -0.2), 2.8, 0.75);
+  tower(-9.2, rimZ(-9.2, -1, 0.8), 0.9, 3.9);
+  arch(-9.4, spineZ(-9.4) + 1.4, 0.9, 1.6, 1.0);
+  hall(-14.3, spineZ(-14.3) + 0.3, 4.6, 2.1, 3.4, 0, 4);
+  arch(-14.3, spineZ(-14.3) + 0.3 + 1.74, 1.1, 1.9, 0.12, 0);
+  block(-14.3, spineZ(-14.3) + 0.3 + 1.72, 1.6, 2.5, 0.2, plaster, -0.1, 0, 0.3);
+  block(-14.3, spineZ(-14.3) + 0.3 + 1.8, 1.3, 0.12, 0.08, turquoise, 2.0, 0, 0.0);
+  const drumY = topAt(-14.3, spineZ(-14.3) + 0.3) + 2.32;
+  const drum = mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.55, 28), plaster, [-14.3, drumY + 0.27, spineZ(-14.3) + 0.3]);
+  mesh(new THREE.CylinderGeometry(1.55, 1.55, 0.14, 28), turquoise, [-14.3, drumY + 0.6, spineZ(-14.3) + 0.3]);
+  const dome = mesh(new THREE.SphereGeometry(1.5, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), plaster, [-14.3, drumY + 0.64, spineZ(-14.3) + 0.3]);
   dome.castShadow = true;
-  block(-19.5, spineZ(-19.5) - 1.6, 4.6, 2.3, 2.1);
-  block(-19.5, spineZ(-19.5) - 1.6, 4.8, 0.22, 2.3, rubble, 2.3);
-  block(-12, spineZ(-12) - 2.2, 2.4, 2.4, 2.2);
-  for (const dz of [-0.6, 0, 0.6]) opening(-10.78, spineZ(-12) - 2.2 + dz, 0.1, 0.5, 0.22);
-  block(-21.5, spineZ(-21.5) + 2.6, 5.2, 1.1, 1.3);
-  block(-15.5, spineZ(-15.5) + 3.4, 6, 1.05, 1.1);
-  block(-17.5, spineZ(-17.5) - 3.6, 5, 1.2, 1.2);
-  block(-13, spineZ(-13) + 1.6, 1.4, 0.08, 1.2, dark, 0.02);
-  block(-17.8, spineZ(-17.8) + 0.6, 1.1, 0.08, 1.8, dark, 0.02);
+  mesh(new THREE.SphereGeometry(0.14, 10, 8), turquoise, [-14.3, drumY + 2.2, spineZ(-14.3) + 0.3]);
+  hall(-19.8, spineZ(-19.8) - 1.7, 4.8, 2.4, 2.2, 0, 3);
+  hall(-12, spineZ(-12) - 2.3, 2.6, 2.6, 2.2, 0, 1);
+  for (const dz of [-0.6, 0, 0.6]) opening(-10.72, spineZ(-12) - 2.3 + dz, 0.08, 0.5, 0.2, 0, 1.3);
+  hall(-21.8, spineZ(-21.8) + 2.5, 5.2, 1.2, 1.3, 0, 4);
+  hall(-16, spineZ(-16) + 3.3, 6, 1.1, 1.1, 0, 4);
+  hall(-17.8, spineZ(-17.8) - 3.6, 5, 1.3, 1.2, 0, 3);
+  cistern(-23.5, spineZ(-23.5) + 0.4, 1.6, 1.0);
+  cistern(-11.5, spineZ(-11.5) + 1.9, 1.2, 0.9);
 
-  wallAlong(-8.5, 5.5, 1, 1.3, 0.45);
-  wallAlong(-8.5, 5.5, -1, 1.3, 0.45);
-  wallAcross(-1.5, spineZ(-1.5) - piecewise(WIDTH, -1.5) + 0.4, spineZ(-1.5) + piecewise(WIDTH, -1.5) - 0.4, 1.1, 0.45);
-  block(1.6, spineZ(1.6) - 1.4, 5, 1.9, 1.7);
-  block(1.6, spineZ(1.6) - 1.4, 5.2, 0.2, 1.9, rubble, 1.9);
-  block(2.4, spineZ(2.4) + 1.9, 3.6, 1.2, 1.5);
-  for (const dx of [-0.9, 0.4, 1.7]) block(3 + dx, spineZ(3) + 0.3, 0.9, 0.08, 0.7, dark, 0.02);
-  wallAcross(6, spineZ(6) - piecewise(WIDTH, 6) - 0.3, spineZ(6) + piecewise(WIDTH, 6) + 0.1, 3.8, 0.85, rubble);
-  tower(6.1, spineZ(6.1) - piecewise(WIDTH, 6.1) - 0.4, 0.95, 4.4);
-  tower(6.1, spineZ(6.1) + piecewise(WIDTH, 6.1), 0.95, 4.4);
-  opening(6.1, spineZ(6.1) - piecewise(WIDTH, 6.1) + 0.75, 1, 1.25, 0.8);
-  block(7.4, spineZ(7.4) - 1.4, 1.6, 0.9, 1.4, rubble, 0.05);
-  block(12.5, spineZ(12.5) + 0.4, 3.4, 1, 1.6, rubble, -0.1);
-  block(12.5, spineZ(12.5) - 1.9, 2.6, 0.9, 1.1, rubble, -0.1);
-  opening(10.4, spineZ(10.4) + 2.6, 0.9, 1.1, 0.7);
-  opening(10.4, spineZ(10.4) - 2.5, 0.9, 1.1, 0.7);
+  curtain(-8.4, 5.6, 1, 1.4, 0.45);
+  curtain(-8.4, 5.6, -1, 1.4, 0.45);
+  wallAcross(-1.5, rimZ(-1.5, -1, 0.4), rimZ(-1.5, 1, 0.4), 1.2, 0.45);
+  hall(1.6, spineZ(1.6) - 1.4, 5, 2.0, 1.7, 0, 4);
+  hall(2.4, spineZ(2.4) + 1.9, 3.6, 1.3, 1.5, 0, 3);
+  cistern(-4.5, spineZ(-4.5) - 0.8, 1.8, 1.1);
+  cistern(-3.5, spineZ(-3.5) + 1.6, 1.0, 1.0);
+  wallAcross(6, rimZ(6, -1, -0.3), rimZ(6, 1, -0.1), 4.1, 0.95, rubble);
+  tower(6.1, rimZ(6.1, -1, -0.4), 1.05, 4.8);
+  tower(6.1, rimZ(6.1, 1, 0), 1.05, 4.8);
+  arch(6.1, rimZ(6.1, -1, -0.75), 1.1, 1.7, 1.1);
+  block(6.1, rimZ(6.1, -1, -0.75) - 0.2, 1.8, 2.3, 0.3, rubble, -0.1, 0, 0.3);
+  arch(6.1, rimZ(6.1, -1, -0.75) - 0.22, 1.1, 1.7, 0.4);
+  for (let k = 0; k < 7; k += 1) {
+    const x = 7.2 + k * 0.5;
+    const z = rimZ(6.1, -1, -0.75) - 0.6 - k * 0.55;
+    mesh(new THREE.BoxGeometry(1.2, 0.3, 0.55), rubble, [x, topAt(x, z) + 0.1, z]);
+  }
+  block(7.6, spineZ(7.6) - 1.3, 1.6, 0.9, 1.4, rubble, 0.05);
+  hall(12.5, spineZ(12.5) + 0.4, 3.4, 1.1, 1.6, 0, 2, rubble);
+  hall(12.5, spineZ(12.5) - 1.9, 2.6, 0.9, 1.1, 0, 1, rubble);
+  arch(10.4, spineZ(10.4) + 2.6, 0.9, 1.3, 0.7);
+  arch(10.4, spineZ(10.4) - 2.5, 0.9, 1.3, 0.7);
   for (const [x, dz] of [[14.6, 2.1], [15.6, 0.3], [15.2, -1.6]]) block(x, spineZ(x) + dz, 1.1, 0.5, 1, rubble, -0.1);
-
 
   const house = (x, z, w, h, d, rotation) => {
     const y = ground(x, z);
     block(x, z, w, h, d, mud, y - topAt(x, z) - 0.35, rotation);
-    block(x, z, w + 0.1, 0.12, d + 0.1, rubble, y - topAt(x, z) - 0.35 + h, rotation);
+    block(x, z, w + 0.1, 0.12, d + 0.1, rubble, y - topAt(x, z) - 0.35 + h, rotation, 0.02);
+    mesh(new THREE.BoxGeometry(0.3, 0.4, 0.05), dark, [x + Math.sin(rotation) * (d / 2 + 0.03), y + 0.3, z + Math.cos(rotation) * (d / 2 + 0.03)], rotation);
   };
   const village = (cx, cz, count, spread) => {
     for (let i = 0; i < count; i += 1) {
@@ -566,7 +638,7 @@ export function createLandscape(textures) {
   });
   const lamp = new THREE.MeshBasicMaterial({ color: 0xffb765 });
   const windows = new THREE.Group();
-  for (const [x, dz, lift] of [[-14.5, 2.05, 1.2], [-19.5, -2.7, 1.4], [-12, -3.35, 1.1], [1.6, -2.3, 1.1], [-21.5, 3.3, 0.6], [-23, 0.3, 2.2]]) {
+  for (const [x, dz, lift] of [[-14.3, 2.05, 1.3], [-19.8, -2.85, 1.4], [-12, -3.45, 1.5], [1.6, -2.3, 1.15], [-21.8, 3.2, 0.7], [-26.2, 0.9, 2.1], [6.1, -4.6, 2.5]]) {
     const z = spineZ(x) + dz;
     const glow = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.22), lamp);
     glow.position.set(x, topAt(x, z) + lift, z);
@@ -574,7 +646,7 @@ export function createLandscape(textures) {
   }
   windows.visible = false;
   group.add(vine, sheep, eagles, windows);
-  const sun = mesh(new THREE.SphereGeometry(2, 48, 32), new THREE.MeshBasicMaterial({ color: 0xffd29a, fog: false }), [35, 31, -100]);
+  const sun = mesh(new THREE.SphereGeometry(2, 48, 32), new THREE.MeshBasicMaterial({ color: 0xffd29a, fog: false }), [70, 38, -60]);
   sun.castShadow = false;
   const swapColours = (snowy) => {
     terrain.setAttribute("color", new THREE.Float32BufferAttribute(snowy ? snowColours : seasonColours, 3));
@@ -624,7 +696,7 @@ export function createLandscape(textures) {
       eagles.visible = key !== "lake";
       smokeMaterial.opacity = key === "lake" ? 0.1 : cold ? 0.3 : 0.22;
       sun.material.color.setHex(key === "lake" || cold ? 0xe1edfa : 0xffd29a);
-      sun.position.x = key === "lake" ? -25 : 35;
+      sun.position.x = key === "lake" ? -40 : 70;
     },
   };
 }
