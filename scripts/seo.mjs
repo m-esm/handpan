@@ -108,9 +108,14 @@ function thumb(id) {
   return existsSync(join(ROOT, "img", "thumbs", `${id}.webp`)) ? `img/thumbs/${id}.webp` : null;
 }
 
-function head({ title, description, canonical, image, type, extra = "", depth = 1 }) {
+function card(id) {
+  return existsSync(join(ROOT, "img", "cards", `${id}.jpg`)) ? `${SITE}/img/cards/${id}.jpg` : null;
+}
+
+function head({ title, description, canonical, image, imageAlt, type, extra = "", depth = 1 }) {
   const up = "../".repeat(depth);
-  const images = [image, `${SITE}/img/og.png`].filter(Boolean);
+  const share = image || `${SITE}/img/og.png`;
+  const alt = imageAlt || "Alamut mark beside the words: play and learn a 10-note D Kurd handpan in the browser";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,13 +131,18 @@ function head({ title, description, canonical, image, type, extra = "", depth = 
   <meta property="og:title" content="${attr(title)}">
   <meta property="og:description" content="${attr(description)}">
   <meta property="og:url" content="${canonical}">
-${images.map((src) => `  <meta property="og:image" content="${src}">`).join("\n")}
+  <meta property="og:image" content="${share}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="${share.endsWith(".png") ? "image/png" : "image/jpeg"}">
+  <meta property="og:image:alt" content="${attr(alt)}">
   <meta property="og:locale" content="en_GB">
   <meta property="og:locale:alternate" content="fa_IR">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${attr(title)}">
   <meta name="twitter:description" content="${attr(description)}">
-  <meta name="twitter:image" content="${images[images.length - 1]}">
+  <meta name="twitter:image" content="${share}">
+  <meta name="twitter:image:alt" content="${attr(alt)}">
   <link rel="icon" type="image/svg+xml" href="${up}img/alamut-mark.svg">
   <link rel="apple-touch-icon" href="${up}img/apple-touch-icon.png">
   <link rel="manifest" href="${up}site.webmanifest">
@@ -262,7 +272,7 @@ ${footer()}
 </body>
 </html>
 `;
-  return head({ title, description, canonical, image: image ? `${SITE}/${image}` : null, type: "article", extra: jsonLd(data) }) + body;
+  return head({ title, description, canonical, image: card(pattern.id), imageAlt: `${pattern.title}: ${pattern.kind}, ${pattern.bpm} BPM, ${signature(pattern)}, cover illustration beside the title and the Alamut mark`, type: "article", extra: jsonLd(data) }) + body;
 }
 
 function hubPage() {
