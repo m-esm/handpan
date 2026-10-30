@@ -4,6 +4,8 @@ A courtyard for sound. A handpan practice space with six Persian mountain and co
 
 Practice patterns for the Gear4music DISC 10-note D Kurd handpan. The ding is D3. The tone fields are A3, B-flat3, C4, D4, E4, F4, G4, A4, and C5, at 440 Hz.
 
+The Songs filter includes **Nothing Else Matters — Intro** by Metallica: a six-bar opening study transposed to A minor for the available notes, with an added practice ending. The opening is `1–3–5–8–5–3` (A3–C4–E4–A4–E4–C4), in 6/8 at 48 dotted-quarter BPM. It is an intro arrangement, not a full-song transcription. Open it in Play or Learn at `#/p/nothing-else-matters`.
+
 https://m-esm.github.io/handpan/
 
 Play the handpan from the Library, Play, or Learn with number keys 0–9 (including the numeric keypad); 0 is the ding and T plays tak. Multiple keys can be struck together. Held keys do not repeat, and shortcuts leave search, form inputs, and Explore controls alone.

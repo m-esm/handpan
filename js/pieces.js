@@ -1,5 +1,25 @@
 export const PIECES = [
   {
+    id: "nothing-else-matters",
+    title: "Nothing Else Matters — Intro",
+    category: "Songs",
+    bpm: 48,
+    meter: "six-eight",
+    blurb: "Metallica's opening arpeggio, adapted to A minor for this D Kurd handpan.",
+    about:
+      "A short handpan arrangement of the opening of Nothing Else Matters by Metallica, not the full song. The opening is transposed from E minor to A minor so every note is available on this D Kurd pan. The guitar's low bass is brought into the handpan's range. Play 1–3–5–8–5–3: A3, C4, E4, A4, E4, C4. Here 1 is the low A in front of you; 0 is the centre D ding and is not used in this arrangement. Count ONE two three FOUR five six, with two large beats per bar at 48 BPM. Let the notes ring into one another and keep the high A gentle. Opening repeats the six-note figure four times. Ending is an added two-bar practice ending, not a transcription of the recording: slow your touch, keep the pulse, then strike low and high A together and let them ring. Learn the first bar, then loop Opening before adding the ending.",
+    form: ["Opening", "Ending"],
+    parts: {
+      Opening: [
+        "1^ 3 5 8 5 3",
+        "1^ 3 5 8 5 3",
+        "1^ 3 5 8 5 3",
+        "1^ 3 5 8 5 3",
+      ],
+      Ending: ["1 3- 5- 8- . .", "[18]- . . . . ."],
+    },
+  },
+  {
     id: "alamut-at-dusk",
     title: "Alamut at Dusk",
     category: "GPT-6 Astra",
