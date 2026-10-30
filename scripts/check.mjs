@@ -105,6 +105,11 @@ function duplicateIds(patterns) {
   return faults;
 }
 
+async function undated(patterns) {
+  const { ADDED } = await import(pathToFileURL(join(REPO_JS, "added.js")).href);
+  return patterns.filter(({ id }) => !ADDED[id]).map(({ id }) => `NO ADDED DATE ${id}: run node scripts/added.mjs`);
+}
+
 function noteUse(pattern, score) {
   const counts = {};
   for (const item of pattern.steps) counts[item.note] = (counts[item.note] || 0) + 1;
@@ -131,7 +136,9 @@ async function main() {
     found.forEach((line) => console.log(`  ${line}`));
     faults.push(...found);
   }
-  faults.filter((line) => line.startsWith("DUPLICATE ID")).forEach((line) => console.log(line));
+  const missing = await undated(score.PATTERNS);
+  faults.push(...missing);
+  faults.filter((line) => line.startsWith("DUPLICATE ID") || line.startsWith("NO ADDED DATE")).forEach((line) => console.log(line));
   console.log(`${faults.length} faults`);
   process.exit(faults.length ? 1 : 0);
 }

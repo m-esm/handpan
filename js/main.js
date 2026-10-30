@@ -10,6 +10,7 @@ import {
   pretty,
   numberOf,
 } from "./score.js";
+import { ADDED } from "./added.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
@@ -488,8 +489,34 @@ function lengthSeconds(pattern) {
   return (pattern.loopBeats * 60) / pattern.bpm;
 }
 
+const NEW_DAYS = 7;
+const DAY_MS = 86400000;
+
+function addedOf(pattern) {
+  return ADDED[pattern.id] || "";
+}
+
+function addedDate(pattern) {
+  const stamp = addedOf(pattern);
+  return stamp ? new Date(stamp) : null;
+}
+
+function isNew(pattern) {
+  const date = addedDate(pattern);
+  return !!date && Date.now() - date.getTime() < NEW_DAYS * DAY_MS;
+}
+
+function addedLabel(pattern, month) {
+  const date = addedDate(pattern);
+  if (!date) return "";
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  const options = { day: "numeric", month, ...(sameYear && month === "short" ? {} : { year: "numeric" }) };
+  return date.toLocaleDateString(undefined, options);
+}
+
 const SORT_ORDERS = [
   { id: "library", label: "Library order" },
+  { id: "new", label: "Newest first", compare: (a, b) => addedOf(b).localeCompare(addedOf(a)) },
   { id: "rating", label: "Highest rated", compare: (a, b) => ratingOf(b) - ratingOf(a) },
   { id: "title", label: "Title A to Z", compare: (a, b) => a.title.localeCompare(b.title) },
   { id: "slow", label: "Slowest first", compare: (a, b) => a.bpm - b.bpm },
@@ -863,6 +890,14 @@ function rowFor(pattern) {
   meta.className = "meta";
   const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
   meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"} · ${pattern.bpm} bpm${learnedLine(pattern)}`;
+  const added = addedLabel(pattern, "short");
+  if (added) {
+    const when = document.createElement("time");
+    when.className = "row-added";
+    when.dateTime = addedOf(pattern);
+    when.textContent = `Added ${added}`;
+    meta.append(" \u00b7 ", when);
+  }
   const stars = ratingOf(pattern);
   if (stars) {
     const rated = document.createElement("span");
@@ -870,6 +905,12 @@ function rowFor(pattern) {
     rated.setAttribute("aria-label", `rated ${starLabel(stars)}`);
     rated.textContent = `\u2605 ${stars}`;
     meta.append(" \u00b7 ", rated);
+  }
+  if (isNew(pattern)) {
+    const badge = document.createElement("span");
+    badge.className = "row-new";
+    badge.textContent = "New";
+    title.append(" ", badge);
   }
   body.append(title, meta);
   const arrow = document.createElement("span");
@@ -1152,7 +1193,18 @@ function renderLearn(pattern) {
   about.textContent = pattern.blurb;
   const name = document.createElement("div");
   name.className = "learn-title";
-  name.append(title, about, ratingControl(pattern));
+  const added = addedLabel(pattern, "long");
+  if (added) {
+    const when = document.createElement("p");
+    when.className = "piece-added";
+    const time = document.createElement("time");
+    time.dateTime = addedOf(pattern);
+    time.textContent = added;
+    when.append("Added to the library ", time);
+    name.append(title, about, when, ratingControl(pattern));
+  } else {
+    name.append(title, about, ratingControl(pattern));
+  }
   head.append(back, name);
   const modes = document.createElement("nav");
   modes.className = "piece-modes";

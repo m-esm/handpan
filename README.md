@@ -29,6 +29,8 @@ Check motion handling with `node scripts/check-motion.mjs`.
 
 Check the pieces before pushing: `node scripts/check.mjs [candidate-pieces.js]`. It prints every piece and ends with the fault count.
 
+Each library row shows when its piece was added, and pieces from the last seven days carry a New badge. Sort by Newest first lists them in order of addition. The piece header shows the full date. The dates come from git, not from a hand-kept list: `node scripts/added.mjs` finds the commit that last added each id and writes `js/added.js`. Commit a new piece first, then run the script and commit `js/added.js`. `node scripts/added.mjs --check` fails when the file is stale, and `check.mjs` counts a piece with no date as a fault.
+
 The landscapes and 36 cover illustrations are original artistic interpretations inspired by the [Institute of Ismaili Studies Alamut Valley photographic collection](https://www.iis.ac.uk/multimedia/sites-alamut-valley/), including the narrow fortress ridge, winter mountains, cultivated terraces, and poplar-lined valley. They are not historical reconstructions. Reference photographs are not bundled with the app.
 
 The loading screen offers a simple view with the original library and sheet if 3D takes too long. Static scenery is batched by material. The courtyard breathes at a throttled ambient rate (motes, fireflies, lantern flicker, a slow camera drift, the handpan hovering above its pedestal, and the occasional shooting star); with `prefers-reduced-motion` the scene holds still and redraws only on state changes. Append `?perf=1` to inspect sampled frame timing and renderer counts in the handpan element's `data-profile` attribute.

@@ -533,6 +533,20 @@ body.is-learn #learn {
 .star.is-on { color: var(--brass); }
 .rating-text { color: var(--soft); font-size: 13px; }
 .row-rating { color: var(--brass); white-space: nowrap; }
+.row-added { white-space: nowrap; }
+.row-new {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  vertical-align: 2px;
+  font: 600 11px/1.5 var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--brass);
+}
+.piece-added { margin: 3px 0 0; color: var(--soft); font-size: 13px; line-height: 1.4; }
 .mirror-note { margin: 0 0 10px; color: var(--brass-2); font-size: 13px; max-width: 70ch; }
 
 .back { padding: 6px 14px 6px 12px; color: var(--soft); }
@@ -839,8 +853,6 @@ input[type="range"]::-moz-range-thumb {
   body.is-learn #dock { display: none; }
   #dock { overflow: visible; }
   .library-head { position: static; }
-  .chips { flex-wrap: nowrap; overflow-x: auto; padding: 2px; }
-  .chip { flex: 0 0 auto; }
   .row .open { min-height: 44px; }
   body.is-learn #learn { overflow: visible; padding: 0 12px 16px; }
   .learn-head { grid-template-columns: minmax(0, 1fr); gap: 8px; }
@@ -879,6 +891,7 @@ input[type="range"]::-moz-range-thumb {
   .keys { display: none; }
   .star { min-width: 40px; min-height: 44px; font-size: 22px; }
   .mode-link { min-height: 44px; }
+  .scene-pick select, .mic-pick select, .list-pick select { font-size: 16px; }
 }
 
 @media (hover: hover) {
