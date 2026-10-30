@@ -1360,14 +1360,12 @@ function renderLearn(pattern) {
   const modes = document.createElement("nav");
   modes.className = "piece-modes";
   modes.setAttribute("aria-label", t("piece.mode"));
-  for (const mode of ["play", "learn"]) {
-    const link = document.createElement("a");
-    link.className = "mode-link";
-    link.href = `#/p/${pattern.id}/${mode}`;
-    link.textContent = mode === "learn" ? t("learn") : t("play");
-    if ((mode === "learn") === !!practice) link.setAttribute("aria-current", "page");
-    modes.append(link);
-  }
+  const other = practice ? "play" : "learn";
+  const link = document.createElement("a");
+  link.className = "mode-link";
+  link.href = `#/p/${pattern.id}/${other}`;
+  link.textContent = other === "learn" ? t("learn") : t("play");
+  modes.append(link);
   head.append(modes);
 
   const warn = document.createElement("p");
