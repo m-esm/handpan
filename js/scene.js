@@ -1530,7 +1530,7 @@ function createWorld() {
   Object.keys(VIEWS).forEach((key, index) => {
     const angle = (index / Object.keys(VIEWS).length) * Math.PI * 2;
     const beacon = new THREE.Group();
-    beacon.position.set(Math.cos(angle) * 24, 0, Math.sin(angle) * 18 - 15);
+    beacon.position.set(Math.cos(angle) * 30 - 6, 0, Math.sin(angle) * 9 + 5);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 48), gold);
     const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshPhysicalMaterial({ color: 0xffd898, emissive: 0xe6b15a, emissiveIntensity: 1.8, metalness: 0.1, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }));
     gem.position.y = 2.8;
@@ -1559,8 +1559,8 @@ function createWorld() {
     const seconds = time / 1000;
     const drift = still ? 0 : 1;
     if (exploring) {
-      camera.position.set(Math.sin(orbit) * 58, 23, Math.cos(orbit) * 58 - 12);
-      camera.lookAt(-3, 7, -22);
+      camera.position.set(Math.sin(orbit) * 64, 24, Math.cos(orbit) * 64 - 8);
+      camera.lookAt(-5, 11, -24);
     } else {
       camera.position.set(
         view.eye[0] + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
@@ -1630,10 +1630,11 @@ function createWorld() {
         const land = ensureLandscape();
         land.group.visible = true;
         land.set(key);
+        for (const beacon of beacons.children) beacon.position.y = land.heightAt(beacon.position.x, beacon.position.z);
         paintSky(view, land.sun.position);
       }
       scene.fog.color.setHex(view.sky);
-      scene.fog.density = key === "courtyard" ? 0.015 : 0.006;
+      scene.fog.density = key === "courtyard" ? 0.015 : 0.0048;
       moonlight.color.setHex(key === "dawn" ? 0xffc28b : key === "valley" ? 0xffeed2 : 0xb9d7ed);
       moonlight.intensity = key === "lake" ? 1.2 : 2.5;
       skyBase = key === "courtyard" ? 1.2 : key === "lake" ? 0.9 : 1.4;
