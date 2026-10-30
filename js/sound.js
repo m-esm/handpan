@@ -126,24 +126,6 @@ export function createAudio() {
     return osc;
   }
 
-  function openVowel(audio, t, out) {
-    const first = audio.createBiquadFilter();
-    first.type = "peaking";
-    first.Q.value = 1.3;
-    first.gain.value = 10;
-    first.frequency.setValueAtTime(380, t);
-    first.frequency.exponentialRampToValueAtTime(820, t + 0.16);
-    const second = audio.createBiquadFilter();
-    second.type = "peaking";
-    second.Q.value = 2;
-    second.gain.value = 5;
-    second.frequency.setValueAtTime(850, t);
-    second.frequency.exponentialRampToValueAtTime(1300, t + 0.16);
-    out.connect(first);
-    first.connect(second);
-    second.connect(master);
-  }
-
   function tak(audio, t, amp) {
     const out = audio.createGain();
     out.gain.value = 0.55 * amp;
@@ -163,13 +145,13 @@ export function createAudio() {
     const ring = note.ding ? 4.6 : 3.3 * Math.pow(220 / note.hz, 0.4);
     const bright = 0.55 + 0.6 * amp;
     const out = audio.createGain();
-    out.gain.value = (note.ding ? 0.18 : 0.135) * amp;
-    openVowel(audio, t, out);
+    out.gain.value = (note.ding ? 0.24 : 0.19) * amp;
+    out.connect(master);
     return stopper([
       partial(audio, t, out, note.hz, 1, ring),
       partial(audio, t, out, note.hz + 0.7, 0.4, ring * 0.9),
-      partial(audio, t, out, note.hz * 2, 0.5 * bright, ring * 0.6),
-      partial(audio, t, out, note.hz * 3 + 0.9, 0.28 * bright, ring * 0.4),
+      partial(audio, t, out, note.hz * 2, 0.46 * bright, ring * 0.6),
+      partial(audio, t, out, note.hz * 3 + 0.9, 0.22 * bright, ring * 0.4),
       partial(audio, t, out, note.hz * 4.07, 0.07 * bright, 0.5),
       partial(audio, t, out, note.hz * 5.42, 0.045 * bright, 0.28),
       burst(audio, t, out, note.ding ? 1100 : 1500 + note.hz * 2, 0.9, 0.5 * amp),
