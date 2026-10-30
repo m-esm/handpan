@@ -88,15 +88,38 @@ document.addEventListener("pointerdown", (event) => {
 });
 document.getElementById("explore-world").addEventListener("click", () => setTools(false));
 
+const loader = document.getElementById("scene-loader");
+const loaderBar = document.getElementById("loading-bar");
+const loaderPercent = document.getElementById("loading-percent");
+const loaderMessage = document.getElementById("loading-message");
+let loaderShown = 0;
+
+function setLoading(fraction, messageKey) {
+  const value = Math.max(loaderShown, Math.min(1, fraction));
+  loaderShown = value;
+  const percent = Math.round(value * 100);
+  loaderBar.style.setProperty("--progress", String(value));
+  loader.setAttribute("aria-valuenow", String(percent));
+  loaderPercent.textContent = digits(`${percent}%`);
+  if (messageKey) loaderMessage.textContent = t(messageKey);
+}
+
 function finishLoading(message = "") {
-  const focusLoader = document.getElementById("scene-loader").contains(document.activeElement);
+  const focusLoader = loader.contains(document.activeElement);
+  setLoading(1);
   document.querySelector(".wrap").removeAttribute("inert");
-  document.getElementById("scene-loader").hidden = true;
   document.getElementById("pan").setAttribute("aria-busy", "false");
   const notice = document.getElementById("scene-notice");
   notice.textContent = message;
   notice.hidden = !message;
   if (focusLoader) document.querySelector(".brand").focus({ preventScroll: true });
+  loader.classList.add("is-done");
+  const hide = () => { loader.hidden = true; };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) hide();
+  else {
+    loader.addEventListener("transitionend", hide, { once: true });
+    setTimeout(hide, 700);
+  }
 }
 
 document.getElementById("simple-view").addEventListener("click", () => {
@@ -337,23 +360,27 @@ async function bootStage() {
   if (!context) { finishLoading(t("simple.no3d")); return; }
   context.getExtension("WEBGL_lose_context")?.loseContext();
   const slow = setTimeout(() => {
-    document.getElementById("loading-message").textContent = t("loader.slow");
+    document.getElementById("slow-hint").hidden = false;
   }, 8000);
   try {
+    setLoading(0.02, "loader.modules");
     const { prepareTextures, COURTYARD } = await import("./textures.js");
     const textures = prepareTextures();
     const { createStage } = await import("./scene.js");
     performance.mark("boot:scene-module");
-    await textures.ready(COURTYARD);
+    setLoading(0.15, "loader.textures");
+    let baked = 0;
+    await textures.ready(COURTYARD, () => setLoading(0.15 + (0.45 * ++baked) / COURTYARD.length));
     performance.mark("boot:textures");
     if (sceneLoadCancelled) return;
-    document.getElementById("loading-message").textContent = t("loader.tuning");
+    setLoading(0.6, "loader.building");
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
     if (sceneLoadCancelled) return;
     stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote, textures });
     stage.layout(panLayout());
     performance.mark("boot:layout");
-    await stage.ready();
+    setLoading(0.75, "loader.tuning");
+    await stage.ready(() => setLoading(loaderShown + 0.12));
     if (sceneLoadCancelled) {
       for (const canvas of document.querySelectorAll(".world, .pan-3d")) canvas.remove();
       stage = null;

@@ -85,11 +85,14 @@
       <section id="dock" aria-label="Library" data-i18n-label="library"></section>
     </main>
   </div>
-  <div id="scene-loader" class="scene-loader" role="status" aria-live="polite">
+  <div id="scene-loader" class="scene-loader" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="loading-message">
+    <span class="loader-glow" aria-hidden="true"></span>
     <img src="img/alamut-mark.svg" width="72" height="72" alt="">
     <span class="loader-name" data-i18n="brand">Alamut</span>
     <p id="loading-message" data-i18n="loader.opening">Opening the courtyard</p>
-    <span class="loading-track" aria-hidden="true"></span>
+    <span class="loading-track" aria-hidden="true"><span id="loading-bar" class="loading-bar"></span></span>
+    <span id="loading-percent" class="loading-percent" aria-hidden="true">0%</span>
+    <p id="slow-hint" class="slow-hint" data-i18n="loader.slow" hidden>Still loading. You can start in simple view.</p>
     <button id="simple-view" type="button" data-i18n="loader.simple">Continue in simple view</button>
   </div>
   <noscript><style>#scene-loader{display:none}</style><p>Enable JavaScript to play and learn with Alamut.</p></noscript>

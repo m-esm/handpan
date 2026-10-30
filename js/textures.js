@@ -29,5 +29,6 @@ export function prepareTextures(names = [...COURTYARD, ...LANDSCAPE]) {
     if (pack.has(name) || !worker) resolve();
     else waits.set(name, resolve);
   });
-  return { pack, ready: (list) => Promise.all(list.map(pending)) };
+  const ready = (list, onEach = () => {}) => Promise.all(list.map((name) => pending(name).then(onEach)));
+  return { pack, ready };
 }

@@ -1825,7 +1825,7 @@ export function createStage({ pan, onHit, textures }) {
   if (still) addEventListener("scroll", () => world.redraw(), { passive: true });
 
   return {
-    ready: () => Promise.all([world.compile(), drum.compile()]).then(() => performance.mark("stage:compiled")),
+    ready: (onEach = () => {}) => Promise.all([world.compile().then(onEach), drum.compile().then(onEach)]).then(() => performance.mark("stage:compiled")),
     layout: drum.layout,
     set: drum.set,
     setTak: drum.setTak,
