@@ -96,9 +96,6 @@ export function initExplore({ onOpen } = {}) {
 
   entry.addEventListener("click", () => open());
   exit.addEventListener("click", close);
-  document.addEventListener("alamut-place", (event) => {
-    if (!overlay.hidden) select(event.detail?.view);
-  });
   document.addEventListener("keydown", (event) => {
     if (overlay.hidden) return;
     if (event.key === "Escape") {

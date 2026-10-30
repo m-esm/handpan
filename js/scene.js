@@ -1566,31 +1566,6 @@ function createWorld() {
   let savedView = "courtyard";
   let orbit = 0;
   let dragging = null;
-  const beacons = new THREE.Group();
-  beacons.visible = false;
-  const pickTargets = [];
-  const pickVolumes = [];
-  Object.keys(VIEWS).forEach((key, index) => {
-    const angle = (index / Object.keys(VIEWS).length) * Math.PI * 2;
-    const beacon = new THREE.Group();
-    beacon.position.set(Math.cos(angle) * 30 - 6, 0, Math.sin(angle) * 9 + 5);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 48), gold);
-    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshPhysicalMaterial({ color: 0xffd898, emissive: 0xe6b15a, emissiveIntensity: 1.8, metalness: 0.1, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }));
-    gem.position.y = 2.8;
-    gem.userData.view = key;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.035, 12, 96), new THREE.MeshBasicMaterial({ color: 0xf4d29b }));
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.4;
-    beacon.add(base, gem, ring);
-    const hitArea = new THREE.Mesh(new THREE.SphereGeometry(2.4, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
-    hitArea.position.y = 2.8;
-    hitArea.userData.view = key;
-    beacon.add(hitArea);
-    beacons.add(beacon);
-    pickTargets.push(gem);
-    pickVolumes.push(hitArea);
-  });
-  scene.add(beacons);
   const look = new THREE.Vector2();
   const ease = new THREE.Vector2();
   let last = 0;
@@ -1674,11 +1649,6 @@ function createWorld() {
       viewKey = key;
       view = VIEWS[key];
       if (exploring) orbit = Math.atan2(view.eye[0], view.eye[2] + 25) * 0.7;
-      pickTargets.forEach((gem) => {
-        const selected = gem.userData.view === key;
-        gem.material.color.setHex(selected ? 0x8be4d4 : 0xffd898);
-        gem.material.emissive.setHex(selected ? 0x469c94 : 0xe6b15a);
-      });
       courtyard.visible = key === "courtyard";
       if (key === "courtyard") {
         if (landscape) landscape.group.visible = false;
@@ -1687,7 +1657,6 @@ function createWorld() {
         const land = ensureLandscape();
         land.group.visible = true;
         land.set(key);
-        for (const beacon of beacons.children) beacon.position.y = land.heightAt(beacon.position.x, beacon.position.z);
         paintSky(view, land.sun.position);
       }
       fogTone.setHex(view.sky);
@@ -1715,7 +1684,6 @@ function createWorld() {
   document.addEventListener("alamut-explore", (event) => {
     if (event.detail.open && !exploring) savedView = viewKey;
     exploring = event.detail.open;
-    beacons.visible = exploring;
     if (exploring) {
       environment(event.detail.view || "dawn");
     } else {
@@ -1726,7 +1694,7 @@ function createWorld() {
   });
   canvas.addEventListener("pointerdown", (event) => {
     if (!exploring) return;
-    dragging = { x: event.clientX, start: event.clientX, y: event.clientY };
+    dragging = { x: event.clientX };
     canvas.setPointerCapture(event.pointerId);
   });
   canvas.addEventListener("pointermove", (event) => {
@@ -1736,17 +1704,7 @@ function createWorld() {
     pendingFrames = 30;
     if (still) draw(performance.now());
   });
-  canvas.addEventListener("pointerup", (event) => {
-    if (!dragging) return;
-    const click = Math.abs(event.clientX - dragging.start) < 6 && Math.abs(event.clientY - dragging.y) < 6;
-    dragging = null;
-    if (!click) return;
-    const ray = new THREE.Raycaster();
-    ray.setFromCamera(new THREE.Vector2(event.clientX / innerWidth * 2 - 1, 1 - event.clientY / innerHeight * 2), camera);
-    const hit = ray.intersectObjects(pickVolumes)[0];
-    if (hit) document.dispatchEvent(new CustomEvent("alamut-place", { detail: { view: hit.object.userData.view } }));
-  });
-  canvas.addEventListener("pointercancel", () => { dragging = null; });
+  for (const type of ["pointerup", "pointercancel"]) canvas.addEventListener(type, () => { dragging = null; });
   return {
     environment,
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
