@@ -139,7 +139,7 @@ button, select, .open, .back, .brand { cursor: pointer; }
 #listen[aria-pressed="true"], #mirror[aria-pressed="true"], #motion-toggle[aria-pressed="true"],
 #tools-toggle[aria-expanded="true"], .loop[aria-pressed="true"], .chip[aria-pressed="true"],
 .part-loop[aria-pressed="true"], .is-main, .practice-panel .is-main, .play,
-.part-chip.is-current, .mode-link[aria-current], .practice-mode[aria-pressed="true"] {
+.part-chip.is-current, .practice-mode[aria-pressed="true"] {
   background: linear-gradient(180deg, #e9cc94, #cfa96a);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 16px -8px rgba(217, 183, 122, 0.7);
   color: var(--ink);
@@ -462,6 +462,9 @@ body:not(.is-learn) #learn { display: none; }
 .library-welcome .practice-start { text-align: left; justify-content: start; white-space: normal; }
 .library-welcome .practice-start:not(.is-main) { background: transparent; box-shadow: none; color: var(--soft); }
 .tool-context { max-width: 22ch; font-size: 13px; line-height: 1.45; color: var(--soft); }
+@media (min-width: 1001px) and (min-height: 521px) {
+  .tool-context { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 button:disabled { cursor: default; opacity: 0.5; }
 .slot:disabled, .bar-num:disabled { opacity: 1; }
 
@@ -496,10 +499,20 @@ body.is-learn #learn {
 
 .learn-title { min-width: 0; }
 #learn h1 { margin: 0; font-family: var(--sans); font-size: 26px; font-weight: 650; line-height: 1.2; letter-spacing: -0.025em; overflow-wrap: anywhere; }
-.piece-modes { display: flex; gap: 8px; }
-.mode-link { min-width: 80px; background: transparent; box-shadow: none; }
+.piece-modes {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 3px;
+  border-radius: calc(var(--r-s) + 3px);
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: var(--ring);
+}
+.mode-link { min-width: 72px; min-height: 40px; background: transparent; box-shadow: none; color: var(--soft); }
+.mode-link[aria-current] { background: var(--fill-2); box-shadow: inset 0 0 0 1px var(--brass-dim); color: var(--brass-2); font-weight: 600; }
 .about { margin: 3px 0 0; color: var(--soft); font-size: 13px; line-height: 1.4; }
-.rating { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; }
+.rating { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin-top: 4px; margin-left: -6px; }
 .stars { display: flex; }
 .star {
   min-width: 32px;
@@ -827,9 +840,10 @@ input[type="range"]::-moz-range-thumb {
   .chip { flex: 0 0 auto; }
   .row .open { min-height: 44px; }
   body.is-learn #learn { overflow: visible; padding: 0 12px 16px; }
-  .learn-head { grid-template-columns: auto minmax(0, 1fr); }
-  .piece-modes { grid-column: 1 / -1; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
-  .learn-head .back { justify-self: start; }
+  .learn-head { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .piece-modes { display: grid; grid-column: 1 / -1; margin-bottom: 4px; }
+  .learn-head .back { justify-self: start; margin-left: -6px; padding-left: 8px; background: transparent; box-shadow: none; }
+  .tools .tool-context { max-width: none; padding: 0 6px 4px; }
   #learn h1 { font-size: 22px; }
   .stepper { width: 44px; min-height: 44px; }
   .tempo { flex: 1 1 100%; max-width: none; margin-left: 0; }
@@ -854,13 +868,14 @@ input[type="range"]::-moz-range-thumb {
   body.is-learn .pan-stick { margin: 0; padding: 0; align-self: center; }
   body.is-learn #learn { overflow: auto; }
   .learn-head { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .piece-modes { grid-column: auto; border-bottom: 0; padding-bottom: 0; }
+  .piece-modes { display: inline-grid; grid-column: auto; margin-bottom: 0; }
   .about, .mirror-note { display: none; }
 }
 
 @media (hover: none) and (pointer: coarse) {
   .keys { display: none; }
-  .star { min-width: 44px; min-height: 44px; font-size: 24px; }
+  .star { min-width: 40px; min-height: 44px; font-size: 22px; }
+  .mode-link { min-height: 44px; }
 }
 
 @media (hover: hover) {
