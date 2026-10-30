@@ -67,6 +67,13 @@ for (const [key, view] of Object.entries(VIEWS)) {
   option.textContent = t(`env.${key}`);
   sceneSelect.append(option);
 }
+function syncPickTitle(select) {
+  select.title = select.selectedOptions[0]?.textContent ?? "";
+}
+for (const select of document.querySelectorAll(".pick select")) {
+  select.addEventListener("change", () => syncPickTitle(select));
+}
+syncPickTitle(sceneSelect);
 sceneSelect.addEventListener("change", () => {
   sceneChoice = sceneSelect.value;
   paint(player.snapshot());
@@ -494,6 +501,7 @@ function applyListParams(params) {
   const nextScene = params.get("scene");
   sceneChoice = nextScene && Object.hasOwn(VIEWS, nextScene) ? nextScene : "auto";
   sceneSelect.value = sceneChoice;
+  syncPickTitle(sceneSelect);
   const nextRating = optionId(RATING_FILTERS, params.get("rating"));
   const nextSort = optionId(SORT_ORDERS, params.get("sort"));
   if (nextQuery === query && nextKind === kindFilter && nextRating === ratingFilter && nextSort === sortOrder) return;
@@ -1787,6 +1795,7 @@ function paint(snap) {
     stage.environment(environment);
     lastEnvironment = environment;
     sceneSelect.options[0].textContent = t("scene.autoNamed", { name: t(`env.${environment}`) });
+    syncPickTitle(sceneSelect);
   }
   const onNotes = new Set(snap.notes);
   const nextNotes = new Set(snap.nextNotes);
@@ -2089,6 +2098,7 @@ async function fillMicList() {
   );
   select.value = listener.deviceId;
   if (select.selectedIndex < 0 && select.options.length) select.selectedIndex = 0;
+  syncPickTitle(select);
 }
 
 function meterLoop() {
