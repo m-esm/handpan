@@ -702,12 +702,15 @@ function renderList() {
   features.href = "features.html";
   features.textContent = "Features";
   siteNav.append(about, features);
-  libraryHead.append(heading, siteNav, find, chips, listTools);
+  const titleRow = document.createElement("div");
+  titleRow.className = "library-title";
+  titleRow.append(heading, siteNav);
   const resultCount = document.createElement("p");
   resultCount.id = "result-count";
   resultCount.className = "result-count";
   resultCount.setAttribute("role", "status");
-  libraryHead.append(resultCount);
+  listTools.append(resultCount);
+  libraryHead.append(titleRow, find, chips, listTools);
   const beginner = textButton("practice-start", "Start learning");
   beginner.id = "practice-beginner";
   beginner.addEventListener("click", () => requestPractice(beginnerPattern(PATTERNS)));
