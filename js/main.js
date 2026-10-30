@@ -1000,7 +1000,6 @@ function markLearned(pattern, key, on) {
   for (const box of document.querySelectorAll(".part-done input")) {
     if (box.dataset.part === key) box.checked = on;
   }
-  fillGuide(pattern);
   fillRows();
   paint(player.snapshot());
 }
@@ -1460,10 +1459,7 @@ function renderLearn(pattern) {
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
   deck.className = "deck";
-  const guide = document.createElement("div");
-  guide.id = "guide";
-  guide.className = "guide";
-  deck.append(transport, guide);
+  deck.append(transport);
 
   document.body.classList.toggle("is-practicing", !!practice);
   const notation = sheetNode(pattern, sheet);
@@ -1473,13 +1469,7 @@ function renderLearn(pattern) {
     panel.querySelector("#practice-next").after(notation);
     dock.append(panel);
   } else dock.append(deck, notation);
-  fillGuide(pattern);
   focusSheet(pattern);
-  if (!practice) {
-    const snap = player.snapshot();
-    const slot = snap.patternId === pattern.id && snap.index >= 0 ? notation.querySelector(`.slot[data-event="${snap.index}"]`) : null;
-    showPart(slot ? slot.closest(".part").dataset.section : "0");
-  }
   updatePractice(player.snapshot());
 }
 
@@ -1491,50 +1481,11 @@ function textButton(className, text) {
   return node;
 }
 
-function fillGuide(pattern) {
-  const guide = document.getElementById("guide");
-  if (guide && !practice) guide.replaceChildren(partMap(pattern, sheetOf(pattern)));
-}
-
-let soloPart = "";
-
-function showPart(section) {
-  const sheet = document.getElementById("sheet");
-  if (!sheet || practice) return;
-  soloPart = section;
-  const parts = sheet.querySelectorAll(".part");
-  sheet.classList.toggle("is-solo", parts.length > 1);
-  for (const part of parts) part.classList.toggle("is-away", part.dataset.section !== section);
-  fitSheet();
-}
-
-function fitSheet() {
-  const sheet = document.getElementById("sheet");
-  const learn = document.getElementById("learn");
-  if (!sheet || !learn || practice) return;
-  sheet.style.zoom = "";
-  sheet.classList.remove("is-dense");
-  const inner = /auto|scroll/.test(getComputedStyle(learn).overflowY);
-  const bottom = inner ? learn.getBoundingClientRect().bottom - parseFloat(getComputedStyle(learn).paddingBottom) : window.innerHeight - 16;
-  let after = 0;
-  for (let node = sheet.nextElementSibling; node; node = node.nextElementSibling) after += node.getBoundingClientRect().height;
-  const room = () => bottom - after - sheet.getBoundingClientRect().top;
-  const over = () => sheet.getBoundingClientRect().height > room() + 1;
-  if (!over()) return;
-  sheet.classList.add("is-dense");
-  if (!over()) return;
-  const scale = Math.max(0.55, Math.min(1, room() / sheet.getBoundingClientRect().height));
-  sheet.style.zoom = String(scale);
-}
-
-addEventListener("resize", () => fitSheet());
-
 function focusSheet(pattern) {
   const sheet = document.getElementById("sheet");
   if (!sheet) return;
   const step = practice?.pattern.id === pattern.id ? practice.phrases[practice.at] : null;
   sheet.classList.toggle("is-focus", !!step);
-  if (step) sheet.classList.remove("is-solo");
   for (const part of sheet.querySelectorAll(".part")) {
     let shown = 0;
     for (const bar of part.querySelectorAll(".bar")) {
@@ -1544,33 +1495,6 @@ function focusSheet(pattern) {
     }
     part.classList.toggle("is-folded", shown === 0);
   }
-}
-
-function partMap(pattern, sheet) {
-  const map = document.createElement("div");
-  map.className = "partmap";
-  map.setAttribute("role", "group");
-  map.setAttribute("aria-label", t("parts"));
-  sheet.sections.forEach((section, i) => {
-    if (!section.name) return;
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "part-chip";
-    chip.dataset.section = String(i);
-    chip.dataset.part = section.name;
-    chip.textContent = partName(section.name);
-    chip.classList.toggle("is-learned", isLearned(pattern, section.name));
-    chip.addEventListener("click", () => {
-      if (learnMode()) return;
-      const first = section.bars.flatMap((bar) => bar.slots).find(Boolean);
-      if (first) player.seek(first.index, player.playing, listener.on);
-      showPart(String(i));
-      const target = document.querySelector(`.part[data-section="${i}"]`);
-      if (target) keepInView(target, true);
-    });
-    map.append(chip);
-  });
-  return map;
 }
 
 function noteNode(id, hand) {
@@ -1891,14 +1815,6 @@ function paint(snap) {
     if (slot && !practice) {
       if (settled) keepInView(slot.closest(".bar"));
       settled = true;
-      const part = slot.closest(".part").dataset.section;
-      if (part !== soloPart) showPart(part);
-      for (const chip of document.querySelectorAll(".part-chip")) {
-        const here = chip.dataset.section === part;
-        chip.classList.toggle("is-current", here);
-        if (here) chip.setAttribute("aria-current", "true");
-        else chip.removeAttribute("aria-current");
-      }
     }
   }
   const node = caption();
