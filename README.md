@@ -4,7 +4,7 @@ A courtyard for sound. A handpan practice space with six Persian mountain and co
 
 Practice patterns for the Gear4music DISC 10-note D Kurd handpan. The ding is D3. The tone fields are A3, B-flat3, C4, D4, E4, F4, G4, A4, and C5, at 440 Hz.
 
-The Songs filter includes **Nothing Else Matters — Intro** by Metallica: a six-bar opening study transposed to A minor for the available notes, with an added practice ending. The opening is `1–3–5–8–5–3` (A3–C4–E4–A4–E4–C4), in 6/8 at 48 dotted-quarter BPM. It is an intro arrangement, not a full-song transcription. Open it in Play or Learn at `#/p/nothing-else-matters`.
+The Songs filter includes **Nothing Else Matters (Intro)** by Metallica: the whole intro, from the fingerpicked arpeggio through the lead melody, the G minor, B-flat and C add 9 turn, the returning arpeggio and the second-guitar section to the harmonic chime before the first verse, moved from E minor to D minor so that every note sits on this D Kurd pan and the ding plays the low open string. The arpeggio is `0 1 4 6 4 1` (D3, A3, D4, F4, D4, A3) in 6/8 at 48 dotted-quarter BPM; the record is near 46. It is an intro arrangement with two-note chord stabs, not a full-song transcription. Open it in Play or Learn at `#/p/nothing-else-matters`.
 
 https://m-esm.github.io/handpan/
 
