@@ -1,5 +1,49 @@
 export const PIECES = [
   {
+    id: "in-the-end",
+    title: "In the End",
+    category: "Songs",
+    bpm: 105,
+    meter: "eighths",
+    blurb: "Linkin Park's piano riff moved down to D minor, over D minor, B-flat, F and C.",
+    about:
+      "In the End by Linkin Park, the piano riff that opens the song and runs under every verse, in D minor at 105 BPM. The record is in E-flat minor; one semitone down puts the whole riff and its four chords on this pan with nothing changed. Count ONE and two and THREE and four and. The riff is two bars: D on 4, the high A on 8 twice, F on 6 and E on 5, then E held, E again, F and a fall back to D. It plays the same over every chord, D minor, B-flat, F and C, while the bass under it moves. Chords are two notes on the first beat: the ding with 1 for D minor, the ding with 2 for B-flat, 6 with 1 for F, 3 with 4 or 3 alone for C. Intro is the riff alone, four times. Verse puts the bass under it. Chorus drops the riff and holds the chords, two strikes a bar, so you can sing or let a guitarist take the tune; the last bar of each chord pair climbs 5 6 8 back into the riff. Learn the riff first with one hand; the chord on the first beat comes after.",
+    form: ["Intro", "Verse", "Chorus", "Verse", "Chorus", "Outro"],
+    parts: {
+      Intro: [
+        "4^ . 8 . 8 6 5 .",
+        "5^ . 5 6 . 4 . .",
+        "4^ . 8 . 8 6 5 .",
+        "5^ . 5 6 . 4 . .",
+      ],
+      Verse: [
+        "[D4]^ . 8 . 8 6 5 .",
+        "[D5]^ . 5 6 . 4 . .",
+        "[D2]^ . 8 . 8 6 5 .",
+        "[25]^ . 5 6 . 4 . .",
+        "[61]^ . 8 . 8 6 5 .",
+        "[65]^ . 5 6 . 4 . .",
+        "[34]^ . 8 . 8 6 5 .",
+        "3^ . 5 6 . 4 . .",
+      ],
+      Chorus: [
+        "[D1]^ . . . [D4]- . . .",
+        "[D2]^ . . . [25]- . . .",
+        "[61]^ . . . [63]- . . .",
+        "[34]^ . . . 5 . 6 8",
+        "[D1]^ . . . [D4]- . . .",
+        "[D2]^ . . . [25]- . . .",
+        "[61]^ . . . [63]- . . .",
+        "[34]^ . . . 5 . 6 8",
+      ],
+      Outro: [
+        "4^ . 8 . 8 6 5 .",
+        "5^ . 5 6 . 4 . .",
+        "[D1]^ . . . . . . .",
+      ],
+    },
+  },
+  {
     id: "amazing-grace",
     title: "Amazing Grace",
     category: "Songs",
