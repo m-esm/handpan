@@ -15,7 +15,7 @@
   --teal: #6fcfb0;
   --bad: #d9735c;
   --serif: Georgia, "Times New Roman", serif;
-  --persian: "Lalezar", var(--sans);
+  --persian: "Amiri", var(--serif);
   --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --r: 16px;
   --r-s: 8px;
@@ -349,7 +349,7 @@ body.has-3d .pan-svg { opacity: 0; pointer-events: none; filter: none; }
 
 .field-name {
   font-family: var(--persian);
-  font-weight: 400;
+  font-weight: 700;
   fill: var(--right);
   text-anchor: middle;
   dominant-baseline: central;

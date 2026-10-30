@@ -267,7 +267,7 @@ async function bootStage() {
     stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
     document.body.classList.add("has-3d");
     stage.layout(panLayout());
-    document.fonts.load("200px Lalezar", "\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9").then(() => stage && stage.layout(panLayout())).catch(() => {});
+    document.fonts.load("700 200px Amiri", "\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());

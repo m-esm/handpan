@@ -59,8 +59,8 @@ function labelTexture(text, color) {
   canvas.width = 256;
   canvas.height = 256;
   const pen = canvas.getContext("2d");
-  const size = text === "\u06f0" ? 400 : 220;
-  pen.font = `400 ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--persian")}`;
+  const size = text === "\u06f0" ? 420 : 250;
+  pen.font = `700 ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--persian")}`;
   pen.textAlign = "center";
   pen.textBaseline = "middle";
   pen.lineJoin = "round";
