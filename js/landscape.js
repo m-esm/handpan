@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { worldScale } from "./materials.js";
+import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
+import { seeded, worldScale } from "./materials.js";
 
 export function createLandscape(textures) {
   const group = new THREE.Group();
@@ -10,7 +11,7 @@ export function createLandscape(textures) {
   const leaf = new THREE.MeshStandardMaterial({ color: 0x304b32, roughness: 1, ...textures("foliage", [6, 7]), normalScale: new THREE.Vector2(1.6, 1.6) });
   const stone = worldScale(new THREE.MeshStandardMaterial({ color: 0xd2c2aa, roughness: 1, ...textures("ashlar"), normalScale: new THREE.Vector2(0.8, 0.8) }), 2.6);
   const ripples = textures("ripples", [3, 10]);
-  const water = new THREE.MeshPhysicalMaterial({ color: 0x315d6b, metalness: 0, roughness: 0.14, ...ripples, normalScale: new THREE.Vector2(0.7, 0.7), specularIntensity: 0.5, envMapIntensity: 0.9 });
+  const water = new THREE.MeshPhysicalMaterial({ color: 0x315d6b, vertexColors: true, metalness: 0, roughness: 0.14, ...ripples, normalScale: new THREE.Vector2(0.7, 0.7), specularIntensity: 0.5, envMapIntensity: 0.9 });
   const mesh = (geometry, material, position, scale = [1, 1, 1]) => {
     const item = new THREE.Mesh(geometry, material);
     item.position.set(...position);
@@ -62,10 +63,24 @@ export function createLandscape(textures) {
   mesh(ground, meadow, [0, -1.8, -45]).rotation.x = -Math.PI / 2;
   const waterGeometry = new THREE.PlaneGeometry(31, 110, 36, 96);
   const waterPoints = waterGeometry.attributes.position;
+  const depth = [];
   for (let i = 0; i < waterPoints.count; i += 1) {
     const y = waterPoints.getY(i);
+    const across = Math.abs(waterPoints.getX(i)) / 15.5;
+    const shallow = THREE.MathUtils.smoothstep(across, 0.55, 1);
+    depth.push(1 + shallow * 1.1, 1 + shallow * 1.2, 1 + shallow * 0.7);
     waterPoints.setX(i, waterPoints.getX(i) * (0.65 + Math.cos(y * 0.055) * 0.18) + Math.sin(y * 0.04) * 6);
   }
+  waterGeometry.setAttribute("color", new THREE.Float32BufferAttribute(depth, 3));
+  const riverAt = (z) => {
+    const y = 2 - z;
+    return { x: 4 + Math.sin(y * 0.04) * 6, half: 15.5 * (0.65 + Math.cos(y * 0.055) * 0.18) };
+  };
+  const open = (x, z, margin) => {
+    const river = riverAt(z);
+    const cliffGap = Math.hypot((x + 8) / 15, (z + 31) / 29);
+    return Math.abs(x - river.x) > river.half + margin && cliffGap > 1.1 && z < 30 && z > -60;
+  };
   const lake = mesh(waterGeometry, water, [4, -1.62, 2]);
   lake.rotation.x = -Math.PI / 2;
   lake.userData.keepSeparate = true;
@@ -108,7 +123,7 @@ export function createLandscape(textures) {
   crownGeometry.computeVertexNormals();
   const trees = new THREE.InstancedMesh(crownGeometry, leaf, 100);
   const bark = new THREE.MeshStandardMaterial({ color: 0x665c49, roughness: 1, ...textures("bark", [2, 3]) });
-  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.12, 1, 12), bark, 100);
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.12, 1, 12), bark, 136);
   trunks.castShadow = true;
   trunks.receiveShadow = true;
   trees.castShadow = true;
@@ -130,7 +145,60 @@ export function createLandscape(textures) {
     matrix.compose(new THREE.Vector3(x, -0.7, z), rotation, new THREE.Vector3(1, 2.2, 1));
     trunks.setMatrixAt(i, matrix);
   }
-  group.add(trees, trunks);
+  const random = seeded(71);
+  const lump = (geometry, amount, seedShift) => {
+    const points = geometry.attributes.position;
+    for (let i = 0; i < points.count; i += 1) {
+      const x = points.getX(i);
+      const y = points.getY(i);
+      const z = points.getZ(i);
+      const k = 1 + (Math.sin(x * 3.1 + seedShift) * Math.sin(y * 2.7 - seedShift) * Math.sin(z * 3.4 + 1)) * amount + Math.sin(x * 9 + y * 7 + z * 8) * amount * 0.25;
+      points.setXYZ(i, x * k, y * k, z * k);
+    }
+    geometry.computeVertexNormals();
+    return geometry;
+  };
+  const canopy = lump(mergeVertices(new THREE.IcosahedronGeometry(1, 4)), 0.22, 1.3);
+  const broadleaf = new THREE.InstancedMesh(canopy, leaf, 36);
+  broadleaf.castShadow = true;
+  broadleaf.receiveShadow = true;
+  broadleaf.count = 0;
+  trunks.count = 100;
+  for (let i = 0, placed = 0; placed < 36 && i < 2000; i += 1) {
+    const x = (random() - 0.5) * 110;
+    const z = 8 - random() * 66;
+    if (!open(x, z, 4)) continue;
+    const size = 1.2 + random() * 1;
+    spin.setFromAxisAngle(new THREE.Vector3(0, 1, 0), random() * 6.3);
+    matrix.compose(new THREE.Vector3(x, size * 0.9 + 0.2, z), spin, new THREE.Vector3(size, size * (0.75 + random() * 0.2), size));
+    broadleaf.setMatrixAt(placed, matrix);
+    broadleaf.setColorAt(placed, new THREE.Color().setHSL(0.17 + random() * 0.08, 0.3 + random() * 0.15, 0.55 + random() * 0.15));
+    matrix.compose(new THREE.Vector3(x, -0.4, z), spin, new THREE.Vector3(2.4, 2.6, 2.4));
+    trunks.setMatrixAt(100 + placed, matrix);
+    placed += 1;
+    broadleaf.count = placed;
+    trunks.count = 100 + placed;
+  }
+  const boulder = new THREE.MeshStandardMaterial({ color: 0x80634e, roughness: 1, ...textures("strata", [2, 1]), normalScale: new THREE.Vector2(1.6, 1.6) });
+  const stones = new THREE.InstancedMesh(lump(new THREE.IcosahedronGeometry(1, 2), 0.3, 4.1), boulder, 48);
+  stones.castShadow = true;
+  stones.receiveShadow = true;
+  stones.count = 0;
+  for (let i = 0, placed = 0; placed < 48 && i < 2000; i += 1) {
+    const nearCliff = placed < 14;
+    const angle = random() * Math.PI * 2;
+    const x = nearCliff ? -8 + Math.cos(angle) * (15 + random() * 3) : (random() - 0.5) * 120;
+    const z = nearCliff ? -31 + Math.sin(angle) * (28 + random() * 4) : 26 - random() * 80;
+    const river = riverAt(z);
+    if (Math.abs(x - river.x) < river.half + 1 || (!nearCliff && !open(x, z, 1))) continue;
+    const size = nearCliff ? 1 + random() * 1.6 : 0.3 + random() ** 2 * 1.2;
+    spin.setFromEuler(new THREE.Euler(random() * 0.6, random() * 6.3, random() * 0.6));
+    matrix.compose(new THREE.Vector3(x, -1.8 + size * 0.25, z), spin, new THREE.Vector3(size * (1 + random() * 0.6), size * 0.65, size));
+    stones.setMatrixAt(placed, matrix);
+    placed += 1;
+    stones.count = placed;
+  }
+  group.add(trees, trunks, broadleaf, stones);
   for (let i = 0; i < 9; i += 1) {
     const terrace = mesh(new THREE.BoxGeometry(18, 0.6, 3), grass, [-30, i * 0.55 - 1, -14 - i * 3.3]);
     terrace.rotation.y = -0.16;
@@ -148,6 +216,7 @@ export function createLandscape(textures) {
       meadow.color.setHex(grassTint);
       grass.color.setHex(grassTint);
       rock.color.setHex(cold ? 0x8e9ea8 : key === "dawn" ? 0x9a755e : 0x7f7668);
+      boulder.color.copy(rock.color).multiplyScalar(1.1);
       leaf.color.setHex(cold ? 0x7f9a90 : key === "dawn" ? 0x587040 : 0x47703f);
       water.color.setHex(key === "lake" ? 0x0e2638 : cold ? 0x2f4a55 : 0x1d3c44);
       sun.visible = key !== "storm" && key !== "winter";

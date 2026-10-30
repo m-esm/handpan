@@ -1242,11 +1242,11 @@ function createWorld() {
   scene.add(amber);
   const textures = materialKit(renderer);
   const brassSet = textures("brass");
-  const stone = worldScale(new THREE.MeshStandardMaterial({ color: 0xb9a68a, ...textures("ashlar"), roughness: 1, normalScale: new THREE.Vector2(0.9, 0.9) }), 3.4);
+  const stone = worldScale(new THREE.MeshStandardMaterial({ color: 0xcabda8, ...textures("ashlar"), roughness: 1, normalScale: new THREE.Vector2(0.9, 0.9) }), 3.4);
   const pale = worldScale(new THREE.MeshStandardMaterial({ color: 0xd6cab2, ...textures("limestone"), roughness: 1, normalScale: new THREE.Vector2(0.7, 0.7) }), 1.6);
   const dark = worldScale(new THREE.MeshStandardMaterial({ color: 0x3a4648, ...textures("limestone"), roughness: 1, normalScale: new THREE.Vector2(0.4, 0.4) }), 3);
   const gold = worldScale(new THREE.MeshStandardMaterial({ color: 0xd8b98a, ...brassSet, metalnessMap: brassSet.roughnessMap, metalness: 1, roughness: 1, normalScale: new THREE.Vector2(0.5, 0.5) }), 0.7);
-  const tile = worldScale(new THREE.MeshStandardMaterial({ ...textures("zellige"), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.6, 0.6) }), 0.9);
+  const tile = worldScale(new THREE.MeshStandardMaterial({ ...textures("zellige"), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.6, 0.6) }), 1.5);
   const box = (w, h, d, x, y, z, material = stone, parent = scene) => {
     const edge = Math.min(0.05, Math.min(w, h, d) * 0.25);
     const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 1, edge), material);
@@ -1254,6 +1254,7 @@ function createWorld() {
     parent.add(mesh);
     return mesh;
   };
+  const contacts = [];
   const arch = (x, z, width, spring, rise, depth, rotation = 0) => {
     const group = new THREE.Group();
     group.position.set(x, 0, z);
@@ -1261,6 +1262,8 @@ function createWorld() {
     scene.add(group);
     const half = width / 2;
     for (const side of [-1, 1]) {
+      const foot = new THREE.Vector3(side * (half + 0.32), 0, 0).applyAxisAngle(UP, rotation).add(group.position);
+      contacts.push(new THREE.Matrix4().compose(foot.setY(0.036), new THREE.Quaternion().setFromAxisAngle(UP, rotation), new THREE.Vector3(2.4, 1, depth + 1.5)));
       box(0.65, spring, depth, side * (half + 0.32), spring / 2, 0, stone, group);
       box(0.94, 0.24, depth + 0.24, side * (half + 0.32), 0.18, 0, pale, group);
       box(0.86, 0.22, depth + 0.22, side * (half + 0.32), spring - 0.08, 0, pale, group);
@@ -1337,13 +1340,20 @@ function createWorld() {
     scene.add(banner);
     box(2.3, 0.08, 0.1, x, 9.3, -8, gold);
   }
+  const shade = new THREE.Mesh(
+    mergeGeometries(contacts.map((matrix) => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).applyMatrix4(matrix))),
+    new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: textures("contact").map, transparent: true, opacity: 0.6, depthWrite: false }),
+  );
+  shade.renderOrder = 1;
+  scene.add(shade);
+  const screen = textures("lantern", [3, 1]);
   const lamps = [];
   const lantern = (x, y, z, scale = 1) => {
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.scale.setScalar(scale);
     scene.add(group);
-    const glass = new THREE.MeshPhysicalMaterial({ color: 0xffca78, emissive: 0xffa64c, emissiveIntensity: 2.5, roughness: 0.3, transmission: 0.2, thickness: 0.2 });
+    const glass = new THREE.MeshStandardMaterial({ ...screen, emissive: 0xffb25c, emissiveIntensity: 2.5, metalness: 0.55, roughness: 0.45 });
     const lightbody = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.27, 0.62, 6), glass);
     group.add(lightbody);
     const capProfile = [[0, 0.3], [0.1, 0.3], [0.2, 0.22], [0.3, 0.1], [0.36, 0.02], [0.36, 0]];

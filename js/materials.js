@@ -603,7 +603,71 @@ function moonFace(seed) {
   }, THREE.SRGBColorSpace);
 }
 
-const RECIPES = { ashlar: () => ashlar(17), limestone: () => limestone(23), flagstone: () => flagstone(31), zellige: () => zellige(11), kilim: () => kilim(5), velvet, brass: () => brass(13), strata: () => strata(29), meadow: () => meadow(37), foliage: () => foliage(43), bark: () => bark(47), ripples: () => ripples(53), moon: () => moonFace(61) };
+function lanternScreen() {
+  const size = 256;
+  const layers = [0, 1].map(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    return canvas;
+  });
+  const [metal, glow] = layers.map((canvas) => canvas.getContext("2d"));
+  const plate = metal.createLinearGradient(0, 0, 0, size);
+  plate.addColorStop(0, "#4a3418");
+  plate.addColorStop(0.5, "#6b4c22");
+  plate.addColorStop(1, "#3e2c14");
+  metal.fillStyle = plate;
+  metal.fillRect(0, 0, size, size);
+  glow.fillStyle = "#000";
+  glow.fillRect(0, 0, size, size);
+  const holes = new Path2D();
+  const star = (cx, cy, r) => {
+    for (let n = 0; n < 16; n += 1) {
+      const angle = n * Math.PI / 8;
+      const radius = n % 2 ? r * 0.55 : r;
+      holes[n ? "lineTo" : "moveTo"](cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    }
+    holes.closePath();
+  };
+  const dot = (cx, cy, r) => {
+    holes.moveTo(cx + r, cy);
+    holes.arc(cx, cy, r, 0, Math.PI * 2);
+  };
+  for (let y = 32; y < size; y += 64) {
+    for (let x = 0; x <= size; x += 64) {
+      const cx = x + (y % 128 === 32 ? 0 : 32);
+      star(cx, y, 20);
+      for (let n = 0; n < 8; n += 1) dot(cx + Math.cos(n * Math.PI / 4) * 28, y + Math.sin(n * Math.PI / 4) * 28, 2.6);
+    }
+  }
+  for (let x = 0; x < size; x += 12) {
+    dot(x + 6, 4, 2);
+    dot(x + 6, size - 4, 2);
+  }
+  metal.fillStyle = "#ffe0a8";
+  metal.fill(holes);
+  glow.shadowColor = "#ffb468";
+  glow.shadowBlur = 10;
+  glow.fillStyle = "#fff";
+  glow.fill(holes);
+  return { map: fromCanvas(layers[0], THREE.SRGBColorSpace), emissiveMap: fromCanvas(layers[1], THREE.SRGBColorSpace) };
+}
+
+function contactShadow() {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const pen = canvas.getContext("2d");
+  pen.fillStyle = "#000";
+  pen.fillRect(0, 0, size, size);
+  pen.filter = "blur(14px)";
+  pen.fillStyle = "#fff";
+  pen.fillRect(34, 34, size - 68, size - 68);
+  const texture = fromCanvas(canvas, THREE.NoColorSpace);
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+const RECIPES = { ashlar: () => ashlar(17), limestone: () => limestone(23), flagstone: () => flagstone(31), zellige: () => zellige(11), kilim: () => kilim(5), velvet, brass: () => brass(13), strata: () => strata(29), meadow: () => meadow(37), foliage: () => foliage(43), bark: () => bark(47), ripples: () => ripples(53), moon: () => moonFace(61), lantern: lanternScreen, contact: contactShadow };
 
 const made = new Map();
 
