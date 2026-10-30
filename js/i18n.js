@@ -9,7 +9,9 @@ export const LANGS = {
 
 const EN = {
   "brand": "Alamut",
-  "app.title": "Alamut | A courtyard for sound",
+  "app.title": "Alamut | Play and learn the D Kurd handpan",
+  "site.title": "Alamut | Play and learn a 10-note D Kurd handpan in the browser",
+  "site.description": "Free handpan practice space for the 10-note D Kurd. Songs, drills and original pieces with number notation, a 3D handpan, microphone note detection and bar-by-bar learning, in English and Persian.",
   "app.description": "Find your rhythm in Alamut. Play a ten-note D Kurd handpan, discover melodies, and learn each piece at your own pace in a moonlit Persian courtyard.",
   "brand.home": "Alamut home",
   "tools": "Tools",
@@ -250,9 +252,11 @@ const EN = {
   "site.lead": "A handpan practice space with six Persian mountain and courtyard settings.",
   "site.open": "Open the practice library",
   "site.limits": "Current features and limits",
+  "site.pieces": "Browse all pieces and notes",
+  "site.intro": "Play a ten-note D Kurd handpan in the browser, read every piece as number notation, and learn it one bar at a time. Songs, carols, drills and original pieces, each with its notes written out.",
   "site.back": "Back to Alamut",
-  "features.title": "Features | Alamut",
-  "features.description": "What Alamut can do today, and the limits of the current practice app.",
+  "features.title": "Features and limits of Alamut, the D Kurd handpan practice app",
+  "features.description": "What Alamut can do today: library, Play, Learn, microphone note detection, 3D landscapes, phone motion, keyboard notes, and the limits of the current app.",
   "features.lead": "What the practice app does today.",
   "features.current": "Current",
   "features.limits": "Limits",
@@ -278,7 +282,9 @@ const EN = {
   "features.keys": "Keyboard",
   "features.keys.text": "Keys 0–9 play the notes. 0 is the ding. T plays tak.",
   "features.instrument": "Instrument",
-  "features.instrument.text": "36 patterns for a Gear4music DISC 10-note D Kurd handpan. The ding is D3.",
+  "features.instrument.text": "Patterns for a Gear4music DISC 10-note D Kurd handpan. The ding is D3.",
+  "features.notes": "Notes for every piece",
+  "features.notes.text": "Every pattern has its own page with number notation, tempo and time signature, readable without the app.",
   "features.limit.mic": "Microphone",
   "features.limit.mic.text": "Microphone works in Play. Learn disables it and explains why.",
   "features.limit.progress": "Progress",
@@ -291,7 +297,9 @@ const EN = {
 
 const FA = {
   "brand": "الموت",
-  "app.title": "الموت | حیاطی برای صدا",
+  "app.title": "الموت | نواختن و یادگیری هندپن رِ کُرد",
+  "site.title": "الموت | نواختن و یادگیری هندپن ده‌نُتی رِ کُرد در مرورگر",
+  "site.description": "فضای رایگان تمرین هندپن ده‌نُتی رِ کُرد. ترانه‌ها، تمرین‌ها و قطعه‌های اصلی با نُت‌نویسی عددی، هندپن سه‌بعدی، تشخیص نُت با میکروفون و یادگیری میزان‌به‌میزان، به انگلیسی و فارسی.",
   "app.description": "ریتم خود را در الموت پیدا کنید. هندپن ده‌نُتی رِ کُرد بنوازید، ملودی‌ها را کشف کنید و هر قطعه را با آهنگ خودتان در حیاطی ایرانی زیر نور ماه بیاموزید.",
   "brand.home": "خانهٔ الموت",
   "tools": "ابزارها",
@@ -532,9 +540,11 @@ const FA = {
   "site.lead": "فضایی برای تمرین هندپن با شش چشم‌انداز از کوه‌ها و حیاط‌های ایرانی.",
   "site.open": "گشودن کتابخانهٔ تمرین",
   "site.limits": "امکانات و محدودیت‌های کنونی",
+  "site.pieces": "همهٔ قطعه‌ها و نُت‌ها",
+  "site.intro": "هندپن ده‌نُتی رِ کُرد را در مرورگر بنوازید، هر قطعه را به صورت نُت‌نویسی عددی بخوانید و میزان‌به‌میزان یاد بگیرید. ترانه‌ها، سرودها، تمرین‌ها و قطعه‌های اصلی، هر یک با نُت‌های نوشته‌شده.",
   "site.back": "بازگشت به الموت",
-  "features.title": "امکانات | الموت",
-  "features.description": "الموت امروز چه می‌کند و محدودیت‌های برنامهٔ تمرین کنونی چیست.",
+  "features.title": "امکانات و محدودیت‌های الموت، برنامهٔ تمرین هندپن رِ کُرد",
+  "features.description": "الموت امروز چه می‌کند: کتابخانه، نواختن، یادگیری، تشخیص نُت با میکروفون، چشم‌اندازهای سه‌بعدی، حرکت گوشی، نُت‌های صفحه‌کلید و محدودیت‌های برنامهٔ کنونی.",
   "features.lead": "برنامهٔ تمرین امروز چه می‌کند.",
   "features.current": "کنونی",
   "features.limits": "محدودیت‌ها",
@@ -560,7 +570,9 @@ const FA = {
   "features.keys": "صفحه‌کلید",
   "features.keys.text": "کلیدهای ۰ تا ۹ نُت‌ها را می‌نوازند. ۰ دینگ است. T تَک می‌زند.",
   "features.instrument": "ساز",
-  "features.instrument.text": "۳۶ الگو برای هندپن ده‌نُتی رِ کُرد Gear4music DISC. دینگ نُت رِ۳ است.",
+  "features.instrument.text": "الگوهایی برای هندپن ده‌نُتی رِ کُرد Gear4music DISC. دینگ نُت رِ۳ است.",
+  "features.notes": "نُت هر قطعه",
+  "features.notes.text": "هر الگو صفحهٔ خودش را دارد، با نُت‌نویسی عددی، تمپو و میزان‌نما، خواندنی بدون برنامه.",
   "features.limit.mic": "میکروفون",
   "features.limit.mic.text": "میکروفون در نواختن کار می‌کند. یادگیری آن را خاموش می‌کند و دلیلش را می‌گوید.",
   "features.limit.progress": "پیشرفت",
@@ -655,8 +667,9 @@ export function applyDocument() {
   root.lang = lang;
   root.dir = dir;
   if (document.body.classList.contains("site")) {
-    document.title = t(document.querySelector(".site-page") ? "features.title" : "brand");
-    document.querySelector('meta[name="description"]')?.setAttribute("content", t(document.querySelector(".site-page") ? "features.description" : "site.lead"));
+    const page = document.querySelector(".site-page") ? "features" : "site";
+    document.title = t(`${page}.title`);
+    document.querySelector('meta[name="description"]')?.setAttribute("content", t(`${page}.description`));
   } else {
     document.title = t("app.title");
     document.querySelector('meta[name="description"]')?.setAttribute("content", t("app.description"));

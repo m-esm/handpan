@@ -1,0 +1,18 @@
+{
+  "name": "Alamut",
+  "short_name": "Alamut",
+  "description": "Play and learn a 10-note D Kurd handpan in the browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10232b",
+  "theme_color": "#10232b",
+  "lang": "en",
+  "dir": "auto",
+  "categories": ["music", "education"],
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/alamut-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

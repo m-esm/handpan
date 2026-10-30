@@ -4,8 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10232b">
-  <title>Alamut | A courtyard for sound</title>
+  <title>Alamut | Play and learn the D Kurd handpan</title>
   <meta name="description" content="Find your rhythm in Alamut. Play a ten-note D Kurd handpan, discover melodies, and learn each piece at your own pace in a moonlit Persian courtyard.">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <link rel="canonical" href="https://handpan.moshes.io/">
+  <meta property="og:site_name" content="Alamut">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Alamut | Play and learn the D Kurd handpan">
+  <meta property="og:description" content="Find your rhythm in Alamut. Play a ten-note D Kurd handpan, discover melodies, and learn each piece at your own pace in a moonlit Persian courtyard.">
+  <meta property="og:url" content="https://handpan.moshes.io/">
+  <meta property="og:image" content="https://handpan.moshes.io/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Alamut mark beside the words: play and learn a 10-note D Kurd handpan in the browser">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:locale:alternate" content="fa_IR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Alamut | Play and learn the D Kurd handpan">
+  <meta name="twitter:description" content="Find your rhythm in Alamut. Play a ten-note D Kurd handpan, discover melodies, and learn each piece at your own pace in a moonlit Persian courtyard.">
+  <meta name="twitter:image" content="https://handpan.moshes.io/img/og.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="sitemap" type="application/xml" href="sitemap.xml">
   <link rel="icon" type="image/svg+xml" href="img/alamut-mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,6 +47,7 @@
   <link rel="modulepreload" href="js/materials.js">
   <link rel="modulepreload" href="js/landscape.js">
   <link rel="modulepreload" href="js/bake.js">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://handpan.moshes.io/#website","name":"Alamut","alternateName":"الموت","url":"https://handpan.moshes.io/","description":"A free browser practice space for a 10-note D Kurd handpan.","inLanguage":["en","fa"],"publisher":{"@id":"https://handpan.moshes.io/#author"}},{"@type":"Person","@id":"https://handpan.moshes.io/#author","name":"Mohsen Esmaeili","url":"https://github.com/m-esm"},{"@type":["SoftwareApplication","WebApplication"],"@id":"https://handpan.moshes.io/#app","name":"Alamut","url":"https://handpan.moshes.io/","description":"Play and learn a 10-note D Kurd handpan in the browser: a library of pieces, songs and drills with number notation, a 3D handpan played by tap, keyboard or phone motion, microphone note detection and bar-by-bar practice.","applicationCategory":"EducationalApplication","applicationSubCategory":"Music practice","operatingSystem":"Any","browserRequirements":"Requires JavaScript. WebGL for the 3D courtyard, with a simple view without it.","inLanguage":["en","fa"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"image":"https://handpan.moshes.io/img/og.png","screenshot":"https://handpan.moshes.io/img/og.png","author":{"@id":"https://handpan.moshes.io/#author"},"featureList":["Library of handpan pieces, songs and drills with number notation","Play mode with full score and transport","Learn mode, one bar at a time, with Hear, Try and Repeat slowly","3D handpan played by tap, keys 0 to 9, or phone motion","Microphone note detection for a real handpan","Six Persian mountain and courtyard landscapes","English and Persian interface"],"codeRepository":"https://github.com/m-esm/handpan","isPartOf":{"@id":"https://handpan.moshes.io/#website"}}]}</script>
 </head>
 <body>
   <div class="wrap" inert>
@@ -95,7 +116,7 @@
     <p id="slow-hint" class="slow-hint" data-i18n="loader.slow" hidden>Still loading. You can start in simple view.</p>
     <button id="simple-view" type="button" data-i18n="loader.simple">Continue in simple view</button>
   </div>
-  <noscript><style>#scene-loader{display:none}</style><p>Enable JavaScript to play and learn with Alamut.</p></noscript>
+  <noscript><style>#scene-loader{display:none}</style><p>Enable JavaScript to play and learn with Alamut. Without it you can still <a href="p/">read the notes for every piece</a> or visit the <a href="landing.html">front page</a>.</p></noscript>
   <script>try{var l=localStorage.getItem("disc-kurd-lang");if(!l&&(navigator.languages||[navigator.language]).some(function(c){return /^fa\b/i.test(c||"")}))l="fa";if(l==="fa"){document.documentElement.lang="fa";document.documentElement.dir="rtl";}}catch(e){}</script>
   <script type="module" src="js/main.js"></script>
   <script src="js/live.js" defer></script>

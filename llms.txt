@@ -1,0 +1,116 @@
+# Alamut
+
+> Alamut is a free browser app for playing and learning a Gear4music DISC 10-note D Kurd handpan. It has 63 patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.
+
+The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz; C4, 261.6 Hz; D4, 293.7 Hz; E4, 329.6 Hz; F4, 349.2 Hz; G4, 392.0 Hz; A4, 440.0 Hz; C5, 523.3 Hz. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten; the pages say which notes were substituted.
+
+## Pages
+
+- [The app](https://handpan.moshes.io/): library, Play and Learn. Piece routes are /#/p/<id>, /#/p/<id>/play and /#/p/<id>/learn
+- [About](https://handpan.moshes.io/landing): what Alamut is, with the links to the app and the pieces
+- [All pieces](https://handpan.moshes.io/p/): every pattern with notation, grouped by kind
+- [Features and limits](https://handpan.moshes.io/features): what the app does today
+- [Source on GitHub](https://github.com/m-esm/handpan): the code, piece data and checks
+
+## Hands
+
+Short hand-alternation drills that teach where the notes sit and which hand reaches them.
+
+- [Bottom cross](https://handpan.moshes.io/p/bottom-cross): Low A, B-flat, and the ding. The hands cross the bottom of the pan. 76 BPM, 4/4, 2 bars.
+- [The ding answers](https://handpan.moshes.io/p/ding-answers): The right hand walks. The ding answers every note. 72 BPM, 4/4, 4 bars.
+- [Left, then right](https://handpan.moshes.io/p/left-then-right): Each note on the left is answered from the right. 74 BPM, 4/4, 2 bars.
+- [The other D](https://handpan.moshes.io/p/other-d): D in two places, A in two places, hands still trading. 70 BPM, 4/4, 2 bars.
+
+## Chords
+
+Two-note chord drills on the fields that ring together on a D Kurd handpan.
+
+- [Ding and low A](https://handpan.moshes.io/p/home-pair): The home sound. Both notes together, then each one alone. 64 BPM, 4/4, 2 bars.
+- [F with the low A](https://handpan.moshes.io/p/minor-third): The minor third. F in the left hand, low A in the right. 68 BPM, 4/4, 2 bars.
+- [G over D](https://handpan.moshes.io/p/g-over-d): G with the higher D, then G with the ding. 66 BPM, 4/4, 2 bars.
+- [High A and E](https://handpan.moshes.io/p/bright-pair): The bright pair up high, then the hands come down. 72 BPM, 4/4, 2 bars.
+
+## Grooves
+
+Repeating rhythmic loops to build steady time and a relaxed strike.
+
+- [Kurd loop](https://handpan.moshes.io/p/kurd-loop): Eight notes. The right hand stays on the low A. 86 BPM, 4/4, 2 bars.
+- [Eight-note roll](https://handpan.moshes.io/p/eight-roll): A roll with no rest. Hands trade on every note. 92 BPM, 4/4, 2 bars.
+- [Long, then short](https://handpan.moshes.io/p/long-then-short): A held pair, then four quick notes. 84 BPM, 4/4, 2 bars.
+- [Down to the ding](https://handpan.moshes.io/p/down-to-the-ding): Two bars on the low A, then a walk down to it. 88 BPM, 4/4, 4 bars.
+
+## Songs
+
+Riffs and melodies from well-known songs, moved onto the pan's ten notes.
+
+- [In the End](https://handpan.moshes.io/p/in-the-end): Linkin Park's piano riff moved down to D minor, over D minor, C and B-flat. 105 BPM, 4/4, 39 bars.
+- [Amazing Grace](https://handpan.moshes.io/p/amazing-grace): The pentatonic hymn in F major, every note on the pan, counted in six. 48 BPM, 6/8, 18 bars.
+- [Knockin' on Heaven's Door](https://handpan.moshes.io/p/knockin-on-heavens-door): Dylan's four chords in F major with the sung line on 3, 4 and 5. 70 BPM, 4/4, 33 bars.
+- [Soltan-e Ghalbha (Chorus)](https://handpan.moshes.io/p/soltan-e-ghalbha): Rohani's chorus in D minor: the 4 5 6 8 climb and the rocking top, with C standing in for the missing B-flat. 96 BPM, 4/4, 16 bars.
+- [House of the Rising Sun](https://handpan.moshes.io/p/house-of-the-rising-sun): The Animals' 6/8 arpeggio and melody in A minor, with the ding as the D minor bass. 76 BPM, 6/8, 42 bars.
+- [Hallelujah](https://handpan.moshes.io/p/hallelujah): Leonard Cohen's verse and chorus in F major, the pan's relative major, in 6/8. 56 BPM, 6/8, 31 bars.
+- [Gole Sangam](https://handpan.moshes.io/p/gole-sangam): Rohani's stepwise minor melody in D minor, verse, verse a step higher, chorus, verse. 60 BPM, 6/8, 36 bars.
+- [Seven Nation Army](https://handpan.moshes.io/p/seven-nation-army): The White Stripes riff in D minor: 4 4 6 4 3 2 1, then the ding joins for the chorus. 124 BPM, 4/4, 16 bars.
+- [Nothing Else Matters (Intro)](https://handpan.moshes.io/p/nothing-else-matters): Metallica's intro as the picking part in A minor, for playing with a guitarist on capo 5. 48 BPM, 6/8, 28 bars.
+
+## Traditional
+
+Public-domain melodies, carols and folk tunes arranged for the pan's ten notes.
+
+- [Frère Jacques](https://handpan.moshes.io/p/frere-jacques): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7, 8. 107 BPM, 4/4, 8 bars.
+- [Going Home (New World Largo)](https://handpan.moshes.io/p/going-home-new-world-largo): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 7. 66 BPM, 4/4, 8 bars.
+- [Hot Cross Buns](https://handpan.moshes.io/p/hot-cross-buns): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5. 96 BPM, 4/4, 4 bars.
+- [Jingle Bells](https://handpan.moshes.io/p/jingle-bells): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7. 133 BPM, 4/4, 16 bars.
+- [Jolly Old Saint Nicholas](https://handpan.moshes.io/p/jolly-old-saint-nicholas): Public-domain melody from the Tonalics letter notes, moved down a fifth, on 3, 4, 5, 6, 7, 8. 101 BPM, 4/4, 8 bars.
+- [Lightly Row](https://handpan.moshes.io/p/lightly-row): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7. 120 BPM, 4/4, 16 bars.
+- [London Bridge](https://handpan.moshes.io/p/london-bridge): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7, 8. 109 BPM, 4/4, 8 bars.
+- [Mary Had a Little Lamb](https://handpan.moshes.io/p/mary-had-a-little-lamb): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 7. 106 BPM, 4/4, 8 bars.
+- [Ode to Joy](https://handpan.moshes.io/p/ode-to-joy): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7. 113 BPM, 4/4, 8 bars.
+- [Old MacDonald](https://handpan.moshes.io/p/old-macdonald): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 7, 8. 116 BPM, 4/4, 8 bars.
+- [Sakura Sakura](https://handpan.moshes.io/p/sakura-sakura): Public-domain melody from the Tonalics letter notes, moved down a fifth, on 2, 4, 5, 6. 78 BPM, 4/4, 9 bars.
+- [Twinkle Twinkle Little Star](https://handpan.moshes.io/p/twinkle-twinkle-little-star): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7, 8. 99 BPM, 4/4, 12 bars.
+- [Up on the Housetop](https://handpan.moshes.io/p/up-on-the-housetop): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7, 8. 128 BPM, 4/4, 16 bars.
+- [When the Saints Go Marching In](https://handpan.moshes.io/p/when-the-saints-go-marching-in): Public-domain melody from the Tonalics letter notes, as written, on 3, 4, 5, 6, 7. 124 BPM, 4/4, 15 bars.
+- [Good King Wenceslas](https://handpan.moshes.io/p/good-king-wenceslas): The Piae Cantiones spring carol in F major, every quarter on the pan, C on 9 for the high B-flat. 112 BPM, 4/4, 17 bars.
+- [O Come, O Come, Emmanuel](https://handpan.moshes.io/p/o-come-o-come-emmanuel): The fifteenth-century chant tune in D minor, the pan's own key, with C on 9 for the high B-flat. 84 BPM, 4/4, 20 bars.
+- [We Three Kings](https://handpan.moshes.io/p/we-three-kings): Hopkins' carol in 6/8, the verse in D minor and the refrain in F major, C on 9 for the high B-flat. 66 BPM, 6/8, 17 bars.
+- [In the Bleak Midwinter](https://handpan.moshes.io/p/in-the-bleak-midwinter): Holst's hymn tune Cranham in C major on 1 to 8, with one low B moved up to D. 72 BPM, 4/4, 16 bars.
+
+## GPT-6 Astra
+
+Long original pieces written with the GPT-6 Astra model for this instrument.
+
+- [Alamut at Dusk](https://handpan.moshes.io/p/alamut-at-dusk): A dark 6/8 dance: pulsing bass, crisp shell taps, and a circling A-B-flat hook. 92 BPM, 6/8, 76 bars.
+- [Sunburst Parade](https://handpan.moshes.io/p/sunburst-parade): A sunlit dance: skipping bass, a soaring hook, and a firework finish. 116 BPM, 4/4, 60 bars.
+
+## Pieces
+
+Original pieces with named sections, written for this instrument.
+
+- [First light](https://handpan.moshes.io/p/first-light): A slow round over four bass notes, then a tune on top of it. 72 BPM, 4/4, 24 bars.
+- [Three three two](https://handpan.moshes.io/p/three-three-two): The handpan groove. Notes land in threes and a two, with taks between them. 92 BPM, 4/4, 29 bars.
+- [Tide](https://handpan.moshes.io/p/tide): Six to the bar. A wave that rises and falls over each bass note. 56 BPM, 6/8, 37 bars.
+- [Seven steps](https://handpan.moshes.io/p/seven-steps): Seven to the bar, felt as two, two, three. 100 BPM, 7/8, 29 bars.
+- [Slow rain](https://handpan.moshes.io/p/slow-rain): A slow one. Two notes struck together, then a falling line. 60 BPM, 4/4, 21 bars.
+- [Night ride](https://handpan.moshes.io/p/night-ride): Fast and even. One hand keeps a quiet pulse, the other plays the tune. 104 BPM, 4/4, 25 bars.
+- [Call and answer](https://handpan.moshes.io/p/call-and-answer): The bottom of the pan asks. The top of the pan answers. 84 BPM, 4/4, 21 bars.
+- [The long way home](https://handpan.moshes.io/p/long-way-home): The long one. A slow opening, a theme, a groove, a peak, and the theme again. 80 BPM, 4/4, 39 bars.
+- [Bright morning](https://handpan.moshes.io/p/bright-morning): A tune you can hum. It asks in four bars, answers in four, then climbs. 72 BPM, 4/4, 26 bars.
+- [Cradle](https://handpan.moshes.io/p/cradle): A lullaby in six. Bass on 1, a soft chord on 4, and a slow tune between. 66 BPM, 6/8, 30 bars.
+- [Half time](https://handpan.moshes.io/p/half-time): A slow backbeat. Bass on 1, a loud D on 3, soft notes between. 88 BPM, 4/4, 34 bars.
+- [Lope](https://handpan.moshes.io/p/lope): Long, short. Each beat is a hit, a gap, and a late hit, so the whole thing limps. 96 BPM, 4/4, 30 bars.
+- [Uphill](https://handpan.moshes.io/p/uphill): Seven to the bar, felt as three, two, two. The bass climbs from the ding to C. 96 BPM, 7/8, 35 bars.
+- [Whisper and shout](https://handpan.moshes.io/p/whisper-and-shout): The same four bars three times: soft, normal, loud. A piece about control. 80 BPM, 4/4, 25 bars.
+- [Two sides](https://handpan.moshes.io/p/two-sides): A round between the two sides of the pan. Each side has a figure, then they lock in. 84 BPM, 4/4, 22 bars.
+- [One day](https://handpan.moshes.io/p/one-day): A day on the pan. Quiet at dawn, a walk, a run up the scale, bright at the top, dusk. 88 BPM, 4/4, 32 bars.
+- [Wildfire](https://handpan.moshes.io/p/wildfire): A long one that catches, burns, dies to embers, and roars at the end. 108 BPM, 4/4, 51 bars.
+- [Storm front](https://handpan.moshes.io/p/storm-front): Six to the bar and it never stops rolling. Wind, rain, thunder, the eye, and thunder again. 80 BPM, 6/8, 60 bars.
+- [Caravan](https://handpan.moshes.io/p/caravan): Seven to the bar at walking speed. The low A and B-flat sit a half step apart and give it its colour. 126 BPM, 7/8, 56 bars.
+- [Runaway](https://handpan.moshes.io/p/runaway): The fast one. Eighths at a run, a hard stop, a breath, and a sprint to the end. 138 BPM, 4/4, 64 bars.
+- [Clockwork](https://handpan.moshes.io/p/clockwork): Threes laid over fours. The ding keeps the beat and the tune lands every third sixteenth. 96 BPM, 4/4, 56 bars.
+- [Last train](https://handpan.moshes.io/p/last-train): A train that leaves slowly, finds its rhythm, and runs flat out before it pulls in. 116 BPM, 4/4, 56 bars.
+
+## Optional
+
+- [Full text of every pattern](https://handpan.moshes.io/llms-full.txt): notation and descriptions in one file
+- [Sitemap](https://handpan.moshes.io/sitemap.xml)
