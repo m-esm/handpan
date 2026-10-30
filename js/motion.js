@@ -17,6 +17,8 @@ export function projectOrientation(sample, baseline, screenAngle = 0) {
   };
 }
 
+import { t } from "./i18n.js";
+
 export function initMotion({ button, recenter, status, onChange }) {
   let active = false;
   let requested = false;
@@ -26,7 +28,7 @@ export function initMotion({ button, recenter, status, onChange }) {
   const orientation = window.screen?.orientation;
   const message = text => { status.textContent = text; };
   const render = () => {
-    button.textContent = requested && !active ? 'Cancel motion' : active ? 'Motion on' : 'Enable motion';
+    button.textContent = requested && !active ? t("motion.cancel") : active ? t("motion.on") : t("motion.enable");
     button.setAttribute('aria-pressed', String(requested));
     recenter.disabled = !active;
     recenter.hidden = !active;
@@ -47,19 +49,19 @@ export function initMotion({ button, recenter, status, onChange }) {
     document.removeEventListener('visibilitychange', visibility);
     onChange(null);
     render();
-    message(text || 'Motion off.');
+    message(text || t("motion.off"));
   };
   const watchForSample = () => {
     clearTimer();
     if (!document.hidden) timeout = window.setTimeout(() => {
-      stop('No motion data. Check your browser’s sensor access.');
+      stop(t("motion.noData"));
     }, 5000);
   };
   function reset() {
     if (!active) return;
     baseline = null;
     onChange({ x: 0, y: 0, z: 0 });
-    message('Hold your phone comfortably to center.');
+    message(t("motion.hold"));
     watchForSample();
   }
   function visibility() {
@@ -71,7 +73,7 @@ export function initMotion({ button, recenter, status, onChange }) {
     clearTimer();
     if (!baseline) {
       baseline = { alpha: event.alpha, beta: event.beta, gamma: event.gamma };
-      message('Centered. Tilt your phone to move the handpan.');
+      message(t("motion.centered"));
     }
     const angle = Number.isFinite(orientation?.angle) ? orientation.angle : window.orientation || 0;
     onChange(projectOrientation(event, baseline, angle));
@@ -89,19 +91,19 @@ export function initMotion({ button, recenter, status, onChange }) {
   function toggle() {
     if (requested) { stop(); return; }
     if (!window.isSecureContext) {
-      message('Motion needs a secure HTTPS connection.');
+      message(t("motion.https"));
       return;
     }
     const sensor = window.DeviceOrientationEvent;
     if (!sensor) {
-      message('Motion sensors are not available in this browser.');
+      message(t("motion.unavailable"));
       return;
     }
     requested = true;
     const token = ++generation;
     render();
     if (typeof sensor.requestPermission !== 'function') { start(token); return; }
-    message('Allow motion access to tilt the handpan.');
+    message(t("motion.allow"));
     try {
       const permission = sensor.requestPermission();
       Promise.resolve(permission).then(result => {

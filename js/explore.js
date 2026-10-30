@@ -1,5 +1,6 @@
 import { PATTERNS } from "./score.js";
 import { VIEWS, viewFor } from "./environments.js";
+import { t, raw, has, plural, pieceText } from "./i18n.js";
 
 export function initExplore({ onOpen } = {}) {
   const entry = document.getElementById("explore-world");
@@ -10,7 +11,7 @@ export function initExplore({ onOpen } = {}) {
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   overlay.setAttribute("aria-labelledby", "explore-title");
-  overlay.innerHTML = `<header class="explore-heading"><div><p class="explore-eyebrow">Alamut · A journey in sound</p><h1 id="explore-title"></h1><p id="explore-description">Drag the landscape to look around. Choose a light to find music.</p></div><button type="button" class="explore-return">Return to handpan <span aria-hidden="true">↗</span></button></header><aside class="explore-music" aria-labelledby="explore-music-title"><div class="explore-music-heading"><h2 id="explore-music-title">Sounds of this place</h2><span class="explore-count" role="status"></span></div><div class="explore-pieces"></div></aside><nav class="explore-places" aria-label="Places to explore"></nav>`;
+  overlay.innerHTML = `<header class="explore-heading"><div><p class="explore-eyebrow">${t("explore.eyebrow")}</p><h1 id="explore-title"></h1><p id="explore-description">${t("explore.description")}</p></div><button type="button" class="explore-return">${t("explore.return")} <span aria-hidden="true">↗</span></button></header><aside class="explore-music" aria-labelledby="explore-music-title"><div class="explore-music-heading"><h2 id="explore-music-title">${t("explore.sounds")}</h2><span class="explore-count" role="status"></span></div><div class="explore-pieces"></div></aside><nav class="explore-places" aria-label="${t("explore.places")}"></nav>`;
   document.body.append(overlay);
   const title = overlay.querySelector("h1");
   const pieces = overlay.querySelector(".explore-pieces");
@@ -27,11 +28,11 @@ export function initExplore({ onOpen } = {}) {
   function select(view, notify = true) {
     if (!Object.hasOwn(VIEWS, view)) return;
     selected = view;
-    title.textContent = VIEWS[view].name.replace(/^Alamut · /, "");
+    title.textContent = t(`env.${view}`);
     for (const button of places.children) button.setAttribute("aria-pressed", String(button.dataset.view === view));
     pieces.replaceChildren();
     const found = PATTERNS.filter((pattern) => viewFor(pattern.id) === view);
-    count.textContent = `${found.length} ${found.length === 1 ? "piece" : "pieces"}`;
+    count.textContent = plural(found.length, "explore.count");
     for (const pattern of found) {
       const link = document.createElement("a");
       link.href = `#/p/${encodeURIComponent(pattern.id)}`;
@@ -44,9 +45,9 @@ export function initExplore({ onOpen } = {}) {
       cover.loading = "lazy";
       const text = document.createElement("span");
       const name = document.createElement("strong");
-      name.textContent = pattern.title;
+      name.textContent = pieceText(pattern, "title");
       const detail = document.createElement("small");
-      detail.textContent = `${pattern.kind} · ${pattern.bpm} BPM`;
+      detail.textContent = `${has(`kind.${pattern.kind}`) ? raw(`kind.${pattern.kind}`) : pattern.kind} · ${t("practice.tempoShort", { bpm: pattern.bpm })}`;
       text.append(name, detail);
       const arrow = document.createElement("span");
       arrow.className = "explore-piece-arrow";
@@ -72,7 +73,7 @@ export function initExplore({ onOpen } = {}) {
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.view = key;
-    button.textContent = view.name.replace(/^Alamut · /, "");
+    button.textContent = t(`env.${key}`);
     button.addEventListener("click", () => select(key));
     places.append(button);
   }

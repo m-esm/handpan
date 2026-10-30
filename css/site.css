@@ -30,7 +30,12 @@ body.site:has(.site-hero) {
   margin: 0 auto;
   min-height: 64px;
   padding: 12px var(--pad) 0;
+  justify-content: space-between;
+  gap: 12px;
 }
+
+:root[lang="fa"] .site-hero h1, :root[lang="fa"] .site-page h1 { letter-spacing: 0; line-height: 1.2; font-family: "Aref Ruqaa", var(--serif); }
+:root[lang="fa"] .site-kicker, :root[lang="fa"] .site-page h2 { letter-spacing: 0; text-transform: none; font-size: 14px; }
 
 .site-hero,
 .site-page {

@@ -7,47 +7,53 @@
   <title>Features | Alamut</title>
   <meta name="description" content="What Alamut can do today, and the limits of the current practice app.">
   <link rel="icon" type="image/svg+xml" href="img/alamut-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Vazirmatn:wght@400;500;600;700&family=Markazi+Text:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body class="site">
   <header class="site-top">
-    <a class="brand" href="landing.html" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span>Alamut</span></a>
+    <a class="brand" href="landing.html" aria-label="Alamut home" data-i18n-label="brand.home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span data-i18n="brand">Alamut</span></a>
+    <button id="language" type="button" class="lang-switch" lang="en"></button>
   </header>
   <main class="site-page">
-    <h1>Features</h1>
-    <p class="site-lead">What the practice app does today.</p>
+    <h1 data-i18n="site.features">Features</h1>
+    <p class="site-lead" data-i18n="features.lead">What the practice app does today.</p>
 
-    <h2>Current</h2>
+    <h2 data-i18n="features.current">Current</h2>
     <ul class="site-list">
-      <li><strong>Library</strong><span>Every pattern is listed, with search and kind filters. Opening a row does not play audio.</span></li>
-      <li><strong>Play</strong><span>The selected piece has the full score and transport. The handpan and score highlight the current and upcoming notes.</span></li>
-      <li><strong>Learn</strong><span>One bar at a time. Hear the phrase, try the notes, or repeat it slowly. Start learning picks a simple Hands drill. Continue learning restores the last phrase and tempo.</span></li>
-      <li><strong>Microphone</strong><span>In Play, the page shows the note you struck and waits until you strike the lit note.</span></li>
-      <li><strong>Tools</strong><span>Microphone, Mirror, the landscape picker, and Explore. Phones group them under Tools.</span></li>
-      <li><strong>Landscapes</strong><span>Six Persian mountain and courtyard settings. Explore lets you look around a place and choose a light to find music.</span></li>
-      <li><strong>Phone motion</strong><span>Enable motion lets you tilt and rotate the 3D handpan. Recenter resets its neutral position.</span></li>
-      <li><strong>Simple view</strong><span>If 3D takes too long, continue with the library and sheet.</span></li>
-      <li><strong>Keyboard</strong><span>Keys 0–9 play the notes. 0 is the ding. T plays tak.</span></li>
-      <li><strong>Instrument</strong><span>36 patterns for a Gear4music DISC 10-note D Kurd handpan. The ding is D3.</span></li>
+      <li><strong data-i18n="features.library">Library</strong><span data-i18n="features.library.text">Every pattern is listed, with search and kind filters. Opening a row does not play audio.</span></li>
+      <li><strong data-i18n="features.play">Play</strong><span data-i18n="features.play.text">The selected piece has the full score and transport. The handpan and score highlight the current and upcoming notes.</span></li>
+      <li><strong data-i18n="features.learn">Learn</strong><span data-i18n="features.learn.text">One bar at a time. Hear the phrase, try the notes, or repeat it slowly. Start learning picks a simple Hands drill. Continue learning restores the last phrase and tempo.</span></li>
+      <li><strong data-i18n="features.mic">Microphone</strong><span data-i18n="features.mic.text">In Play, the page shows the note you struck and waits until you strike the lit note.</span></li>
+      <li><strong data-i18n="features.tools">Tools</strong><span data-i18n="features.tools.text">Microphone, Mirror, the landscape picker, and Explore. Phones group them under Tools.</span></li>
+      <li><strong data-i18n="features.scenes">Landscapes</strong><span data-i18n="features.scenes.text">Six Persian mountain and courtyard settings. Explore lets you look around a place and choose a light to find music.</span></li>
+      <li><strong data-i18n="features.motion">Phone motion</strong><span data-i18n="features.motion.text">Enable motion lets you tilt and rotate the 3D handpan. Recenter resets its neutral position.</span></li>
+      <li><strong data-i18n="features.simple">Simple view</strong><span data-i18n="features.simple.text">If 3D takes too long, continue with the library and sheet.</span></li>
+      <li><strong data-i18n="features.keys">Keyboard</strong><span data-i18n="features.keys.text">Keys 0–9 play the notes. 0 is the ding. T plays tak.</span></li>
+      <li><strong data-i18n="features.instrument">Instrument</strong><span data-i18n="features.instrument.text">36 patterns for a Gear4music DISC 10-note D Kurd handpan. The ding is D3.</span></li>
     </ul>
 
-    <h2>Limits</h2>
-    <p class="site-note">These are limits of the app today, not a roadmap.</p>
+    <h2 data-i18n="features.limits">Limits</h2>
+    <p class="site-note" data-i18n="features.limits.note">These are limits of the app today, not a roadmap.</p>
     <ul class="site-list">
-      <li><strong>Microphone</strong><span>Microphone works in Play. Learn disables it and explains why.</span></li>
-      <li><strong>Progress</strong><span>Learn does not mark a piece learned and does not score timing.</span></li>
-      <li><strong>Screen taps</strong><span>Screen taps teach note order, not physical handpan accuracy.</span></li>
-      <li><strong>Landscapes</strong><span>The landscapes are artistic interpretations, not historical reconstructions.</span></li>
+      <li><strong data-i18n="features.limit.mic">Microphone</strong><span data-i18n="features.limit.mic.text">Microphone works in Play. Learn disables it and explains why.</span></li>
+      <li><strong data-i18n="features.limit.progress">Progress</strong><span data-i18n="features.limit.progress.text">Learn does not mark a piece learned and does not score timing.</span></li>
+      <li><strong data-i18n="features.limit.taps">Screen taps</strong><span data-i18n="features.limit.taps.text">Screen taps teach note order, not physical handpan accuracy.</span></li>
+      <li><strong data-i18n="features.limit.scenes">Landscapes</strong><span data-i18n="features.limit.scenes.text">The landscapes are artistic interpretations, not historical reconstructions.</span></li>
     </ul>
 
-    <h2>Backlog</h2>
-    <p class="site-note">There is no backlog file in this repository. This page does not list planned work.</p>
+    <h2 data-i18n="features.backlog">Backlog</h2>
+    <p class="site-note" data-i18n="features.backlog.note">There is no backlog file in this repository. This page does not list planned work.</p>
 
     <p class="site-actions">
-      <a class="site-primary" href="index.html">Open the practice library</a>
-      <a class="site-secondary" href="landing.html">Back to Alamut</a>
+      <a class="site-primary" href="index.html" data-i18n="site.open">Open the practice library</a>
+      <a class="site-secondary" href="landing.html" data-i18n="site.back">Back to Alamut</a>
     </p>
   </main>
+  <script>try{var l=localStorage.getItem("disc-kurd-lang");if(!l&&(navigator.languages||[navigator.language]).some(function(c){return /^fa\b/i.test(c||"")}))l="fa";if(l==="fa"){document.documentElement.lang="fa";document.documentElement.dir="rtl";}}catch(e){}</script>
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>

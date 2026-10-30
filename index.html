@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="img/alamut-mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Aref+Ruqaa:wght@700&family=Vazirmatn:wght@400;500;600;700&family=Markazi+Text:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="css/app.css">
   <script type="importmap">
     {
@@ -23,15 +23,16 @@
 <body>
   <div class="wrap" inert>
     <header class="top">
-      <a class="brand" href="#/" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span>Alamut</span></a>
-      <button id="tools-toggle" type="button" aria-expanded="false" aria-controls="tools">Tools</button>
+      <a class="brand" href="#/" aria-label="Alamut home" data-i18n-label="brand.home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span data-i18n="brand">Alamut</span></a>
+      <button id="tools-toggle" type="button" aria-expanded="false" aria-controls="tools" data-i18n="tools">Tools</button>
       <div id="tools" class="tools">
-        <button id="listen" type="button" aria-pressed="false" aria-describedby="mic-context" title="Use the microphone to hear your handpan">Microphone</button>
-        <span id="mic-context" class="tool-context" hidden>Learn uses screen notes. Microphone is available in Play.</span>
-        <button id="mirror" type="button" aria-pressed="false" title="Swap the left and right sides of the handpan">Mirror</button>
-        <div class="motion-controls" hidden><button id="motion-toggle" type="button" aria-pressed="false">Enable motion</button><button id="motion-center" type="button" hidden>Recenter</button></div>
-        <label class="scene-pick"><span class="sr">Landscape</span><select id="environment"><option value="auto">Follow the music</option></select></label>
-        <button id="explore-world" type="button">Explore</button>
+        <button id="listen" type="button" aria-pressed="false" aria-describedby="mic-context" title="Use the microphone to hear your handpan" data-i18n="mic" data-i18n-title="mic.hint">Microphone</button>
+        <span id="mic-context" class="tool-context" hidden data-i18n="mic.context">Learn uses screen notes. Microphone is available in Play.</span>
+        <button id="mirror" type="button" aria-pressed="false" title="Swap the left and right sides of the handpan" data-i18n="mirror" data-i18n-title="mirror.hint">Mirror</button>
+        <div class="motion-controls" hidden><button id="motion-toggle" type="button" aria-pressed="false" data-i18n="motion.enable">Enable motion</button><button id="motion-center" type="button" hidden data-i18n="motion.recenter">Recenter</button></div>
+        <label class="scene-pick"><span class="sr" data-i18n="scene.pick">Landscape</span><select id="environment"><option value="auto" data-i18n="scene.auto">Follow the music</option></select></label>
+        <button id="explore-world" type="button" data-i18n="explore">Explore</button>
+        <button id="language" type="button" class="lang-switch" lang="en"></button>
       </div>
     </header>
     <main class="split">
@@ -40,7 +41,7 @@
           <span class="mic-dot" aria-hidden="true"></span>
           <span id="mic-text" class="mic-text"></span>
           <span class="mic-meter" aria-hidden="true"><span id="mic-fill"></span></span>
-          <label class="mic-pick"><span class="sr">Input source</span><select id="mic-input"></select></label>
+          <label class="mic-pick"><span class="sr" data-i18n="mic.input">Input source</span><select id="mic-input"></select></label>
         </div>
         <div id="pan"></div>
         <section id="game" class="game" hidden aria-label="Playing score" data-tier="0" style="--q: 0">
@@ -68,23 +69,24 @@
           </div>
           <p id="game-pop" class="game-pop" role="status"></p>
         </section>
-        <p id="caption" class="caption sr">Tap a note to hear it.</p>
+        <p id="caption" class="caption sr" data-i18n="caption.tap">Tap a note to hear it.</p>
         <p id="motion-status" role="status"></p>
         <p id="scene-notice" class="scene-notice" role="status" hidden></p>
         <p id="status" class="sr" role="status"></p>
       </div>
       <div id="learn"></div>
-      <section id="dock" aria-label="Library"></section>
+      <section id="dock" aria-label="Library" data-i18n-label="library"></section>
     </main>
   </div>
   <div id="scene-loader" class="scene-loader" role="status" aria-live="polite">
     <img src="img/alamut-mark.svg" width="72" height="72" alt="">
-    <span class="loader-name">Alamut</span>
-    <p id="loading-message">Opening the courtyard</p>
+    <span class="loader-name" data-i18n="brand">Alamut</span>
+    <p id="loading-message" data-i18n="loader.opening">Opening the courtyard</p>
     <span class="loading-track" aria-hidden="true"></span>
-    <button id="simple-view" type="button">Continue in simple view</button>
+    <button id="simple-view" type="button" data-i18n="loader.simple">Continue in simple view</button>
   </div>
   <noscript><style>#scene-loader{display:none}</style><p>Enable JavaScript to play and learn with Alamut.</p></noscript>
+  <script>try{var l=localStorage.getItem("disc-kurd-lang");if(!l&&(navigator.languages||[navigator.language]).some(function(c){return /^fa\b/i.test(c||"")}))l="fa";if(l==="fa"){document.documentElement.lang="fa";document.documentElement.dir="rtl";}}catch(e){}</script>
   <script type="module" src="js/main.js"></script>
   <script src="js/live.js" defer></script>
 </body>

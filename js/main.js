@@ -19,6 +19,9 @@ import { VIEWS, viewFor } from "./environments.js";
 import { initExplore } from "./explore.js";
 import { initMotion } from "./motion.js";
 import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPractice, savePractice } from "./practice.js";
+import { t, raw, has, plural, digits, pieceText, partName, lang, wireLanguageSwitch, applyDocument } from "./i18n.js";
+
+applyDocument();
 
 const audio = createAudio();
 document.getElementById("pan").addEventListener("pointerup", (event) => {
@@ -33,12 +36,9 @@ try {
 
 const caption = () => document.getElementById("caption");
 const KIND_ORDER = ["Pieces", "Hands", "Chords", "Grooves"];
-const KIND_NOTE = {
-  Hands: "Two hands trading, which is how this pan is played.",
-  Chords: "Two notes at once. One hand each.",
-  Grooves: "A short loop you can keep going.",
-  Pieces: "Whole pieces with parts. A bass note, then a tune over it.",
-};
+const kindName = (kind) => (has(`kind.${kind}`) ? raw(`kind.${kind}`) : kind);
+const kindNote = (kind) => (has(`kind.note.${kind}`) ? t(`kind.note.${kind}`) : "");
+const handName = (hand) => (hand ? t(`hand.${hand}`) : hand);
 let query = "";
 let kindFilter = "All";
 let ratingFilter = "any";
@@ -64,7 +64,7 @@ const sceneSelect = document.getElementById("environment");
 for (const [key, view] of Object.entries(VIEWS)) {
   const option = document.createElement("option");
   option.value = key;
-  option.textContent = view.name;
+  option.textContent = t(`env.${key}`);
   sceneSelect.append(option);
 }
 sceneSelect.addEventListener("change", () => {
@@ -72,6 +72,8 @@ sceneSelect.addEventListener("change", () => {
   paint(player.snapshot());
   syncUrl();
 });
+
+wireLanguageSwitch(document.getElementById("language"));
 
 const toolsToggle = document.getElementById("tools-toggle");
 
@@ -99,7 +101,7 @@ function finishLoading(message = "") {
 
 document.getElementById("simple-view").addEventListener("click", () => {
   sceneLoadCancelled = true;
-  finishLoading("Simple view. All notes and learning tools are ready.");
+  finishLoading(t("simple.ready"));
 });
 
 const player = createPlayer(audio, paint);
@@ -231,13 +233,13 @@ function flipHand(hand) {
 }
 
 function spokenName(id) {
-  if (id === TAK) return "tak";
-  const ding = id === "D3" ? ", the ding" : "";
+  if (id === TAK) return t("practice.tak.name");
+  const ding = id === "D3" ? `,${t("note.ding")}` : "";
   return `${numberOf(id)}, ${pretty(id)}${ding}`;
 }
 
 function dimpleLabel(id) {
-  return `${spokenName(id)}, ${flipHand(SIDE[id])} hand`;
+  return `${spokenName(id)}, ${t("hand.label", { hand: handName(flipHand(SIDE[id])) })}`;
 }
 
 function place(deg, orbit) {
@@ -246,13 +248,15 @@ function place(deg, orbit) {
   return [210 + Math.cos(math) * orbit, 210 + Math.sin(math) * orbit];
 }
 
+const panLabel = (id) => digits(numberOf(id));
+
 function fieldMarkup(id, x, y, radius, ding) {
-  const nameSize = ding ? 72 : 40;
+  const nameSize = lang === "fa" ? (ding ? 104 : 34) : ding ? 72 : 40;
   const hand = flipHand(SIDE[id]);
   return `<g class="field hand-${hand}${ding ? " ding" : ""}" data-note="${id}" role="button" tabindex="0" transform="translate(${x} ${y})" aria-label="${dimpleLabel(id)}">
     <circle class="field-shade" r="${radius}" fill="url(#dimple)"></circle>
     <circle class="field-face" r="${radius * 0.72}" fill="#4e3b2e"></circle>
-    <text class="field-name" style="font-size:${nameSize}px">${numberOf(id)}</text>
+    <text class="field-name" style="font-size:${nameSize}px">${panLabel(id)}</text>
   </g>`;
 }
 
@@ -323,7 +327,7 @@ function panLayout() {
   return ["D3", ...FIELDS.map((field) => field.id)].map((id) => {
     const field = FIELDS.find((item) => item.id === id);
     const deg = field ? (mirrored ? (360 - field.deg) % 360 : field.deg) : 0;
-    return { id, deg, ding: id === "D3", hand: flipHand(SIDE[id]), text: numberOf(id) };
+    return { id, deg, ding: id === "D3", hand: flipHand(SIDE[id]), text: numberOf(id), label: panLabel(id) };
   });
 }
 
@@ -331,21 +335,21 @@ async function bootStage() {
   document.getElementById("pan").setAttribute("aria-busy", "true");
   const probe = document.createElement("canvas");
   const context = probe.getContext("webgl2") || probe.getContext("webgl");
-  if (!context) { finishLoading("Simple view. Your browser could not start 3D; all music tools are ready."); return; }
+  if (!context) { finishLoading(t("simple.no3d")); return; }
   context.getExtension("WEBGL_lose_context")?.loseContext();
   const slow = setTimeout(() => {
-    document.getElementById("loading-message").textContent = "Still loading. You can start in simple view.";
+    document.getElementById("loading-message").textContent = t("loader.slow");
   }, 8000);
   try {
     const { createStage } = await import("./scene.js");
     if (sceneLoadCancelled) return;
-    document.getElementById("loading-message").textContent = "Tuning the light and the handpan";
+    document.getElementById("loading-message").textContent = t("loader.tuning");
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
     if (sceneLoadCancelled) return;
     stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
     document.body.classList.add("has-3d");
     stage.layout(panLayout());
-    document.fonts.load("400 200px \"Pinyon Script\"", "0123456789\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
+    document.fonts.load(lang === "fa" ? "700 200px \"Aref Ruqaa\"" : "400 200px \"Pinyon Script\"", digits("0123456789") + "\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());
@@ -353,7 +357,7 @@ async function bootStage() {
   } catch (err) {
     for (const canvas of document.querySelectorAll(".world, .pan-3d")) canvas.remove();
     document.body.classList.remove("has-3d");
-    finishLoading("Simple view. The courtyard could not load; all music tools are ready.");
+    finishLoading(t("simple.failed"));
   } finally {
     clearTimeout(slow);
   }
@@ -384,9 +388,9 @@ function soundNote(id) {
   const run = session?.run;
   if (practice?.mode === "try") {
     const result = practice.attempt.strike(id);
-    practice.message = result.complete ? "Phrase complete. Retry, hear it, or choose Next phrase."
-      : !result.accepted ? "Keep the current target. Try its numbered note."
-        : result.partial.length ? "Chord: add the remaining note(s)." : "";
+    practice.message = result.complete ? t("practice.done")
+      : !result.accepted ? t("practice.keepTarget")
+        : result.partial.length ? t("practice.chordMore") : "";
     if (result.target) player.seek(result.target.index, false, true);
     updatePractice(player.snapshot());
   }
@@ -412,19 +416,19 @@ function soundNote(id) {
   if (!player.playing && !practice) {
     const hand = flipHand(SIDE[id]);
     const node = caption();
-    if (node) node.textContent = hand ? `${numberOf(id)}, ${hand} hand` : numberOf(id);
+    if (node) node.textContent = hand ? t("note.named", { number: numberOf(id), hand: handName(hand) }) : digits(numberOf(id));
   }
 }
 
 function audioError() {
-  const message = "Sound could not start. Tap a note to try again.";
+  const message = t("sound.failed");
   document.getElementById("status").textContent = message;
 }
 
 function syncMirror() {
   const button = document.getElementById("mirror");
   button.setAttribute("aria-pressed", mirrored ? "true" : "false");
-  button.textContent = mirrored ? "Mirror on" : "Mirror";
+  button.textContent = mirrored ? t("mirror.on") : t("mirror");
 }
 
 function readHash() {
@@ -510,8 +514,8 @@ function scheduleSync() {
 function handLine(hands) {
   const names = [...new Set(Object.values(hands).map((hand) => flipHand(hand)))];
   if (names.length === 0) return "";
-  if (names.length === 1) return `${names[0]} hand`;
-  return `${names[0]} and ${names[1]}`;
+  if (names.length === 1) return t("hand.label", { hand: handName(names[0]) });
+  return `${handName(names[0])}${t("and")}${handName(names[1])}`;
 }
 
 function kindList() {
@@ -562,9 +566,9 @@ function hitsQuery(pattern) {
 }
 
 const RATING_FILTERS = [
-  { id: "any", label: "Any rating", keep: () => true },
-  { id: "rated", label: "Rated", keep: (stars) => stars > 0 },
-  { id: "unrated", label: "Not rated", keep: (stars) => stars === 0 },
+  { id: "any", label: t("rating.any"), keep: () => true },
+  { id: "rated", label: t("rating.rated"), keep: (stars) => stars > 0 },
+  { id: "unrated", label: t("rating.unrated"), keep: (stars) => stars === 0 },
   { id: "4", label: "4 stars and up", keep: (stars) => stars >= 4 },
   { id: "5", label: "5 stars", keep: (stars) => stars === 5 },
 ];
@@ -595,17 +599,17 @@ function addedLabel(pattern, month) {
   if (!date) return "";
   const sameYear = date.getFullYear() === new Date().getFullYear();
   const options = { day: "numeric", month, ...(sameYear && month === "short" ? {} : { year: "numeric" }) };
-  return date.toLocaleDateString(undefined, options);
+  return date.toLocaleDateString(lang === "fa" ? "fa-IR" : undefined, options);
 }
 
 const SORT_ORDERS = [
-  { id: "library", label: "Library order" },
-  { id: "new", label: "Newest first", compare: (a, b) => addedOf(b).localeCompare(addedOf(a)) },
-  { id: "rating", label: "Highest rated", compare: (a, b) => ratingOf(b) - ratingOf(a) },
-  { id: "title", label: "Title A to Z", compare: (a, b) => a.title.localeCompare(b.title) },
-  { id: "slow", label: "Slowest first", compare: (a, b) => a.bpm - b.bpm },
-  { id: "fast", label: "Fastest first", compare: (a, b) => b.bpm - a.bpm },
-  { id: "short", label: "Shortest first", compare: (a, b) => lengthSeconds(a) - lengthSeconds(b) },
+  { id: "library", label: t("sort.library") },
+  { id: "new", label: t("sort.new"), compare: (a, b) => addedOf(b).localeCompare(addedOf(a)) },
+  { id: "rating", label: t("sort.rating"), compare: (a, b) => ratingOf(b) - ratingOf(a) },
+  { id: "title", label: t("sort.title"), compare: (a, b) => a.title.localeCompare(b.title, lang) },
+  { id: "slow", label: t("sort.slow"), compare: (a, b) => a.bpm - b.bpm },
+  { id: "fast", label: t("sort.fast"), compare: (a, b) => b.bpm - a.bpm },
+  { id: "short", label: t("sort.short"), compare: (a, b) => lengthSeconds(a) - lengthSeconds(b) },
 ];
 
 function optionId(options, value) {
@@ -634,10 +638,10 @@ function chipCount(kind) {
 function setChipLabel(chip) {
   const name = document.createElement("span");
   name.className = "chip-name";
-  name.textContent = chip.dataset.kind;
+  name.textContent = kindName(chip.dataset.kind);
   const count = document.createElement("span");
   count.className = "chip-count";
-  count.textContent = String(chipCount(chip.dataset.kind));
+  count.textContent = digits(chipCount(chip.dataset.kind));
   chip.replaceChildren(name, document.createTextNode(" "), count);
 }
 
@@ -645,13 +649,13 @@ function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
   const heading = document.createElement("h2");
-  heading.textContent = "Library";
+  heading.textContent = t("library");
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
   find.type = "search";
-  find.placeholder = "Search by name or note number";
-  find.setAttribute("aria-label", "Search patterns");
+  find.placeholder = t("search.placeholder");
+  find.setAttribute("aria-label", t("search.label"));
   find.value = query;
   find.addEventListener("input", () => {
     query = find.value;
@@ -662,7 +666,7 @@ function renderList() {
   const chips = document.createElement("div");
   chips.className = "chips";
   chips.setAttribute("role", "group");
-  chips.setAttribute("aria-label", "Pattern kinds");
+  chips.setAttribute("aria-label", t("kinds.label"));
   const kinds = ["All", ...kindList()];
   for (const kind of kinds) {
     const chip = document.createElement("button");
@@ -685,8 +689,8 @@ function renderList() {
   const listTools = document.createElement("div");
   listTools.className = "list-tools";
   listTools.append(
-    listPick("rating-filter", "Rating", RATING_FILTERS, ratingFilter, (id) => { ratingFilter = id; }),
-    listPick("sort-order", "Sort", SORT_ORDERS, sortOrder, (id) => { sortOrder = id; }),
+    listPick("rating-filter", t("rating"), RATING_FILTERS, ratingFilter, (id) => { ratingFilter = id; }),
+    listPick("sort-order", t("sort"), SORT_ORDERS, sortOrder, (id) => { sortOrder = id; }),
   );
   const rows = document.createElement("div");
   rows.id = "rows";
@@ -694,13 +698,13 @@ function renderList() {
   libraryHead.className = "library-head";
   const siteNav = document.createElement("nav");
   siteNav.className = "library-site-nav";
-  siteNav.setAttribute("aria-label", "Site pages");
+  siteNav.setAttribute("aria-label", t("site.pages"));
   const about = document.createElement("a");
   about.href = "landing.html";
-  about.textContent = "About Alamut";
+  about.textContent = t("site.about");
   const features = document.createElement("a");
   features.href = "features.html";
-  features.textContent = "Features";
+  features.textContent = t("site.features");
   siteNav.append(about, features);
   const titleRow = document.createElement("div");
   titleRow.className = "library-title";
@@ -711,7 +715,7 @@ function renderList() {
   resultCount.setAttribute("role", "status");
   listTools.append(resultCount);
   libraryHead.append(titleRow, find, chips, listTools);
-  const beginner = textButton("practice-start", "Start learning");
+  const beginner = textButton("practice-start", t("start.learning"));
   beginner.id = "practice-beginner";
   beginner.addEventListener("click", () => requestPractice(beginnerPattern(PATTERNS)));
   const continuePractice = textButton("practice-start is-main", "");
@@ -768,12 +772,12 @@ function fillRows() {
   rows.innerHTML = "";
   const visible = PATTERNS.filter(matches);
   const resultCount = document.getElementById("result-count");
-  if (resultCount) resultCount.textContent = visible.length === PATTERNS.length ? `${visible.length} patterns` : `${visible.length} of ${PATTERNS.length} patterns`;
+  if (resultCount) resultCount.textContent = visible.length === PATTERNS.length ? t("count.all", { n: visible.length }) : t("count.some", { n: visible.length, total: PATTERNS.length });
   if (visible.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = kindFilter === "All" ? "No patterns match. " : `No ${kindFilter} patterns match. `;
-    const clear = textButton("step-btn", filtersActive() ? "Clear search and filters" : "Clear search");
+    empty.textContent = kindFilter === "All" ? t("empty.all") : t("empty.kind", { kind: kindName(kindFilter) });
+    const clear = textButton("step-btn", filtersActive() ? t("clear.filters") : t("clear.search"));
     clear.addEventListener("click", () => {
       query = "";
       kindFilter = "All";
@@ -809,12 +813,12 @@ function fillRows() {
     section.className = "group";
     const heading = document.createElement("h2");
     heading.className = "kind";
-    heading.textContent = kind;
+    heading.textContent = kindName(kind);
     section.append(heading);
-    if (KIND_NOTE[kind]) {
+    if (kindNote(kind)) {
       const note = document.createElement("p");
       note.className = "kind-note";
-      note.textContent = KIND_NOTE[kind];
+      note.textContent = kindNote(kind);
       section.append(note);
     }
     for (const pattern of items) section.append(rowFor(pattern));
@@ -864,7 +868,7 @@ function setRating(pattern, stars) {
 }
 
 function starLabel(stars) {
-  return `${stars} ${stars === 1 ? "star" : "stars"}`;
+  return plural(stars, "stars");
 }
 
 function paintStars(group, pattern) {
@@ -873,16 +877,16 @@ function paintStars(group, pattern) {
     const value = Number(star.dataset.stars);
     star.classList.toggle("is-on", value <= current);
     star.setAttribute("aria-pressed", String(value === current));
-    star.title = value === current ? "Clear rating" : `Rate ${starLabel(value)}`;
+    star.title = value === current ? t("rating.clear") : t("rating.rate", { stars: starLabel(value) });
   }
-  group.querySelector(".rating-text").textContent = current ? `Your rating: ${starLabel(current)}` : "Not rated";
+  group.querySelector(".rating-text").textContent = current ? t("rating.yours", { stars: starLabel(current) }) : t("rating.unrated");
 }
 
 function ratingControl(pattern) {
   const group = document.createElement("div");
   group.className = "rating";
   group.setAttribute("role", "group");
-  group.setAttribute("aria-label", `Rate ${pattern.title}`);
+  group.setAttribute("aria-label", t("rating.group", { title: pieceText(pattern, "title") }));
   const stars = document.createElement("div");
   stars.className = "stars";
   for (let value = 1; value <= STAR_COUNT; value += 1) {
@@ -939,16 +943,20 @@ function barsOf(pattern, range) {
   return { first: Math.round(range.from / beats), end: Math.round(range.to / beats) };
 }
 
+function countLabel(beat, pattern) {
+  return digits(beatLabel(beat, pattern).replace(/ (and|e|a)$/, (m, word) => t(`count.${word}`)));
+}
+
 function barSpan(first, end) {
-  return end - first === 1 ? `bar ${first + 1}` : `bars ${first + 1} to ${end}`;
+  return end - first === 1 ? t("span.bar", { n: first + 1 }) : t("span.bars", { first: first + 1, end });
 }
 
 function learnedLine(pattern) {
   const names = partNames(pattern);
   const done = names.filter((name) => isLearned(pattern, name)).length;
   if (done === 0) return "";
-  if (names.length === 1) return ", learned";
-  return `, ${done} of ${names.length} parts learned`;
+  if (names.length === 1) return t("learned.one");
+  return t("learned.some", { done, total: names.length });
 }
 
 function thumbFor(pattern, size) {
@@ -973,31 +981,31 @@ function rowFor(pattern) {
   const body = document.createElement("div");
   body.className = "row-body";
   const title = document.createElement("h3");
-  title.textContent = pattern.title;
+  title.textContent = pieceText(pattern, "title");
   const meta = document.createElement("p");
   meta.className = "meta";
   const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
-  meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"} · ${pattern.bpm} bpm${learnedLine(pattern)}`;
+  meta.textContent = t("row.meta", { bars: plural(bars, "bars"), bpm: pattern.bpm, learned: learnedLine(pattern) });
   const added = addedLabel(pattern, "short");
   if (added) {
     const when = document.createElement("time");
     when.className = "row-added";
     when.dateTime = addedOf(pattern);
-    when.textContent = `Added ${added}`;
+    when.textContent = t("row.added", { date: added });
     meta.append(" \u00b7 ", when);
   }
   const stars = ratingOf(pattern);
   if (stars) {
     const rated = document.createElement("span");
     rated.className = "row-rating";
-    rated.setAttribute("aria-label", `rated ${starLabel(stars)}`);
-    rated.textContent = `\u2605 ${stars}`;
+    rated.setAttribute("aria-label", t("rating.rated.label", { stars: starLabel(stars) }));
+    rated.textContent = `\u2605 ${digits(stars)}`;
     meta.append(" \u00b7 ", rated);
   }
   if (isNew(pattern)) {
     const badge = document.createElement("span");
     badge.className = "row-new";
-    badge.textContent = "New";
+    badge.textContent = t("row.new");
     title.append(" ", badge);
   }
   body.append(title, meta);
@@ -1015,10 +1023,10 @@ function updateResume() {
   if (!button) return;
   const pattern = PATTERNS.find((item) => item.id === practiceSaved?.patternId);
   button.hidden = !pattern;
-  button.textContent = pattern ? `Continue learning · ${pattern.title}` : "";
+  button.textContent = pattern ? t("start.continue", { title: pieceText(pattern, "title") }) : "";
   const beginner = document.getElementById("practice-beginner");
   beginner.classList.toggle("is-main", !pattern);
-  beginner.textContent = pattern ? "New to Alamut? Start learning" : "Start learning";
+  beginner.textContent = pattern ? t("start.new") : t("start.learning");
 }
 
 function rememberPractice() {
@@ -1050,7 +1058,7 @@ function enterPractice(pattern, saved = null) {
     tempo: saved?.tempo ?? practiceTempo(pattern.bpm * 0.7),
     mode: "ready",
     attempt: createNotePractice(phrases[at].events),
-    message: "Choose Hear phrase, then try the notes at your own pace.",
+    message: t("practice.welcome"),
     pending: false,
   };
   selectPhrase(at);
@@ -1064,8 +1072,7 @@ function selectPhrase(at) {
   practice.run = (practice.run || 0) + 1;
   const phrase = practice.phrases[practice.at];
   practice.attempt.reset(phrase.events);
-  practice.message = phrase.events.length ? "Hear the phrase or try its notes. No microphone needed."
-    : "This bar is silent. Rest for its full length on your instrument, then choose Next phrase.";
+  practice.message = phrase.events.length ? t("practice.chooseMode") : t("practice.silentBar");
   player.setRange(phrase.events.length ? { from: phrase.from, to: phrase.to } : null);
   player.setLoop(false);
   player.setTempo(practice.tempo);
@@ -1092,8 +1099,7 @@ function tryPhrase() {
   const phrase = practice.phrases[practice.at];
   const attempt = practice.attempt.reset(phrase.events);
   player.setLoop(false);
-  practice.message = attempt.complete ? "This bar is silent. There are no notes to tap."
-    : "Tap the lit target. Chords accept separate taps; wrong notes keep the target.";
+  practice.message = attempt.complete ? t("practice.silentTry") : t("practice.tapLit");
   if (attempt.target) player.seek(attempt.target.index, false, true);
   updatePractice(player.snapshot());
 }
@@ -1107,8 +1113,7 @@ async function playPhrase(mode, resume = false) {
   player.pause();
   session.mode = mode;
   session.attempt.reset(phrase.events);
-  session.message = mode === "hear" ? "Listen once, including the rests. Then choose Try notes."
-    : "Repeat this bar on your instrument. Pause whenever you need.";
+  session.message = mode === "hear" ? t("practice.listenOnce") : t("practice.repeatBar");
   player.setLoop(mode === "repeat");
   player.setTempo(session.tempo);
   session.pending = true;
@@ -1117,7 +1122,7 @@ async function playPhrase(mode, resume = false) {
     if (resume) await player.resume();
     else await player.play(session.pattern, phrase.from, { keepTempo: true });
   } catch {
-    if (practice === session && session.run === run) session.message = "Sound could not start. Press Hear phrase to retry.";
+    if (practice === session && session.run === run) session.message = t("practice.soundFailed");
   } finally {
     if (practice === session && session.run === run) {
       session.pending = false;
@@ -1132,7 +1137,7 @@ function pausePractice() {
     practice.pending = false;
     practice.run += 1;
     player.pause();
-    practice.message = "Paused. Resume replays the current note; Restart begins the bar.";
+    practice.message = t("practice.paused");
     updatePractice(player.snapshot());
   } else playPhrase(practice.mode, true);
 }
@@ -1140,16 +1145,16 @@ function pausePractice() {
 function practicePanel() {
   const panel = document.createElement("section");
   panel.className = "practice-panel";
-  panel.setAttribute("aria-label", "Short phrase practice");
+  panel.setAttribute("aria-label", t("practice.panel"));
   const position = document.createElement("strong");
   position.id = "practice-position";
   position.tabIndex = -1;
   const modes = document.createElement("div");
   modes.className = "practice-actions";
   for (const [id, label, action] of [
-    ["hear", "Hear phrase", () => playPhrase("hear")],
-    ["try", "Try notes", tryPhrase],
-    ["repeat", "Repeat slowly", () => playPhrase("repeat")],
+    ["hear", t("practice.hear"), () => playPhrase("hear")],
+    ["try", t("practice.try"), tryPhrase],
+    ["repeat", t("practice.repeat"), () => playPhrase("repeat")],
   ]) {
     const button = textButton("practice-mode", label);
     button.id = `practice-${id}`;
@@ -1165,26 +1170,26 @@ function practicePanel() {
   message.setAttribute("role", "status");
   const actions = document.createElement("div");
   actions.className = "practice-actions";
-  const pause = textButton("", "Pause");
+  const pause = textButton("", t("pause"));
   pause.id = "practice-pause";
   pause.addEventListener("click", pausePractice);
-  const restart = textButton("", "Restart phrase");
+  const restart = textButton("", t("practice.restart"));
   restart.id = "practice-restart";
   restart.addEventListener("click", () => {
     if (["hear", "repeat"].includes(practice.mode)) playPhrase(practice.mode);
     else tryPhrase();
   });
-  const tak = textButton("", "Tap tak (T)");
+  const tak = textButton("", t("practice.tak"));
   tak.id = "practice-tak";
   tak.addEventListener("click", () => soundNote(TAK));
-  const back = textButton("", "Previous phrase");
+  const back = textButton("", t("practice.previous"));
   back.id = "practice-previous";
   back.addEventListener("click", () => {
     selectPhrase(practice.at - 1);
     const target = document.getElementById("practice-previous");
     (target.disabled ? document.getElementById("practice-position") : target).focus({ preventScroll: true });
   });
-  const forward = textButton("", "Next phrase");
+  const forward = textButton("", t("practice.next"));
   forward.id = "practice-forward";
   forward.addEventListener("click", () => {
     selectPhrase(practice.at + 1);
@@ -1204,7 +1209,7 @@ function practicePanel() {
   slider.min = "48";
   slider.max = "140";
   slider.value = String(practice.tempo);
-  slider.setAttribute("aria-label", "Practice tempo in beats per minute");
+  slider.setAttribute("aria-label", t("practice.tempoLabel"));
   slider.addEventListener("input", () => {
     practice.tempo = practiceTempo(Number(slider.value));
     player.setTempo(practice.tempo);
@@ -1214,9 +1219,9 @@ function practicePanel() {
   const help = document.createElement("details");
   help.className = "practice-help";
   const summary = document.createElement("summary");
-  summary.textContent = "How to read and play";
+  summary.textContent = t("practice.help");
   const explanation = document.createElement("p");
-  explanation.textContent = "0 is the centre ding; 1–9 are rim notes; + joins a chord; × is a tak; dots let the sound ring or rest. Tap the pan or use 0–9 and T. Try notes teaches note order, with no microphone or timing score. Microphone following is available in Play. Hear phrase and Repeat slowly keep the rests.";
+  explanation.textContent = t("practice.explain");
   help.append(summary, explanation);
   panel.append(position, target, next, modes, actions, message, tempo, navigation, help);
   for (const button of panel.querySelectorAll(".practice-actions button, .phrase-navigation button")) {
@@ -1233,23 +1238,23 @@ function updatePractice(snap) {
   const at = active ? phrase.events.findIndex((event) => event.index === snap.index) : attempt.at;
   const target = active ? phrase.events[at] : attempt.target;
   const next = phrase.events[at + 1];
-  const describe = (event) => event ? event.notes.map((id) => `${id === TAK ? "tak" : numberOf(id)} (${flipHand(event.hands[id]) || "either"} hand)`).join(" + ") : "none";
+  const describe = (event) => event ? event.notes.map((id) => `${id === TAK ? t("practice.tak.name") : digits(numberOf(id))} (${t("hand.label", { hand: handName(flipHand(event.hands[id]) || "either") })})`).join(" + ") : t("practice.none");
   const set = (id, text) => {
     const node = document.getElementById(id);
     if (node.textContent !== text) node.textContent = text;
   };
-  set("practice-position", `Phrase ${practice.at + 1} of ${practice.phrases.length} · ${barSpan(phrase.first, phrase.end)}${phrase.name ? ` · ${phrase.name}` : ""}`);
-  set("practice-target", !phrase.events.length ? "Rest bar" : attempt.complete && practice.mode === "try" ? "Phrase complete" : `Current: ${describe(target)}`);
-  set("practice-next", `Next: ${describe(next)}${attempt.partial.length ? ` · Already tapped: ${attempt.partial.map((id) => id === TAK ? "tak" : numberOf(id)).join(" + ")}` : ""}`);
-  set("practice-message", active && snap.ended ? "Phrase heard, including its rests. Try notes or hear it again." : practice.message);
-  set("practice-bpm", `Practice tempo: ${practice.tempo} BPM`);
-  set("practice-restart", practice.mode === "try" && attempt.complete ? "Retry notes" : "Restart phrase");
+  set("practice-position", `${t("practice.position", { at: practice.at + 1, total: practice.phrases.length, span: barSpan(phrase.first, phrase.end) })}${phrase.name ? ` · ${partName(phrase.name)}` : ""}`);
+  set("practice-target", !phrase.events.length ? t("practice.rest") : attempt.complete && practice.mode === "try" ? t("practice.complete") : t("practice.current", { target: describe(target) }));
+  set("practice-next", `${t("practice.nextIs", { target: describe(next) })}${attempt.partial.length ? t("practice.tapped", { notes: attempt.partial.map((id) => id === TAK ? t("practice.tak.name") : numberOf(id)).join(" + ") }) : ""}`);
+  set("practice-message", active && snap.ended ? t("practice.heardAll") : practice.message);
+  set("practice-bpm", t("practice.tempo", { bpm: practice.tempo }));
+  set("practice-restart", practice.mode === "try" && attempt.complete ? t("practice.retry") : t("practice.restart"));
   document.getElementById("practice-restart").hidden = practice.mode === "ready" || !phrase.events.length;
   document.getElementById("practice-tak").hidden = practice.mode !== "try" || !phrase.events.some((event) => event.notes.includes(TAK));
   const pause = document.getElementById("practice-pause");
   pause.hidden = !active;
   pause.disabled = !active || !phrase.events.length;
-  pause.textContent = snap.playing || practice.pending ? "Pause" : "Resume";
+  pause.textContent = snap.playing || practice.pending ? t("pause") : t("resume");
   document.getElementById("practice-previous").disabled = practice.at === 0;
   document.getElementById("practice-forward").disabled = practice.at === practice.phrases.length - 1;
   for (const mode of ["hear", "try", "repeat"]) {
@@ -1263,7 +1268,7 @@ function updatePractice(snap) {
 function renderLearn(pattern) {
   lastScroll = -2;
   settled = false;
-  document.title = `${pattern.title} | Alamut`;
+  document.title = t("piece.title", { title: pieceText(pattern, "title") });
   const dock = document.getElementById("learn");
   dock.innerHTML = "";
 
@@ -1272,13 +1277,13 @@ function renderLearn(pattern) {
   const back = document.createElement("a");
   back.className = "back";
   back.href = "#/";
-  back.textContent = "Library";
+  back.textContent = t("library");
   const title = document.createElement("h1");
   title.tabIndex = -1;
-  title.textContent = pattern.title;
+  title.textContent = pieceText(pattern, "title");
   const about = document.createElement("p");
   about.className = "about";
-  about.textContent = pattern.blurb;
+  about.textContent = pieceText(pattern, "blurb");
   const name = document.createElement("div");
   name.className = "learn-title";
   const added = addedLabel(pattern, "long");
@@ -1288,7 +1293,7 @@ function renderLearn(pattern) {
     const time = document.createElement("time");
     time.dateTime = addedOf(pattern);
     time.textContent = added;
-    when.append("Added to the library ", time);
+    when.append(t("piece.added"), time);
     name.append(title, about, when, ratingControl(pattern));
   } else {
     name.append(title, about, ratingControl(pattern));
@@ -1296,12 +1301,12 @@ function renderLearn(pattern) {
   head.append(back, name);
   const modes = document.createElement("nav");
   modes.className = "piece-modes";
-  modes.setAttribute("aria-label", "Piece mode");
+  modes.setAttribute("aria-label", t("piece.mode"));
   for (const mode of ["play", "learn"]) {
     const link = document.createElement("a");
     link.className = "mode-link";
     link.href = `#/p/${pattern.id}/${mode}`;
-    link.textContent = mode === "learn" ? "Learn" : "Play";
+    link.textContent = mode === "learn" ? t("learn") : t("play");
     if ((mode === "learn") === !!practice) link.setAttribute("aria-current", "page");
     modes.append(link);
   }
@@ -1310,8 +1315,7 @@ function renderLearn(pattern) {
   const warn = document.createElement("p");
   warn.className = "mirror-note";
   warn.hidden = !mirrored;
-  warn.textContent =
-    "Mirror on · hand labels match the flipped pan.";
+  warn.textContent = t("mirror.note");
 
   const transport = document.createElement("div");
   transport.className = "transport";
@@ -1322,7 +1326,7 @@ function renderLearn(pattern) {
   play.className = "play";
   const playMark = document.createElement("span");
   playMark.className = "mark";
-  playMark.textContent = "Play";
+  playMark.textContent = t("play");
   play.append(playMark);
   play.addEventListener("click", () => {
     if (learnMode()) return;
@@ -1340,37 +1344,37 @@ function renderLearn(pattern) {
   const previous = document.createElement("button");
   previous.type = "button";
   previous.className = "stepper is-prev";
-  previous.setAttribute("aria-label", "Previous note");
-  previous.title = "Previous note";
+  previous.setAttribute("aria-label", t("note.previous"));
+  previous.title = t("note.previous");
   previous.addEventListener("click", () => { if (!learnMode()) player.step(-1, listener.on); });
 
   const next = document.createElement("button");
   next.type = "button";
   next.className = "stepper is-next";
-  next.setAttribute("aria-label", "Next note");
-  next.title = "Next note";
+  next.setAttribute("aria-label", t("note.next"));
+  next.title = t("note.next");
   next.addEventListener("click", () => { if (!learnMode()) player.step(1, listener.on); });
 
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
-  tempoLabel.append("Tempo ");
+  tempoLabel.append(t("tempo"));
   const bpm = document.createElement("span");
   bpm.id = "bpm";
-  bpm.textContent = String(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
+  bpm.textContent = digits(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
   const unit = document.createElement("span");
   unit.className = "tempo-unit";
-  unit.textContent = "bpm";
+  unit.textContent = t("bpm");
   const range = document.createElement("input");
   range.id = "tempo";
   range.type = "range";
   range.min = "48";
   range.max = "140";
   range.step = "1";
-  range.value = bpm.textContent;
-  range.setAttribute("aria-label", "Tempo");
+  range.value = String(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
+  range.setAttribute("aria-label", t("tempo.label"));
   range.setAttribute("aria-valuetext", `${range.value} bpm`);
   range.addEventListener("input", () => {
-    bpm.textContent = range.value;
+    bpm.textContent = digits(range.value);
     range.setAttribute("aria-valuetext", `${range.value} bpm`);
     player.setTempo(Number(range.value));
     scheduleSync();
@@ -1381,7 +1385,7 @@ function renderLearn(pattern) {
   loop.type = "button";
   loop.id = "loop";
   loop.className = "loop";
-  loop.textContent = "Loop";
+  loop.textContent = t("loop");
   loop.addEventListener("click", () => {
     if (learnMode()) return;
     if (player.range) clearRange();
@@ -1397,8 +1401,7 @@ function renderLearn(pattern) {
 
   const keys = document.createElement("p");
   keys.className = "keys";
-  keys.textContent =
-    "Space plays or pauses. Arrows move one note. Select bar numbers to loop a range. Microphone waits for the lit note on your instrument.";
+  keys.textContent = t("keys");
 
   transport.append(play, previous, next, loop, ranged, tempoLabel);
 
@@ -1495,7 +1498,7 @@ function partMap(pattern, sheet) {
   const map = document.createElement("div");
   map.className = "partmap";
   map.setAttribute("role", "group");
-  map.setAttribute("aria-label", "Parts of this piece");
+  map.setAttribute("aria-label", t("parts"));
   sheet.sections.forEach((section, i) => {
     if (!section.name) return;
     const chip = document.createElement("button");
@@ -1503,7 +1506,7 @@ function partMap(pattern, sheet) {
     chip.className = "part-chip";
     chip.dataset.section = String(i);
     chip.dataset.part = section.name;
-    chip.textContent = section.name;
+    chip.textContent = partName(section.name);
     chip.classList.toggle("is-learned", isLearned(pattern, section.name));
     chip.addEventListener("click", () => {
       if (learnMode()) return;
@@ -1523,17 +1526,17 @@ function legend() {
   line.className = "legend";
   const left = document.createElement("span");
   left.className = `note ${flipHand("left")}`;
-  left.textContent = "Left hand";
+  left.textContent = t("hand.leftLabel");
   const right = document.createElement("span");
   right.className = `note ${flipHand("right")}`;
-  right.textContent = "Right hand";
+  right.textContent = t("hand.rightLabel");
   const soft = document.createElement("span");
   soft.className = "legend-soft";
-  soft.textContent = "small is soft";
+  soft.textContent = t("legend.soft");
   const tak = document.createElement("span");
-  tak.textContent = "\u00d7 is a tak";
+  tak.textContent = t("legend.tak");
   const bars = document.createElement("span");
-  bars.textContent = "tap a bar number to loop it";
+  bars.textContent = t("legend.bars");
   line.append(left, right, soft, tak, bars);
   return line;
 }
@@ -1545,7 +1548,7 @@ function noteNode(id, hand) {
     node.textContent = "\u00d7";
     return node;
   }
-  node.textContent = numberOf(id);
+  node.textContent = digits(numberOf(id));
   return node;
 }
 
@@ -1554,14 +1557,14 @@ function slotNode(pattern, sheet, bar, slot, event) {
   const beat = (bar * sheet.perBar + slot) / sheet.perBeat;
   const node = document.createElement(event ? "button" : "span");
   node.className = "slot";
-  if (onBeat) node.dataset.count = beatLabel(beat, pattern);
+  if (onBeat) node.dataset.count = countLabel(beat, pattern);
   if (!event) return node;
   node.type = "button";
   node.classList.add("hit");
   node.classList.toggle("is-soft", event.notes.every((id) => id === TAK || event.amps[id] < SOFT_BELOW));
   node.dataset.event = String(event.index);
-  const names = event.notes.map((id) => `${spokenName(id)}, ${flipHand(event.hands[id])} hand`);
-  node.setAttribute("aria-label", `Bar ${bar + 1}, count ${beatLabel(beat, pattern)}: ${names.join(" and ")}`);
+  const names = event.notes.map((id) => `${spokenName(id)}, ${t("hand.label", { hand: handName(flipHand(event.hands[id])) })}`);
+  node.setAttribute("aria-label", t("bar.label", { bar: bar + 1, beat: beatLabel(beat, pattern), names: names.join(t("and")) }));
   for (const id of event.notes) node.append(noteNode(id, event.hands[id]));
   node.addEventListener("click", () => {
     if (learnMode()) return;
@@ -1569,7 +1572,7 @@ function slotNode(pattern, sheet, bar, slot, event) {
   });
   if (practice) {
     node.disabled = true;
-    node.setAttribute("aria-label", `${node.getAttribute("aria-label")}. Play these notes on the pan.`);
+    node.setAttribute("aria-label", t("bar.play", { label: node.getAttribute("aria-label") }));
   }
   return node;
 }
@@ -1588,7 +1591,7 @@ function sheetNode(pattern, sheet) {
     head.className = "part-head";
     if (section.name) {
       const name = document.createElement("h2");
-      name.textContent = section.name;
+      name.textContent = partName(section.name);
       const span = document.createElement("span");
       span.className = "part-bars";
       span.textContent = barSpan(section.first, section.end);
@@ -1597,7 +1600,7 @@ function sheetNode(pattern, sheet) {
       loop.className = "part-loop";
       loop.dataset.from = String(section.first);
       loop.dataset.to = String(section.end);
-      loop.textContent = "Loop part";
+      loop.textContent = t("loop.part");
       loop.addEventListener("click", () => {
         if (loop.getAttribute("aria-pressed") === "true") clearRange();
         else loopBars(pattern, section.first, section.end);
@@ -1611,7 +1614,7 @@ function sheetNode(pattern, sheet) {
     box.dataset.part = section.name;
     box.checked = isLearned(pattern, section.name);
     box.addEventListener("change", () => markLearned(pattern, section.name, box.checked));
-    done.append(box, " Learned");
+    done.append(box, ` ${t("learned")}`);
     head.append(done);
 
     const bars = document.createElement("div");
@@ -1623,8 +1626,8 @@ function sheetNode(pattern, sheet) {
       const number = document.createElement("button");
       number.type = "button";
       number.className = "bar-num";
-      number.textContent = String(bar.bar + 1);
-      number.setAttribute("aria-label", `${practice ? "Current phrase, bar" : "Loop bar"} ${bar.bar + 1}`);
+      number.textContent = digits(bar.bar + 1);
+      number.setAttribute("aria-label", t(practice ? "phrase.barLabel" : "loop.barLabel", { n: bar.bar + 1 }));
       number.disabled = !!practice;
       const slots = document.createElement("div");
       slots.className = "slots";
@@ -1738,7 +1741,7 @@ function routeNow() {
   updateResume();
   const learn = document.getElementById("learn");
   if (!pattern) {
-    document.title = "Alamut | A courtyard for sound";
+    document.title = t("app.title");
     learn.replaceChildren();
     paint(player.snapshot());
     const left = routed ? document.querySelector(`.row[data-pattern="${routed}"] .open`) : null;
@@ -1796,7 +1799,7 @@ function paint(snap) {
   if (stage && environment !== lastEnvironment) {
     stage.environment(environment);
     lastEnvironment = environment;
-    sceneSelect.options[0].textContent = `Auto: ${VIEWS[environment].name.replace(/^Alamut · /, "")}`;
+    sceneSelect.options[0].textContent = t("scene.autoNamed", { name: t(`env.${environment}`) });
   }
   const onNotes = new Set(snap.notes);
   const nextNotes = new Set(snap.nextNotes);
@@ -1892,14 +1895,14 @@ function paint(snap) {
   const play = document.getElementById("play");
   if (play) {
     play.dataset.state = snap.playing ? "playing" : "paused";
-    const label = snap.playing ? "Pause" : "Play";
+    const label = snap.playing ? t("pause") : t("play");
     const mark = play.querySelector(".mark");
     if (mark.textContent !== label) mark.textContent = label;
     play.setAttribute("aria-label", label);
   }
   const bpm = document.getElementById("bpm");
   const tempo = document.getElementById("tempo");
-  if (bpm) bpm.textContent = String(snap.bpm);
+  if (bpm) bpm.textContent = digits(snap.bpm);
   if (tempo && document.activeElement !== tempo && tempo.value !== String(snap.bpm)) {
     tempo.value = String(snap.bpm);
     tempo.setAttribute("aria-valuetext", `${snap.bpm} bpm`);
@@ -1907,7 +1910,7 @@ function paint(snap) {
   const loop = document.getElementById("loop");
   if (loop) {
     loop.setAttribute("aria-pressed", snap.loop ? "true" : "false");
-    loop.textContent = snap.range ? "Loop bars" : "Loop";
+    loop.textContent = snap.range ? t("loop.bars") : t("loop");
   }
   const warn = document.querySelector(".mirror-note");
   if (warn) warn.hidden = !mirrored;
@@ -1933,7 +1936,7 @@ function paintRange(snap) {
   const ranged = document.getElementById("range");
   if (ranged) {
     ranged.hidden = first < 0;
-    ranged.textContent = end - first === 1 ? `Bar ${first + 1} loops. Clear` : `Bars ${first + 1} to ${end} loop. Clear`;
+    ranged.textContent = end - first === 1 ? t("loop.bar", { first: first + 1 }) : t("loop.range", { first: first + 1, end });
   }
 }
 
@@ -1959,24 +1962,24 @@ function scrollStrip(scroller, current) {
 
 function spoken(id, hands) {
   const hand = flipHand(hands[id]);
-  return hand ? `${numberOf(id)}, ${hand} hand` : numberOf(id);
+  return hand ? t("note.named", { number: numberOf(id), hand: handName(hand) }) : numberOf(id);
 }
 
 function captionText(snap) {
-  if (practice?.mode === "try" && practice.attempt.snapshot().complete) return "Phrase complete. Retry or choose Next phrase.";
-  if (practice && !practice.phrases[practice.at].events.length) return "Rest bar. Choose Next phrase when ready.";
+  if (practice?.mode === "try" && practice.attempt.snapshot().complete) return t("caption.phraseDone");
+  if (practice && !practice.phrases[practice.at].events.length) return t("caption.restBar");
   if (listener.on && !snap.playing) {
     const wanted = patternFromHash() ? pitched(snap.notes) : [];
-    const target = wanted.map((id) => spoken(id, snap.hands)).join(" and ");
-    const name = heard ? numberOf(heard.id) : "";
-    if (heard && heard.miss) return `Heard ${name}. Play ${target}.`;
-    if (heard) return target ? `Heard ${name}. Now ${target}.` : `Heard ${name}.`;
-    return target ? `Play ${target}.` : "Listening. Strike a note.";
+    const target = wanted.map((id) => spoken(id, snap.hands)).join(t("and"));
+    const name = heard ? digits(numberOf(heard.id)) : "";
+    if (heard && heard.miss) return t("caption.heardMiss", { name, target });
+    if (heard) return target ? t("caption.heardNext", { name, target }) : t("caption.heard", { name });
+    return target ? t("caption.play", { target }) : t("caption.listening");
   }
   if (!snap.notes.length) {
-    if (!snap.patternId) return "Tap a note to hear it.";
+    if (!snap.patternId) return t("caption.tap");
     const pattern = PATTERNS.find((item) => item.id === snap.patternId);
-    return pattern ? "Press Play, or tap a note." : "Tap a note to hear it.";
+    return pattern ? t("caption.playOrTap") : t("caption.tap");
   }
   return snap.notes
     .map((id) => spoken(id, snap.hands))
@@ -2076,10 +2079,10 @@ function saveMic(id) {
 function micError(err) {
   if (!navigator.mediaDevices || !window.isSecureContext) return "A microphone needs https or localhost.";
   const name = err ? err.name : "";
-  if (name === "NotAllowedError") return "The microphone is blocked. Allow it for this page, then press Listen.";
-  if (name === "NotFoundError") return "No microphone found. Connect one, then press Listen.";
-  if (name === "NotReadableError") return "Another app holds this input. Close it, or pick another input.";
-  return "The microphone did not start. Press Listen to try again.";
+  if (name === "NotAllowedError") return t("mic.blocked");
+  if (name === "NotFoundError") return t("mic.missing");
+  if (name === "NotReadableError") return t("mic.busy");
+  return t("mic.failed");
 }
 
 function setMicText(text) {
@@ -2094,13 +2097,13 @@ function drawMic() {
   document.querySelector(".mic-meter").hidden = micState !== "on";
   document.querySelector(".mic-pick").hidden = micState !== "on";
   document.getElementById("game").hidden = micState !== "on";
-  if (micState === "asking") setMicText("Waiting for microphone permission");
+  if (micState === "asking") setMicText(t("mic.asking"));
   if (micState === "error") setMicText(micNote);
   const button = document.getElementById("listen");
   button.setAttribute("aria-pressed", listener.on ? "true" : "false");
   button.disabled = learnMode();
-  button.textContent = listener.on ? "Microphone on" : "Microphone";
-  button.title = learnMode() ? "Learn uses screen notes. Switch to Play to use a microphone." : "Use the microphone to hear your handpan";
+  button.textContent = listener.on ? t("mic.on") : t("mic");
+  button.title = learnMode() ? t("mic.hint.learn") : t("mic.hint");
   document.getElementById("mic-context").hidden = !learnMode();
 }
 
@@ -2111,7 +2114,7 @@ async function fillMicList() {
     ...found.map((device, i) => {
       const option = document.createElement("option");
       option.value = device.deviceId;
-      option.textContent = device.label || `Microphone ${i + 1}`;
+      option.textContent = device.label || t("mic.device", { n: i + 1 });
       return option;
     }),
   );
@@ -2129,7 +2132,7 @@ function meterLoop() {
   document.getElementById("mic-fill").style.transform = `scaleX(${level.toFixed(3)})`;
   bar.dataset.quiet = quiet ? "1" : "0";
   bar.dataset.heard = heard ? (heard.miss ? "miss" : "hit") : "";
-  setMicText(quiet ? "No sound on this input. Check the source, or pick another." : "Listening");
+  setMicText(quiet ? t("mic.quiet") : t("mic.listening"));
   requestAnimationFrame(meterLoop);
 }
 
@@ -2192,7 +2195,7 @@ function stopListening(note) {
 }
 
 function onMicEnded() {
-  stopListening("The input disconnected. Press Microphone to start again.");
+  stopListening(t("mic.disconnected"));
 }
 
 async function toggleListen() {

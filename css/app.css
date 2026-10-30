@@ -205,6 +205,10 @@ button, select, .open, .back, .brand { cursor: pointer; }
 
 .scene-pick { display: flex; min-width: 0; }
 
+.lang-switch { min-height: 44px; padding: 8px 12px; border: 0; background: transparent; box-shadow: none; color: var(--brass-2); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; cursor: pointer; }
+.lang-switch[lang="fa"] { font-family: "Vazirmatn", var(--sans); font-size: 15px; letter-spacing: 0; }
+.lang-switch:hover { color: var(--mist); }
+
 .scene-pick select, .mic-pick select, .list-pick select {
   flex: 1;
   min-width: 0;
@@ -1231,3 +1235,48 @@ body.is-exploring .world:active { cursor: grabbing; }
   #explore-description { margin-top: 6px; font-size: 13px; }
   .explore-music { grid-row: 1 / 3; margin-top: 54px; align-self: stretch; }
 }
+
+:root[lang="fa"] {
+  --serif: "Markazi Text", Georgia, "Times New Roman", serif;
+  --sans: "Vazirmatn", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root[lang="fa"] body { font-size: 15.5px; line-height: 1.7; }
+:root[lang="fa"] { --script: "Aref Ruqaa", var(--serif); }
+:root[lang="fa"] .brand, :root[lang="fa"] .loader-name { font-family: "Aref Ruqaa", var(--serif); font-weight: 700; letter-spacing: 0; }
+:root[lang="fa"] .brand { font-size: 30px; }
+:root[lang="fa"] .field-name { font-weight: 700; }
+:root[lang="fa"] h1, :root[lang="fa"] h2, :root[lang="fa"] h3, :root[lang="fa"] .row h3,
+:root[lang="fa"] #learn h1, :root[lang="fa"] .part-head h2, :root[lang="fa"] .explore-heading h1,
+:root[lang="fa"] .row-new, :root[lang="fa"] #dock .kind, :root[lang="fa"] .explore-eyebrow { letter-spacing: 0; }
+:root[lang="fa"] #dock .kind, :root[lang="fa"] .row-new, :root[lang="fa"] .explore-eyebrow { text-transform: none; font-size: 13px; }
+:root[lang="fa"] .explore-heading h1 { font-family: var(--serif); font-weight: 600; }
+
+[dir="rtl"] .tools { justify-content: start; }
+[dir="rtl"] .scene-pick select, [dir="rtl"] .mic-pick select, [dir="rtl"] .list-pick select {
+  padding: 6px 12px 6px 34px;
+  background-position: left 12px center;
+}
+[dir="rtl"] .row .open, [dir="rtl"] .library-welcome .practice-start { text-align: right; }
+[dir="rtl"] .rating { margin-left: 0; margin-right: -6px; }
+[dir="rtl"] .row-new { margin-left: 0; margin-right: 4px; }
+[dir="rtl"] .back { padding: 6px 12px 6px 14px; }
+[dir="rtl"] .back::before { transform: rotate(-135deg); margin-right: 0; margin-left: 2px; }
+[dir="rtl"] .stepper::before { transform: rotate(-135deg); margin-left: -7px; }
+[dir="rtl"] .stepper.is-next::before { transform: rotate(45deg); margin-left: 7px; }
+[dir="rtl"] .tempo { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .tempo #bpm { text-align: left; }
+[dir="rtl"] .part-done { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .practice-help summary::before { margin-right: 0; margin-left: 8px; }
+[dir="rtl"] #dock .kind::after { background: linear-gradient(270deg, var(--line-2), transparent); }
+[dir="rtl"] .explore-return span { margin-left: 0; margin-right: 16px; }
+[dir="rtl"] .explore-piece-arrow { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .explore-piece-arrow, [dir="rtl"] .explore-return span, [dir="rtl"] .row-arrow { display: inline-block; transform: scaleX(-1); }
+[dir="rtl"] .deck, [dir="rtl"] .sheet, [dir="rtl"] .partmap, [dir="rtl"] #pan, [dir="rtl"] .mic-meter, [dir="rtl"] input[type="range"] { direction: ltr; }
+[dir="rtl"] .tempo #bpm, [dir="rtl"] .chip-count, [dir="rtl"] .row-rating, [dir="rtl"] .explore-count { unicode-bidi: isolate; }
+@media (max-width: 1000px), (max-height: 520px) {
+  [dir="rtl"] .tools { right: auto; left: 0; }
+  [dir="rtl"] .learn-head .back { margin-left: 0; margin-right: -6px; padding-left: 14px; padding-right: 8px; }
+  [dir="rtl"] .tempo { margin-right: 0; }
+}
+[dir="rtl"] .about, [dir="rtl"] #learn h1, [dir="rtl"] .row h3, [dir="rtl"] .explore-piece strong, [dir="rtl"] .part-head h2, [dir="rtl"] .part-chip { unicode-bidi: plaintext; }

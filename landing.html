@@ -7,21 +7,27 @@
   <title>Alamut</title>
   <meta name="description" content="A handpan practice space with six Persian mountain and courtyard settings.">
   <link rel="icon" type="image/svg+xml" href="img/alamut-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Vazirmatn:wght@400;500;600;700&family=Markazi+Text:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/site.css">
 </head>
 <body class="site">
   <header class="site-top">
-    <a class="brand" href="landing.html" aria-label="Alamut home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span>Alamut</span></a>
+    <a class="brand" href="landing.html" aria-label="Alamut home" data-i18n-label="brand.home"><img src="img/alamut-mark.svg" width="34" height="34" alt=""><span data-i18n="brand">Alamut</span></a>
+    <button id="language" type="button" class="lang-switch" lang="en"></button>
   </header>
   <main class="site-hero">
-    <p class="site-kicker">A courtyard for sound</p>
-    <h1>Alamut</h1>
-    <p class="site-lead">A handpan practice space with six Persian mountain and courtyard settings.</p>
+    <p class="site-kicker" data-i18n="site.kicker">A courtyard for sound</p>
+    <h1 data-i18n="brand">Alamut</h1>
+    <p class="site-lead" data-i18n="site.lead">A handpan practice space with six Persian mountain and courtyard settings.</p>
     <div class="site-actions">
-      <a class="site-primary" href="index.html">Open the practice library</a>
-      <a class="site-secondary" href="features.html">Current features and limits</a>
+      <a class="site-primary" href="index.html" data-i18n="site.open">Open the practice library</a>
+      <a class="site-secondary" href="features.html" data-i18n="site.limits">Current features and limits</a>
     </div>
   </main>
+  <script>try{var l=localStorage.getItem("disc-kurd-lang");if(!l&&(navigator.languages||[navigator.language]).some(function(c){return /^fa\b/i.test(c||"")}))l="fa";if(l==="fa"){document.documentElement.lang="fa";document.documentElement.dir="rtl";}}catch(e){}</script>
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>
