@@ -59,6 +59,12 @@ export function numberOf(id) {
   return id === TAK ? "\u00d7" : NUMBER[id];
 }
 
+const PERSIAN_DIGITS = "\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9";
+
+export function panLabel(id) {
+  return numberOf(id).replace(/[0-9]/g, (digit) => PERSIAN_DIGITS[digit]);
+}
+
 const METERS = {
   eighths: { slotsPerBeat: 2, beatsPerBar: 4 },
   sixteenths: { slotsPerBeat: 4, beatsPerBar: 4 },
