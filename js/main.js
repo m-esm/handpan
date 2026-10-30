@@ -341,14 +341,26 @@ async function bootStage() {
     document.getElementById("loading-message").textContent = t("loader.slow");
   }, 8000);
   try {
+    const { prepareTextures, COURTYARD } = await import("./textures.js");
+    const textures = prepareTextures();
     const { createStage } = await import("./scene.js");
+    performance.mark("boot:scene-module");
+    await textures.ready(COURTYARD);
+    performance.mark("boot:textures");
     if (sceneLoadCancelled) return;
     document.getElementById("loading-message").textContent = t("loader.tuning");
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
     if (sceneLoadCancelled) return;
-    stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
-    document.body.classList.add("has-3d");
+    stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote, textures });
     stage.layout(panLayout());
+    performance.mark("boot:layout");
+    await stage.ready();
+    if (sceneLoadCancelled) {
+      for (const canvas of document.querySelectorAll(".world, .pan-3d")) canvas.remove();
+      stage = null;
+      return;
+    }
+    document.body.classList.add("has-3d");
     document.fonts.load(lang === "fa" ? "700 200px \"Aref Ruqaa\"" : "400 200px \"Pinyon Script\"", digits("0123456789") + "\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
@@ -967,6 +979,7 @@ function thumbFor(pattern, size) {
   thumb.width = size;
   thumb.height = size;
   thumb.decoding = "async";
+  thumb.loading = "lazy";
   thumb.addEventListener("error", () => thumb.remove());
   return thumb;
 }
