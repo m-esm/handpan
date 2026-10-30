@@ -947,7 +947,7 @@ function paintStars(group, pattern) {
     star.setAttribute("aria-pressed", String(value === current));
     star.title = value === current ? t("rating.clear") : t("rating.rate", { stars: starLabel(value) });
   }
-  group.querySelector(".rating-text").textContent = current ? t("rating.yours", { stars: starLabel(current) }) : t("rating.unrated");
+  group.querySelector(".rating-text").textContent = current ? t("rating.yours", { stars: starLabel(current) }) : "";
 }
 
 function ratingControl(pattern) {
@@ -1355,18 +1355,7 @@ function renderLearn(pattern) {
   about.textContent = pieceText(pattern, "blurb");
   const name = document.createElement("div");
   name.className = "learn-title";
-  const added = addedLabel(pattern, "long");
-  if (added) {
-    const when = document.createElement("p");
-    when.className = "piece-added";
-    const time = document.createElement("time");
-    time.dateTime = addedOf(pattern);
-    time.textContent = added;
-    when.append(t("piece.added"), time);
-    name.append(title, about, when, ratingControl(pattern));
-  } else {
-    name.append(title, about, ratingControl(pattern));
-  }
+  name.append(title, about, ratingControl(pattern));
   head.append(back, name);
   const modes = document.createElement("nav");
   modes.className = "piece-modes";
@@ -1468,10 +1457,6 @@ function renderLearn(pattern) {
   ranged.hidden = true;
   ranged.addEventListener("click", clearRange);
 
-  const keys = document.createElement("p");
-  keys.className = "keys";
-  keys.textContent = t("keys");
-
   transport.append(play, previous, next, loop, ranged, tempoLabel);
 
   const sheet = sheetOf(pattern);
@@ -1489,7 +1474,7 @@ function renderLearn(pattern) {
     const panel = practicePanel();
     panel.querySelector("#practice-next").after(notation);
     dock.append(panel);
-  } else dock.append(deck, legend(), notation, keys);
+  } else dock.append(deck, notation);
   fillGuide(pattern);
   focusSheet(pattern);
   if (!practice) {
@@ -1590,26 +1575,6 @@ function partMap(pattern, sheet) {
   return map;
 }
 
-function legend() {
-  const line = document.createElement("p");
-  line.className = "legend";
-  const left = document.createElement("span");
-  left.className = `note ${flipHand("left")}`;
-  left.textContent = t("hand.leftLabel");
-  const right = document.createElement("span");
-  right.className = `note ${flipHand("right")}`;
-  right.textContent = t("hand.rightLabel");
-  const soft = document.createElement("span");
-  soft.className = "legend-soft";
-  soft.textContent = t("legend.soft");
-  const tak = document.createElement("span");
-  tak.textContent = t("legend.tak");
-  const bars = document.createElement("span");
-  bars.textContent = t("legend.bars");
-  line.append(left, right, soft, tak, bars);
-  return line;
-}
-
 function noteNode(id, hand) {
   const node = document.createElement("span");
   node.className = `note ${flipHand(hand)}`;
@@ -1650,6 +1615,7 @@ function sheetNode(pattern, sheet) {
   const node = document.createElement("div");
   node.className = "sheet";
   node.id = "sheet";
+  node.title = [t("hand.leftLabel"), t("hand.rightLabel"), t("legend.soft"), t("legend.tak"), t("legend.bars")].join(" \u00b7 ");
   node.style.setProperty("--cols", String(sheet.cols));
   sheet.sections.forEach((section, i) => {
     const part = document.createElement("section");
