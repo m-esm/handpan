@@ -15,7 +15,7 @@
   --teal: #6fcfb0;
   --bad: #d9735c;
   --serif: Georgia, "Times New Roman", serif;
-  --persian: "Aref Ruqaa", var(--serif);
+  --script: "Pinyon Script", var(--serif);
   --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --r: 16px;
   --r-s: 8px;
@@ -348,8 +348,8 @@ body.has-3d .pan-svg { opacity: 0; pointer-events: none; filter: none; }
 .field-face { stroke: #1a120e; stroke-width: 1; transition: stroke var(--ease), stroke-width var(--ease); }
 
 .field-name {
-  font-family: var(--persian);
-  font-weight: 700;
+  font-family: var(--script);
+  font-weight: 400;
   fill: var(--right);
   text-anchor: middle;
   dominant-baseline: central;

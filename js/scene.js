@@ -59,8 +59,7 @@ function labelTexture(text, color) {
   canvas.width = 256;
   canvas.height = 256;
   const pen = canvas.getContext("2d");
-  const size = text === "\u06f0" ? 420 : 250;
-  pen.font = `700 ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--persian")}`;
+  pen.font = `400 270px ${getComputedStyle(document.documentElement).getPropertyValue("--script")}`;
   pen.textAlign = "center";
   pen.textBaseline = "middle";
   pen.lineJoin = "round";
@@ -900,8 +899,8 @@ function createDrum(host, onHit, onStrike) {
     marks.add(pillar);
     const styles = getComputedStyle(document.documentElement);
     const tint = styles.getPropertyValue(spec.hand === "left" ? "--left" : "--right").trim();
-    const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.label, tint), depthTest: false, transparent: true, toneMapped: false });
-    const bright = new THREE.SpriteMaterial({ map: labelTexture(spec.label, LIT_LABEL), depthTest: false, transparent: true, toneMapped: false });
+    const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.text, tint), depthTest: false, transparent: true, toneMapped: false });
+    const bright = new THREE.SpriteMaterial({ map: labelTexture(spec.text, LIT_LABEL), depthTest: false, transparent: true, toneMapped: false });
     const label = new THREE.Sprite(plain);
     const size = spec.ding ? 0.56 : 0.44;
     label.scale.set(size, size, 1);

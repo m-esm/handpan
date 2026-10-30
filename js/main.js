@@ -9,7 +9,6 @@ import {
   beatLabel,
   pretty,
   numberOf,
-  panLabel,
 } from "./score.js";
 import { ADDED } from "./added.js";
 import { createAudio } from "./sound.js";
@@ -169,12 +168,12 @@ function place(deg, orbit) {
 }
 
 function fieldMarkup(id, x, y, radius, ding) {
-  const nameSize = ding ? 104 : 34;
+  const nameSize = ding ? 72 : 40;
   const hand = flipHand(SIDE[id]);
   return `<g class="field hand-${hand}${ding ? " ding" : ""}" data-note="${id}" role="button" tabindex="0" transform="translate(${x} ${y})" aria-label="${dimpleLabel(id)}">
     <circle class="field-shade" r="${radius}" fill="url(#dimple)"></circle>
     <circle class="field-face" r="${radius * 0.72}" fill="#4e3b2e"></circle>
-    <text class="field-name" style="font-size:${nameSize}px">${panLabel(id)}</text>
+    <text class="field-name" style="font-size:${nameSize}px">${numberOf(id)}</text>
   </g>`;
 }
 
@@ -245,7 +244,7 @@ function panLayout() {
   return ["D3", ...FIELDS.map((field) => field.id)].map((id) => {
     const field = FIELDS.find((item) => item.id === id);
     const deg = field ? (mirrored ? (360 - field.deg) % 360 : field.deg) : 0;
-    return { id, deg, ding: id === "D3", hand: flipHand(SIDE[id]), text: numberOf(id), label: panLabel(id) };
+    return { id, deg, ding: id === "D3", hand: flipHand(SIDE[id]), text: numberOf(id) };
   });
 }
 
@@ -267,7 +266,7 @@ async function bootStage() {
     stage = createStage({ pan: document.getElementById("pan"), onHit: soundNote });
     document.body.classList.add("has-3d");
     stage.layout(panLayout());
-    document.fonts.load("700 200px \"Aref Ruqaa\"", "\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9").then(() => stage && stage.layout(panLayout())).catch(() => {});
+    document.fonts.load("400 200px \"Pinyon Script\"", "0123456789\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());
