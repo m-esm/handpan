@@ -688,10 +688,23 @@ function renderList() {
   }
   const listTools = document.createElement("div");
   listTools.className = "list-tools";
-  listTools.append(
-    listPick("rating-filter", t("rating"), RATING_FILTERS, ratingFilter, (id) => { ratingFilter = id; }),
-    listPick("sort-order", t("sort"), SORT_ORDERS, sortOrder, (id) => { sortOrder = id; }),
+  const optionsToggle = textButton("list-options-toggle", "");
+  optionsToggle.id = "list-options-toggle";
+  optionsToggle.setAttribute("aria-expanded", "false");
+  optionsToggle.setAttribute("aria-controls", "list-options");
+  const options = document.createElement("div");
+  options.id = "list-options";
+  options.className = "list-options";
+  options.hidden = true;
+  options.append(
+    optionRow("rating-filter", t("rating"), RATING_FILTERS, (id) => { ratingFilter = id; }),
+    optionRow("sort-order", t("sort"), SORT_ORDERS, (id) => { sortOrder = id; }),
   );
+  optionsToggle.addEventListener("click", () => {
+    options.hidden = !options.hidden;
+    optionsToggle.setAttribute("aria-expanded", options.hidden ? "false" : "true");
+  });
+  listTools.append(optionsToggle);
   const rows = document.createElement("div");
   rows.id = "rows";
   const libraryHead = document.createElement("div");
@@ -714,7 +727,7 @@ function renderList() {
   resultCount.className = "result-count";
   resultCount.setAttribute("role", "status");
   listTools.append(resultCount);
-  libraryHead.append(titleRow, find, chips, listTools);
+  libraryHead.append(titleRow, find, chips, listTools, options);
   const beginner = textButton("practice-start", t("start.learning"));
   beginner.id = "practice-beginner";
   beginner.addEventListener("click", () => requestPractice(beginnerPattern(PATTERNS)));
@@ -730,27 +743,50 @@ function renderList() {
   welcome.append(continuePractice, beginner);
   titleRow.after(welcome);
   dock.append(libraryHead, rows);
+  syncListOptions();
   updateResume();
   fillRows();
 }
 
-function listPick(id, name, options, current, choose) {
-  const label = document.createElement("label");
-  label.className = "list-pick";
+function optionRow(id, name, options, choose) {
+  const row = document.createElement("div");
+  row.id = id;
+  row.className = "option-row";
+  row.setAttribute("role", "group");
+  row.setAttribute("aria-label", name);
   const caption = document.createElement("span");
-  caption.className = "list-pick-name";
+  caption.className = "option-row-name";
   caption.textContent = name;
-  const select = document.createElement("select");
-  select.id = id;
-  for (const option of options) select.append(new Option(option.label, option.id, false, option.id === current));
-  select.addEventListener("change", () => {
-    choose(select.value);
-    fillRows();
-    paint(player.snapshot());
-    syncUrl();
-  });
-  label.append(caption, select);
-  return label;
+  row.append(caption);
+  for (const option of options) {
+    const button = textButton("option", option.label);
+    button.dataset.id = option.id;
+    button.addEventListener("click", () => {
+      choose(option.id);
+      syncListOptions();
+      fillRows();
+      paint(player.snapshot());
+      syncUrl();
+    });
+    row.append(button);
+  }
+  return row;
+}
+
+function syncListOptions() {
+  const current = { "rating-filter": ratingFilter, "sort-order": sortOrder };
+  for (const [id, value] of Object.entries(current)) {
+    for (const button of document.querySelectorAll(`#${id} .option`)) {
+      button.setAttribute("aria-pressed", button.dataset.id === value ? "true" : "false");
+    }
+  }
+  const toggle = document.getElementById("list-options-toggle");
+  if (!toggle) return;
+  const parts = [];
+  if (sortOrder !== SORT_ORDERS[0].id) parts.push(SORT_ORDERS.find((o) => o.id === sortOrder).label);
+  if (ratingFilter !== RATING_FILTERS[0].id) parts.push(RATING_FILTERS.find((o) => o.id === ratingFilter).label);
+  toggle.textContent = parts.length ? parts.join(" · ") : t("list.options");
+  toggle.classList.toggle("is-set", parts.length > 0);
 }
 
 function libraryOrder(patterns) {
@@ -782,7 +818,7 @@ function fillRows() {
       query = "";
       kindFilter = "All";
       ratingFilter = RATING_FILTERS[0].id;
-      document.getElementById("rating-filter").value = ratingFilter;
+      syncListOptions();
       const find = document.getElementById("find");
       find.value = "";
       for (const chip of document.querySelectorAll("#dock .chip")) {
