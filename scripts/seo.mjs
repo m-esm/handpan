@@ -161,7 +161,7 @@ function jsonLd(data) {
 function header(depth = 1) {
   const up = "../".repeat(depth);
   return `  <header class="site-top">
-    <a class="brand" href="${up}landing.html" aria-label="${NAME} home"><img src="${up}img/alamut-mark.svg" width="34" height="34" alt=""><span>${NAME}</span></a>
+    <a class="brand" href="${up}" aria-label="${NAME} home"><img src="${up}img/alamut-mark.svg" width="34" height="34" alt=""><span>${NAME}</span></a>
     <nav class="site-nav" aria-label="Site"><a href="${up}p/">All pieces</a><a href="${up}features.html">Features</a><a href="${up}index.html">Open the app</a></nav>
   </header>`;
 }
@@ -169,7 +169,7 @@ function header(depth = 1) {
 function footer(depth = 1) {
   const up = "../".repeat(depth);
   return `  <footer class="site-foot">
-    <p>${NAME} is a free browser practice space for the ${INSTRUMENT}. <a href="${up}landing.html">Home</a> · <a href="${up}p/">All pieces</a> · <a href="${up}features.html">Features</a> · <a href="${REPO}">Source on GitHub</a> · <a href="${up}llms.txt">llms.txt</a></p>
+    <p>${NAME} is a free browser practice space for the ${INSTRUMENT}. <a href="${up}">Home</a> · <a href="${up}p/">All pieces</a> · <a href="${up}features.html">Features</a> · <a href="${REPO}">Source on GitHub</a> · <a href="${up}llms.txt">llms.txt</a></p>
   </footer>`;
 }
 
@@ -233,7 +233,7 @@ function piecePage(pattern, index) {
 <body class="site">
 ${header()}
   <main class="site-page piece-page">
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="../landing.html">${NAME}</a> › <a href="./">All pieces</a> › <span>${esc(pattern.title)}</span></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="../">${NAME}</a> › <a href="./">All pieces</a> › <span>${esc(pattern.title)}</span></nav>
     <p class="site-kicker">${esc(pattern.kind)} · handpan ${pattern.kind === "Songs" || pattern.kind === "Traditional" ? "arrangement" : pattern.kind === "Pieces" || pattern.kind === "GPT-6 Astra" ? "piece" : "drill"} for D Kurd</p>
     <h1>${esc(pattern.title)}</h1>
     <p class="site-lead">${esc(pattern.blurb)}</p>
@@ -294,7 +294,7 @@ function hubPage() {
 <body class="site">
 ${header()}
   <main class="site-page">
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="../landing.html">${NAME}</a> › <span>All pieces</span></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="../">${NAME}</a> › <span>All pieces</span></nav>
     <p class="site-kicker">The whole library</p>
     <h1>Handpan pieces, songs and drills for D Kurd</h1>
     <p class="site-lead">${total} patterns for the ${INSTRUMENT}. Each page has the number notation bar by bar, the tempo and time signature, the notes it uses, and a link to play or learn it in the browser.</p>
@@ -319,7 +319,7 @@ ${footer()}
 }
 
 function sitemap() {
-  const urls = [`${SITE}/`, `${SITE}/landing`, `${SITE}/features`, `${SITE}/p/`, ...PATTERNS.map((pattern) => pageUrl(pattern.id))];
+  const urls = [`${SITE}/`, `${SITE}/features`, `${SITE}/p/`, ...PATTERNS.map((pattern) => pageUrl(pattern.id))];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${url}</loc></url>`).join("\n")}\n</urlset>\n`;
 }
 
@@ -334,7 +334,6 @@ function llmsSummary() {
     "## Pages",
     "",
     `- [The app](${SITE}/): library, Play and Learn. Piece routes are /#/p/<id>, /#/p/<id>/play and /#/p/<id>/learn`,
-    `- [About](${SITE}/landing): what ${NAME} is, with the links to the app and the pieces`,
     `- [All pieces](${SITE}/p/): every pattern with notation, grouped by kind`,
     `- [Features and limits](${SITE}/features): what the app does today`,
     `- [Source on GitHub](${REPO}): the code, piece data and checks`,

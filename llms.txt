@@ -7,7 +7,6 @@ The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz
 ## Pages
 
 - [The app](https://handpan.moshes.io/): library, Play and Learn. Piece routes are /#/p/<id>, /#/p/<id>/play and /#/p/<id>/learn
-- [About](https://handpan.moshes.io/landing): what Alamut is, with the links to the app and the pieces
 - [All pieces](https://handpan.moshes.io/p/): every pattern with notation, grouped by kind
 - [Features and limits](https://handpan.moshes.io/features): what the app does today
 - [Source on GitHub](https://github.com/m-esm/handpan): the code, piece data and checks

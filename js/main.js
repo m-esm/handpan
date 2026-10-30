@@ -752,13 +752,10 @@ function renderList() {
   const siteNav = document.createElement("nav");
   siteNav.className = "library-site-nav";
   siteNav.setAttribute("aria-label", t("site.pages"));
-  const about = document.createElement("a");
-  about.href = "landing.html";
-  about.textContent = t("site.about");
   const features = document.createElement("a");
   features.href = "features.html";
   features.textContent = t("site.features");
-  siteNav.append(about, features);
+  siteNav.append(features);
   const titleRow = document.createElement("div");
   titleRow.className = "library-title";
   titleRow.append(heading, siteNav);
