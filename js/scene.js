@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { createLandscape } from "./landscape.js";
 import { VIEWS } from "./environments.js";
 
@@ -118,6 +119,69 @@ void main() {
   float core = smoothstep(0.2, 0.0, d);
   gl_FragColor = vec4(uColor * (m + core) * uGlow, m * vAlpha);
 }`;
+
+function grainMaps(size, seed, { scale = 1, strength = 2.4, base = 150, spread = 60 } = {}) {
+  const random = seededRandom(seed);
+  const height = new Float32Array(size * size);
+  const octaves = [[3, 1], [7, 0.55], [17, 0.3], [41, 0.14]];
+  const phases = octaves.map(() => [random() * 6.3, random() * 6.3, random() * 6.3]);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const u = (x / size) * Math.PI * 2 * scale;
+      const v = (y / size) * Math.PI * 2 * scale;
+      let value = 0;
+      octaves.forEach(([freq, amp], k) => {
+        const [a, b, c] = phases[k];
+        value += amp * (Math.sin(u * freq + a + Math.sin(v * freq * 0.7 + c) * 1.3) * Math.cos(v * freq + b));
+      });
+      height[y * size + x] = value;
+    }
+  }
+  for (let n = 0; n < size * 1.5; n += 1) {
+    const cx = random() * size;
+    const cy = random() * size;
+    const r = 1 + random() * 4;
+    const dent = (random() - 0.5) * 0.6;
+    for (let y = Math.floor(cy - r); y <= cy + r; y += 1) {
+      for (let x = Math.floor(cx - r); x <= cx + r; x += 1) {
+        const d = Math.hypot(x - cx, y - cy) / r;
+        if (d < 1) height[((y + size) % size) * size + ((x + size) % size)] += dent * (1 - d * d);
+      }
+    }
+  }
+  const at = (x, y) => height[((y + size) % size) * size + ((x + size) % size)];
+  const make = (fill, colorSpace) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const pen = canvas.getContext("2d");
+    const image = pen.createImageData(size, size);
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) fill(image.data, (y * size + x) * 4, x, y);
+    }
+    pen.putImageData(image, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = colorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    return texture;
+  };
+  const normal = make((data, i, x, y) => {
+    const nx = -(at(x + 1, y) - at(x - 1, y)) * strength;
+    const ny = -(at(x, y + 1) - at(x, y - 1)) * strength;
+    const len = Math.hypot(nx, ny, 1);
+    data[i] = (nx / len * 0.5 + 0.5) * 255;
+    data[i + 1] = (ny / len * 0.5 + 0.5) * 255;
+    data[i + 2] = (1 / len * 0.5 + 0.5) * 255;
+    data[i + 3] = 255;
+  }, THREE.NoColorSpace);
+  const albedo = make((data, i, x, y) => {
+    const value = Math.max(0, Math.min(255, base + at(x, y) * spread));
+    data[i] = value;
+    data[i + 1] = value - 6;
+    data[i + 2] = value - 16;
+    data[i + 3] = 255;
+  }, THREE.SRGBColorSpace);
+  return { normal, albedo };
+}
 
 function seededRandom(seed) {
   let state = seed;
@@ -534,6 +598,8 @@ function createDrum(host, onHit, onStrike) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.9;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const canvas = renderer.domElement;
   canvas.className = "pan-3d";
   canvas.setAttribute("aria-hidden", "true");
@@ -546,6 +612,16 @@ function createDrum(host, onHit, onStrike) {
 
   const key = new THREE.DirectionalLight(0xfff3e2, 1.45);
   key.position.set(-3.4, 7.2, 2.4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.left = -2.8;
+  key.shadow.camera.right = 2.8;
+  key.shadow.camera.top = 2.8;
+  key.shadow.camera.bottom = -2.8;
+  key.shadow.camera.near = 2;
+  key.shadow.camera.far = 16;
+  key.shadow.radius = 4;
+  key.shadow.normalBias = 0.02;
   const fill = new THREE.DirectionalLight(0xd5e2f2, 0.22);
   fill.position.set(5.5, 2.6, -2.2);
   const kicker = new THREE.DirectionalLight(0xffe2b8, 0.28);
@@ -575,6 +651,8 @@ function createDrum(host, onHit, onStrike) {
     iridescence: 0.1,
     iridescenceIOR: 1.6,
     iridescenceThicknessRange: [180, 420],
+    clearcoat: 0.18,
+    clearcoatRoughness: 0.5,
   });
   const bellyNormal = hammer.normal.clone();
   const bellyRough = hammer.rough.clone();
@@ -586,34 +664,62 @@ function createDrum(host, onHit, onStrike) {
   under.roughnessMap = bellyRough;
   under.side = THREE.DoubleSide;
   const lip = new THREE.Mesh(
-    new THREE.TorusGeometry(RADIUS + 0.004, 0.022, 14, 220),
+    new THREE.TorusGeometry(RADIUS + 0.004, 0.022, 24, 360),
     new THREE.MeshStandardMaterial({ color: 0x5e4129, metalness: 1, roughness: 0.38, emissive: BRASS, emissiveIntensity: 0, envMapIntensity: 1.1 }),
   );
   lip.rotation.x = Math.PI / 2;
   lip.scale.z = 0.65;
+  const felt = grainMaps(256, 5, { scale: 3, strength: 1.2 });
+  felt.normal.repeat.set(6, 1);
   const cushion = new THREE.Mesh(
-    new THREE.TorusGeometry(0.7, 0.09, 16, 96),
-    new THREE.MeshStandardMaterial({ color: 0x241914, roughness: 0.86, metalness: 0 }),
+    new THREE.TorusGeometry(0.7, 0.09, 32, 160),
+    new THREE.MeshStandardMaterial({ color: 0x241914, roughness: 0.92, metalness: 0, normalMap: felt.normal, normalScale: new THREE.Vector2(0.6, 0.6) }),
   );
   cushion.rotation.x = Math.PI / 2;
   cushion.position.y = -0.67;
-  drum.add(new THREE.Mesh(bowlGeometry(), under), lip);
+  cushion.castShadow = true;
+  cushion.receiveShadow = true;
+  const bowl = new THREE.Mesh(bowlGeometry(), under);
+  bowl.castShadow = true;
+  lip.castShadow = true;
+  drum.add(bowl, lip);
   scene.add(cushion);
   let dome = null;
 
   const pedestal = new THREE.Group();
-  const pedestalStone = new THREE.MeshStandardMaterial({ color: 0x34302b, roughness: 0.92, metalness: 0 });
-  const pedestalProfile = [[0, -1.07], [2.08, -1.07], [2.14, -1.055], [2.18, -1.02], [2.18, -0.82], [2.16, -0.785], [2.12, -0.76], [0, -0.76]];
-  pedestal.add(new THREE.Mesh(new THREE.LatheGeometry(pedestalProfile.map(([r, y]) => new THREE.Vector2(r, y)), 96), pedestalStone));
+  const granite = grainMaps(512, 3, { scale: 2, strength: 1.6, base: 120, spread: 40 });
+  for (const map of [granite.normal, granite.albedo]) {
+    map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    map.repeat.set(3, 1);
+  }
+  const pedestalStone = new THREE.MeshStandardMaterial({
+    color: 0x5a544c,
+    map: granite.albedo,
+    roughness: 0.9,
+    metalness: 0,
+    normalMap: granite.normal,
+    normalScale: new THREE.Vector2(0.7, 0.7),
+  });
+  const pedestalProfile = [[0, -1.07], [2.08, -1.07], [2.14, -1.055], [2.18, -1.02], [2.2, -0.96], [2.2, -0.86], [2.18, -0.82], [2.16, -0.785], [2.12, -0.76], [0, -0.76]];
+  const plinth = new THREE.Mesh(new THREE.LatheGeometry(pedestalProfile.map(([r, y]) => new THREE.Vector2(r, y)), 192), pedestalStone);
+  plinth.receiveShadow = true;
+  pedestal.add(plinth);
+  const groove = new THREE.Mesh(
+    new THREE.TorusGeometry(1.96, 0.012, 8, 192),
+    new THREE.MeshStandardMaterial({ color: 0x1f1b17, roughness: 1 }),
+  );
+  groove.rotation.x = Math.PI / 2;
+  groove.position.y = -0.758;
+  pedestal.add(groove);
   scene.add(pedestal);
 
   const shadow = new THREE.Mesh(
     new THREE.PlaneGeometry(4.26, 4.26),
     new THREE.MeshBasicMaterial({
       map: radialTexture([
-        [0, "rgba(0,0,0,0.8)"],
-        [0.74, "rgba(0,0,0,0.6)"],
-        [0.9, "rgba(0,0,0,0.18)"],
+        [0, "rgba(0,0,0,0.5)"],
+        [0.74, "rgba(0,0,0,0.3)"],
+        [0.9, "rgba(0,0,0,0.08)"],
         [1, "rgba(0,0,0,0)"],
       ]),
       transparent: true,
@@ -820,6 +926,7 @@ function createDrum(host, onHit, onStrike) {
         dome.geometry.dispose();
       }
       dome = new THREE.Mesh(domeGeometry(specs.map(frameOf)), metal);
+      dome.castShadow = true;
       drum.add(dome);
     }
     for (const item of fields.values()) {
@@ -1118,7 +1225,8 @@ function createWorld() {
   const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);
   moonlight.position.set(-12, 24, -5);
   moonlight.castShadow = true;
-  moonlight.shadow.mapSize.set(2048, 2048);
+  moonlight.shadow.mapSize.set(4096, 4096);
+  moonlight.shadow.radius = 3;
   moonlight.shadow.camera.left = -32;
   moonlight.shadow.camera.right = 32;
   moonlight.shadow.camera.top = 32;
@@ -1129,31 +1237,21 @@ function createWorld() {
   const amber = new THREE.DirectionalLight(0xe9b16f, 1.2);
   amber.position.set(12, 6, 10);
   scene.add(amber);
-  const stoneCanvas = document.createElement("canvas");
-  stoneCanvas.width = stoneCanvas.height = 256;
-  const stonePen = stoneCanvas.getContext("2d");
-  const pixels = stonePen.createImageData(256, 256);
-  for (let y = 0; y < 256; y += 1) {
-    for (let x = 0; x < 256; x += 1) {
-      const i = (y * 256 + x) * 4;
-      const cloud = Math.sin(x * 0.08 + Math.sin(y * 0.05) * 2) * 6 + Math.sin(y * 0.12) * 4;
-      const value = 198 + cloud * 0.5;
-      pixels.data[i] = value;
-      pixels.data[i + 1] = value - 9;
-      pixels.data[i + 2] = value - 21;
-      pixels.data[i + 3] = 255;
-    }
-  }
-  stonePen.putImageData(pixels, 0, 0);
-  const stoneMap = new THREE.CanvasTexture(stoneCanvas);
-  stoneMap.colorSpace = THREE.SRGBColorSpace;
-  const stone = new THREE.MeshStandardMaterial({ color: 0xa89b85, map: stoneMap, roughness: 0.94 });
-  const pale = new THREE.MeshStandardMaterial({ color: 0xc4b99d, map: stoneMap, roughness: 0.9 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x374749, roughness: 0.9 });
-  const gold = new THREE.MeshStandardMaterial({ color: 0x897455, metalness: 0.72, roughness: 0.6 });
-  const tile = new THREE.MeshStandardMaterial({ map: mosaicTexture(), roughness: 0.76, metalness: 0, color: 0xadc7c2 });
+  const anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const sandstone = grainMaps(512, 17, { scale: 1.5, strength: 1.4, base: 196, spread: 22 });
+  for (const map of [sandstone.normal, sandstone.albedo]) map.anisotropy = anisotropy;
+  const stoneMap = sandstone.albedo;
+  const stoneNormal = new THREE.Vector2(0.45, 0.45);
+  const stone = new THREE.MeshStandardMaterial({ color: 0xa89b85, map: stoneMap, roughness: 0.94, normalMap: sandstone.normal, normalScale: stoneNormal });
+  const pale = new THREE.MeshStandardMaterial({ color: 0xc4b99d, map: stoneMap, roughness: 0.9, normalMap: sandstone.normal, normalScale: stoneNormal });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x374749, roughness: 0.9, normalMap: sandstone.normal, normalScale: new THREE.Vector2(0.3, 0.3) });
+  const gold = new THREE.MeshStandardMaterial({ color: 0x897455, metalness: 0.72, roughness: 0.55 });
+  const mosaic = mosaicTexture();
+  mosaic.anisotropy = anisotropy;
+  const tile = new THREE.MeshStandardMaterial({ map: mosaic, roughness: 0.62, metalness: 0.05, color: 0xadc7c2 });
   const box = (w, h, d, x, y, z, material = stone, parent = scene) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    const edge = Math.min(0.05, Math.min(w, h, d) * 0.25);
+    const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 1, edge), material);
     mesh.position.set(x, y, z);
     parent.add(mesh);
     return mesh;
@@ -1175,7 +1273,7 @@ function createWorld() {
       shape.lineTo(side * (half + 0.63), spring);
       shape.bezierCurveTo(side * (half + 0.65), spring + rise * 0.58, side * half * 0.55, spring + rise + 0.45, 0, spring + rise + 0.64);
       shape.closePath();
-      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.035, bevelSegments: 2, steps: 1, curveSegments: 24 }), pale);
+      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.035, bevelSegments: 3, steps: 1, curveSegments: 40 }), pale);
       mesh.position.z = -depth / 2;
       group.add(mesh);
       const curve = new THREE.CubicBezierCurve3(
@@ -1184,13 +1282,13 @@ function createWorld() {
         new THREE.Vector3(side * (half + 0.27), spring + rise * 0.5, depth / 2 + 0.025),
         new THREE.Vector3(side * (half + 0.27), spring, depth / 2 + 0.025),
       );
-      group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 36, 0.07, 6, false), tile));
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.07, 10, false), tile));
     }
     return group;
   };
   box(70, 0.5, 90, 0, -0.28, -20, dark);
-  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x858c86, map: stoneMap, roughness: 0.65 });
-  const paving = new THREE.InstancedMesh(new THREE.BoxGeometry(3.16, 0.06, 3.16), floorMaterial, 240);
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x858c86, map: stoneMap, roughness: 0.58, normalMap: sandstone.normal, normalScale: new THREE.Vector2(0.6, 0.6) });
+  const paving = new THREE.InstancedMesh(new RoundedBoxGeometry(3.16, 0.06, 3.16, 1, 0.02), floorMaterial, 240);
   const pavingTransform = new THREE.Matrix4();
   let pavingIndex = 0;
   for (let z = 7; z > -38; z -= 3.2) {
@@ -1215,9 +1313,10 @@ function createWorld() {
   box(50, 0.2, 2.5, 0, 11.4, -23, pale);
   for (let x = -24; x <= 24; x += 1.5) box(0.65, 0.65, 1.9, x, 11.7, -23, stone);
   for (let x = -17; x <= 18; x += 7) {
-    const medallion = new THREE.Mesh(new THREE.CircleGeometry(0.42, 8), tile);
+    const medallion = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 8), tile);
+    medallion.rotation.x = Math.PI / 2;
     medallion.position.set(x, 8.2, -22.08);
-    medallion.rotation.z = Math.PI / 8;
+    medallion.rotation.y = Math.PI / 8;
     scene.add(medallion);
   }
   for (const side of [-1, 1]) {
@@ -1232,9 +1331,9 @@ function createWorld() {
   }
   const cloth = new THREE.MeshStandardMaterial({ color: 0x683a38, side: THREE.DoubleSide, roughness: 0.9 });
   for (const x of [-12.4, 12.4]) {
-    const geometry = new THREE.PlaneGeometry(2, 5.3, 16, 24);
+    const geometry = new THREE.PlaneGeometry(2, 5.3, 48, 72);
     const p = geometry.attributes.position;
-    for (let i = 0; i < p.count; i += 1) p.setZ(i, Math.sin(p.getX(i) * 12) * 0.11);
+    for (let i = 0; i < p.count; i += 1) p.setZ(i, Math.sin(p.getX(i) * 12) * 0.11 + Math.sin(p.getY(i) * 3 + p.getX(i) * 5) * 0.04);
     geometry.computeVertexNormals();
     const banner = new THREE.Mesh(geometry, cloth);
     banner.position.set(x, 6.6, -8);
@@ -1247,20 +1346,29 @@ function createWorld() {
     group.position.set(x, y, z);
     group.scale.setScalar(scale);
     scene.add(group);
-    const glass = new THREE.MeshStandardMaterial({ color: 0xffca78, emissive: 0xffa64c, emissiveIntensity: 2.5, roughness: 0.4 });
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0xffca78, emissive: 0xffa64c, emissiveIntensity: 2.5, roughness: 0.3, transmission: 0.2, thickness: 0.2 });
     const lightbody = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.27, 0.62, 6), glass);
     group.add(lightbody);
+    const capProfile = [[0, 0.3], [0.1, 0.3], [0.2, 0.22], [0.3, 0.1], [0.36, 0.02], [0.36, 0]];
     for (const at of [-0.38, 0.4]) {
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.25, 6), gold);
+      const cap = new THREE.Mesh(new THREE.LatheGeometry(capProfile.map(([r, y]) => new THREE.Vector2(r, y)), 24), gold);
       cap.position.y = at;
       cap.rotation.z = at < 0 ? Math.PI : 0;
       group.add(cap);
     }
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), gold);
+    finial.position.y = 0.74;
+    group.add(finial);
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), gold);
+    foot.position.y = -0.7;
+    group.add(foot);
     for (let n = 0; n < 6; n += 1) {
       const a = n * Math.PI / 3;
-      box(0.025, 0.74, 0.025, Math.cos(a) * 0.23, 0, Math.sin(a) * 0.23, gold, group);
+      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.74, 8), gold);
+      rib.position.set(Math.cos(a) * 0.23, 0, Math.sin(a) * 0.23);
+      group.add(rib);
     }
-    const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.5, 5), gold);
+    const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.5, 8), gold);
     chain.position.y = 1.85;
     group.add(chain);
     const light = new THREE.PointLight(0xffb660, 22 * scale, 10 * scale, 2);
@@ -1283,7 +1391,7 @@ function createWorld() {
     const height = 6 + Math.sin(k * 2.1) * 2 + k % 3;
     box(4.5, height, 5, k * 5 - 42, height / 2 + 6, -48 - k % 3 * 2, ridge);
     if (k % 3 === 0) {
-      const dome = new THREE.Mesh(new THREE.SphereGeometry(2.8, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), ridge);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(2.8, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2), ridge);
       dome.position.set(k * 5 - 42, height + 6, -48);
       scene.add(dome);
     }
@@ -1379,11 +1487,11 @@ function createWorld() {
     const angle = (index / Object.keys(VIEWS).length) * Math.PI * 2;
     const beacon = new THREE.Group();
     beacon.position.set(Math.cos(angle) * 24, 0, Math.sin(angle) * 18 - 15);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 16), new THREE.MeshStandardMaterial({ color: 0x97764d, metalness: 0.5, roughness: 0.45 }));
-    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshStandardMaterial({ color: 0xffd898, emissive: 0xe6b15a, emissiveIntensity: 1.8, metalness: 0.4, roughness: 0.3 }));
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 48), new THREE.MeshStandardMaterial({ color: 0x97764d, metalness: 0.5, roughness: 0.45 }));
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshPhysicalMaterial({ color: 0xffd898, emissive: 0xe6b15a, emissiveIntensity: 1.8, metalness: 0.1, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }));
     gem.position.y = 2.8;
     gem.userData.view = key;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.035, 6, 36), new THREE.MeshBasicMaterial({ color: 0xf4d29b }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.035, 12, 96), new THREE.MeshBasicMaterial({ color: 0xf4d29b }));
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.4;
     beacon.add(base, gem, ring);

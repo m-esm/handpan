@@ -3,21 +3,34 @@ import * as THREE from "three";
 export function createLandscape() {
   const group = new THREE.Group();
   const textureCanvas = document.createElement("canvas");
-  textureCanvas.width = textureCanvas.height = 256;
+  textureCanvas.width = textureCanvas.height = 512;
   const pen = textureCanvas.getContext("2d");
-  pen.fillStyle = "#a99e8e";
-  pen.fillRect(0, 0, 256, 256);
-  for (let y = 0; y < 256; y += 16) {
-    for (let x = -24; x < 256; x += 48) {
+  pen.fillStyle = "#8d8275";
+  pen.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y += 32) {
+    for (let x = -48; x < 512; x += 96) {
       const shade = 172 + (Math.sin(x * 9 + y * 5) + 1) * 9;
-      pen.fillStyle = `rgb(${shade},${shade - 5},${shade - 12})`;
-      pen.fillRect(x + (y % 32 ? 24 : 0), y, 47, 15);
+      const left = x + (y % 64 ? 48 : 0);
+      const stoneFill = pen.createLinearGradient(left, y, left + 94, y + 30);
+      stoneFill.addColorStop(0, `rgb(${shade + 8},${shade + 2},${shade - 6})`);
+      stoneFill.addColorStop(1, `rgb(${shade - 10},${shade - 14},${shade - 22})`);
+      pen.fillStyle = stoneFill;
+      pen.beginPath();
+      pen.roundRect(left + 1, y + 1, 92, 29, 3);
+      pen.fill();
+      for (let n = 0; n < 24; n += 1) {
+        const px = left + 4 + ((n * 37 + y) % 86);
+        const py = y + 3 + ((n * 53 + x) % 25);
+        pen.fillStyle = n % 2 ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.07)";
+        pen.fillRect(px, py, 2, 2);
+      }
     }
   }
   const masonry = new THREE.CanvasTexture(textureCanvas);
   masonry.colorSpace = THREE.SRGBColorSpace;
   masonry.wrapS = masonry.wrapT = THREE.RepeatWrapping;
   masonry.repeat.set(2, 2);
+  masonry.anisotropy = 8;
   const rock = new THREE.MeshStandardMaterial({ color: 0x80634e, roughness: 1 });
   const grass = new THREE.MeshStandardMaterial({ color: 0x5b7141, roughness: 1 });
   const leaf = new THREE.MeshStandardMaterial({ color: 0x304b32, roughness: 1 });
@@ -35,7 +48,7 @@ export function createLandscape() {
   const block = (x, y, z, w, h, d) => mesh(new THREE.BoxGeometry(w, h, d), stone, [x, y, z]);
   const noise = (x, z) => Math.sin(x * 0.19 + Math.sin(z * 0.11) * 2) * 0.45 + Math.sin(x * 0.47 + z * 0.29) * 0.22 + Math.cos(x * 1.13 - z * 0.61) * 0.1;
   for (let layer = 0; layer < 4; layer += 1) {
-    const geometry = new THREE.PlaneGeometry(260, 65, 140, 32);
+    const geometry = new THREE.PlaneGeometry(260, 65, 260, 65);
     geometry.rotateX(-Math.PI / 2);
     const vertices = geometry.attributes.position;
     const colors = [];
@@ -43,7 +56,8 @@ export function createLandscape() {
       const x = vertices.getX(i);
       const z = vertices.getZ(i);
       const spine = Math.max(0, 1 - Math.abs(z + Math.sin(x * 0.08) * 8) / 34);
-      const height = Math.pow(spine, 1.4) * (22 + layer * 7 + noise(x + layer * 43, z) * 16);
+      const ridges = Math.abs(Math.sin(x * 0.31 + z * 0.17 + layer)) * 1.6 + Math.abs(Math.sin(x * 0.9 - z * 0.4)) * 0.6;
+      const height = Math.pow(spine, 1.4) * (22 + layer * 7 + noise(x + layer * 43, z) * 16 + ridges);
       vertices.setY(i, height - 4);
       const cap = height > 23 + layer * 5;
       const tint = new THREE.Color(cap ? 0xcad4d2 : layer ? 0x7b8c94 : 0x968273);
@@ -56,7 +70,7 @@ export function createLandscape() {
     mesh(geometry, material, [0, 0, -64 - layer * 27]);
   }
   mesh(new THREE.PlaneGeometry(300, 250), grass, [0, -1.8, -45]).rotation.x = -Math.PI / 2;
-  const waterGeometry = new THREE.PlaneGeometry(31, 110, 12, 32);
+  const waterGeometry = new THREE.PlaneGeometry(31, 110, 36, 96);
   const waterPoints = waterGeometry.attributes.position;
   for (let i = 0; i < waterPoints.count; i += 1) {
     const y = waterPoints.getY(i);
@@ -64,13 +78,13 @@ export function createLandscape() {
   }
   const lake = mesh(waterGeometry, water, [4, -1.62, 2]);
   lake.rotation.x = -Math.PI / 2;
-  const cliff = new THREE.CylinderGeometry(8, 14, 20, 48, 24);
+  const cliff = new THREE.CylinderGeometry(8, 14, 20, 128, 48);
   const cliffPoints = cliff.attributes.position;
   for (let i = 0; i < cliffPoints.count; i += 1) {
     const x = cliffPoints.getX(i);
     const y = cliffPoints.getY(i);
     const z = cliffPoints.getZ(i);
-    const erosion = 1 + noise(x * 2, z * 2 + y * 0.4) * 0.12;
+    const erosion = 1 + noise(x * 2, z * 2 + y * 0.4) * 0.12 + Math.sin(y * 2.4 + x * 0.8) * 0.02;
     cliffPoints.setXYZ(i, x * erosion, y, z * erosion);
   }
   cliff.computeVertexNormals();
@@ -89,9 +103,9 @@ export function createLandscape() {
     for (const dx of [-1.7, 0, 1.7]) for (const dz of [-1.9, 1.9]) block(x + dx, 17 + h + 0.5, z + dz, 0.7, 1, 0.8);
   }
   const crown = [[0, -1], [0.45, -0.9], [0.78, -0.65], [0.96, -0.3], [1, 0], [0.87, 0.35], [0.62, 0.66], [0.3, 0.9], [0, 1.08]];
-  const trees = new THREE.InstancedMesh(new THREE.LatheGeometry(crown.map(([r, y]) => new THREE.Vector2(r, y)), 12), leaf, 100);
+  const trees = new THREE.InstancedMesh(new THREE.LatheGeometry(crown.map(([r, y]) => new THREE.Vector2(r, y)), 32), leaf, 100);
   const bark = new THREE.MeshStandardMaterial({ color: 0x665c49, roughness: 1 });
-  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.12, 1, 6), bark, 100);
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.12, 1, 12), bark, 100);
   trunks.castShadow = true;
   trunks.receiveShadow = true;
   trees.castShadow = true;
@@ -116,7 +130,7 @@ export function createLandscape() {
     const terrace = mesh(new THREE.BoxGeometry(18, 0.6, 3), grass, [-30, i * 0.55 - 1, -14 - i * 3.3]);
     terrace.rotation.y = -0.16;
   }
-  const sun = mesh(new THREE.SphereGeometry(2, 20, 12), new THREE.MeshBasicMaterial({ color: 0xffd29a, fog: false }), [35, 31, -100]);
+  const sun = mesh(new THREE.SphereGeometry(2, 48, 32), new THREE.MeshBasicMaterial({ color: 0xffd29a, fog: false }), [35, 31, -100]);
   return {
     group,
     set(key) {

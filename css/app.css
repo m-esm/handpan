@@ -32,8 +32,6 @@
 
 * { box-sizing: border-box; }
 
-.keyboard-hint { margin: 4px 0 0; text-align: center; color: var(--mist); font-size: 13px; text-shadow: 0 1px 4px var(--night); }
-.keyboard-hint kbd { font: inherit; font-weight: 600; }
 
 html, body { margin: 0; }
 
