@@ -1082,7 +1082,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 1000px), (max-height: 520px) {
-  :root { --pad: 14px; --pan-h: 120px; }
+  :root { --pad: 14px; --pan-h: clamp(200px, 34vh, 300px); }
   body.is-learn { --pan-h: clamp(155px, 22vh, 200px); }
   body { height: auto; min-height: 100vh; min-height: 100dvh; overflow: auto; }
   .wrap { display: block; }
@@ -1151,7 +1151,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (min-width: 600px) and (max-width: 1000px) and (min-height: 521px) {
-  :root { --pad: 20px; --pan-h: 160px; }
+  :root { --pad: 20px; --pan-h: clamp(220px, 36vh, 340px); }
   body.is-learn { --pan-h: min(25vh, 250px); }
 }
 
