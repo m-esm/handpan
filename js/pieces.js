@@ -296,20 +296,20 @@ export const PIECES = [
     meter: "eighths",
     blurb: "The White Stripes riff in D minor: 4 4 6 4 3 2 1, then the ding joins for the chorus.",
     about:
-      "The riff from Seven Nation Army by The White Stripes, moved from E minor to D minor so that it sits on this D Kurd pan. The record is at about 124 BPM. The riff is seven notes over two bars: D on 4 held from beat one, then five straight eighths from the and of two, D, F, D, C, B-flat, and the low A on 1 landing on the next downbeat and ringing through the bar. Count ONE and two AND THREE AND FOUR AND, ONE: the first D is long, the five eighths run without a gap, and the A takes the downbeat. Riff is the bass line alone, four times. Chorus strikes the ding together with the first D and with the low A, so the bass drops an octave the way the record's octave guitar fills out under the vocal. Keep every note short except the first D and the last A, which ring. Learn the two-bar riff with the right hand on 3 and 1 and the left on 4, 6 and 2 until it loops without a gap, then add the ding.",
+      "The riff from Seven Nation Army by The White Stripes, moved from E minor to D minor so that it sits on this D Kurd pan. The record is at about 124 BPM. The riff is four bars, a phrase and its answer. The phrase is seven notes over two bars: D on 4 held from beat one, then five straight eighths from the and of two, D, F, D, C, B-flat, and the low A on 1 landing on the next downbeat and ringing through the bar. The answer repeats the phrase, then turns C, B-flat, C, B-flat before the low A lands on beat three. Count ONE and two AND THREE AND FOUR AND, ONE: the first D is long, the five eighths run without a gap, and the A takes the downbeat. Riff is the bass line alone, four times. Chorus strikes the ding together with the first D and with the low A, so the bass drops an octave the way the record's octave guitar fills out under the vocal. Keep every note short except the first D and the last A, which ring. Learn the four-bar riff with the right hand on 3 and 1 and the left on 4, 6 and 2 until it loops without a gap, then add the ding.",
     form: ["Riff", "Riff", "Chorus", "Chorus"],
     parts: {
       Riff: [
         "4^ . . 4 6 4 3 2",
         "1^ . . . . . . .",
         "4^ . . 4 6 4 3 2",
-        "1^ . . . . . . .",
+        "3 2 3 2 1^ . . .",
       ],
       Chorus: [
         "[D4]^ . . 4 6 4 3 2",
         "[D1]^ . . . . . . .",
         "[D4]^ . . 4 6 4 3 2",
-        "[D1]^ . . . . . . .",
+        "3 2 3 2 [D1]^ . . .",
       ],
     },
   },
