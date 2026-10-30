@@ -619,11 +619,13 @@ function createDrum(host, onHit, onStrike) {
   canvas.className = "pan-3d";
   canvas.setAttribute("aria-hidden", "true");
   host.append(canvas);
+  if (profiling) host.alamutPerf = { renderer };
 
   const scene = new THREE.Scene();
   scene.environment = studio(renderer);
   renderer.setClearColor(0x000000, 0);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 60);
+  if (profiling) Object.assign(host.alamutPerf, { scene, camera });
 
   const key = new THREE.DirectionalLight(0xfff3e2, 1.45);
   key.position.set(-3.4, 7.2, 2.4);
@@ -1095,6 +1097,8 @@ function createDrum(host, onHit, onStrike) {
   let lastSeconds = 0;
   let lastDraw = -1000;
   let energy = 0;
+  let magic = 0;
+  let magicGoal = 0;
 
   function frame(time) {
     const active = document.activeElement;
@@ -1109,9 +1113,12 @@ function createDrum(host, onHit, onStrike) {
     lastSeconds = seconds;
     renderer.info.reset();
     energy *= 0.94;
+    magic += (magicGoal - magic) * 0.04;
+    if (Math.abs(magicGoal - magic) > 0.002) pendingFrames = Math.max(pendingFrames, 2);
     for (const points of [ambientMotes, coolMotes]) {
       points.material.uniforms.uTime.value = seconds;
-      points.material.uniforms.uGlow.value = (points === coolMotes ? 0.7 : 0.9) + energy * 0.8;
+      points.material.uniforms.uGlow.value = (points === coolMotes ? 0.7 : 0.9) + energy * 0.8 + magic * 1.4;
+      points.material.uniforms.uScale.value = (points === coolMotes ? 26 : 34) * (1 + magic * 0.5);
     }
     for (const burst of bursts) {
       if (!burst.visible) continue;
@@ -1119,13 +1126,13 @@ function createDrum(host, onHit, onStrike) {
       if (seconds - burst.material.uniforms.uStart.value > 1.4) burst.visible = false;
     }
     const breath = still ? 0 : Math.sin(seconds * 0.5);
-    aurora.material.opacity = 0.13 + breath * 0.04 + energy * 0.3;
-    aurora.rotation.z = seconds * 0.03;
-    aurora.scale.setScalar(1 + breath * 0.03 + energy * 0.08);
-    runes.material.opacity = 0.2 + breath * 0.05 + energy * 0.55;
-    runes.rotation.z = seconds * 0.02;
-    innerRunes.material.opacity = 0.12 + energy * 0.4;
-    innerRunes.rotation.z = -seconds * 0.045;
+    aurora.material.opacity = 0.13 + breath * 0.04 + energy * 0.3 + magic * 0.3;
+    aurora.rotation.z = seconds * (0.03 + magic * 0.05);
+    aurora.scale.setScalar(1 + breath * 0.03 + energy * 0.08 + magic * 0.18);
+    runes.material.opacity = 0.2 + breath * 0.05 + energy * 0.55 + magic * 0.45;
+    runes.rotation.z = seconds * (0.02 + magic * 0.04);
+    innerRunes.material.opacity = 0.12 + energy * 0.4 + magic * 0.5;
+    innerRunes.rotation.z = -seconds * (0.045 + magic * 0.06);
     for (const [id, item] of fields) {
       const look = LOOKS[item.state] || LOOKS.idle;
       const lit = id === focused;
@@ -1179,7 +1186,7 @@ function createDrum(host, onHit, onStrike) {
     drum.rotation.y += (targetY - drum.rotation.y) * 0.12;
     drum.rotation.z += (targetZ - drum.rotation.z) * 0.12;
     drum.position.y = Math.sin(seconds * 0.6) * 0.035 * sway + energy * 0.02;
-    halo.material.opacity = 0.24 + breath * 0.06 + energy * 0.4;
+    halo.material.opacity = 0.24 + breath * 0.06 + energy * 0.4 + magic * 0.3;
     if (profiling) host.dataset.rotation = JSON.stringify([drum.rotation.x, drum.rotation.y, drum.rotation.z]);
     renderer.render(scene, camera);
   }
@@ -1200,6 +1207,10 @@ function createDrum(host, onHit, onStrike) {
     setTak(on) {
       if (tak !== on) pendingFrames = 40;
       tak = on;
+    },
+    magic(level) {
+      magicGoal = Math.max(0, Math.min(1, level));
+      pendingFrames = 40;
     },
     visible: () => inView,
   };
@@ -1247,9 +1258,11 @@ function createWorld() {
   canvas.setAttribute("aria-hidden", "true");
   document.body.prepend(canvas);
   const scene = new THREE.Scene();
+  if (profiling) canvas.alamutPerf = { renderer, scene };
   scene.background = new THREE.Color(0x142c3c);
   scene.fog = new THREE.FogExp2(0x142c3c, 0.015);
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 900);
+  if (profiling) canvas.alamutPerf.camera = camera;
   const skyLight = new THREE.HemisphereLight(0x9dbdd4, 0x322517, 1.2);
   scene.add(skyLight);
   const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);
@@ -1491,7 +1504,25 @@ function createWorld() {
     pixelRatio,
     place: (random) => [random() * 50 - 25, random() * 6, random() * 30 - 30],
   });
-  scene.add(dust, fireflies, wisps);
+  const charm = motes({
+    count: 220,
+    color: 0xb49cff,
+    rise: 5,
+    swirl: 1.3,
+    speed: 0.07,
+    scale: 150,
+    glow: 0,
+    pixelRatio,
+    place: (random) => [random() * 26 - 13, random() * 9, random() * 22 - 18],
+  });
+  scene.add(dust, fireflies, wisps, charm);
+  let magic = 0;
+  let magicGoal = 0;
+  let celebrating = 0;
+  let fogBase = 0.015;
+  let moonBase = 2.5;
+  const fogTone = new THREE.Color(0x142c3c);
+  const charmTone = new THREE.Color(0x4a3d86);
   const streak = new THREE.Sprite(new THREE.SpriteMaterial({
     map: radialTexture([[0, "rgba(255,255,255,1)"], [0.25, "rgba(220,235,255,0.5)"], [1, "rgba(220,235,255,0)"]]),
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0,
@@ -1579,27 +1610,41 @@ function createWorld() {
       );
       camera.lookAt(...view.target);
     }
+    magic += (magicGoal - magic) * 0.035;
+    if (Math.abs(magicGoal - magic) > 0.002) pendingFrames = Math.max(pendingFrames, 2);
     lamps.forEach(({ light, base, glass }, i) => {
       const flicker = (Math.sin(seconds * 13 + i * 2.1) + Math.sin(seconds * 31 + i * 5.3)) * 0.03 * drift;
-      light.intensity = base * (1 + energy * 0.15 + flicker);
-      glass.emissiveIntensity = 2.1 + energy * 0.5 + flicker * 4;
+      light.intensity = base * (1 + energy * 0.15 + magic * 0.4 + flicker);
+      glass.emissiveIntensity = 2.1 + energy * 0.5 + magic * 1.2 + flicker * 4;
     });
-    skyLight.intensity = skyBase + energy * 0.5;
+    skyLight.intensity = skyBase + energy * 0.5 + magic * 0.7;
+    moonlight.intensity = moonBase * (1 + magic * 0.35);
+    scene.fog.density = fogBase * (1 - magic * 0.45);
+    renderer.toneMappingExposure = 1.1 + magic * 0.28;
     sky.uniforms.uTime.value = seconds;
+    sky.uniforms.uMagic.value = magic;
+    scene.fog.color.copy(fogTone).lerp(charmTone, magic * 0.55);
     if (landscape?.group.visible) landscape.update(seconds);
-    moonHalo.scale.setScalar(20 + Math.sin(seconds * 0.4) * 1.2 * drift + energy * 2);
-    for (const points of [dust, fireflies, wisps]) points.material.uniforms.uTime.value = seconds;
-    fireflies.material.uniforms.uGlow.value = 1.3 + energy * 1.2;
-    wisps.material.uniforms.uGlow.value = 0.6 + energy * 0.9;
-    if (streakAt < 0 && seconds > nextStreak && drift) {
+    moonHalo.scale.setScalar(20 + Math.sin(seconds * 0.4) * 1.2 * drift + energy * 2 + magic * 14);
+    for (const points of [dust, fireflies, wisps, charm]) points.material.uniforms.uTime.value = seconds;
+    dust.material.uniforms.uGlow.value = 0.8 + magic * 0.9;
+    fireflies.material.uniforms.uGlow.value = 1.3 + energy * 1.2 + magic * 2.4;
+    fireflies.material.uniforms.uScale.value = 220 * (1 + magic * 0.6);
+    wisps.material.uniforms.uGlow.value = 0.6 + energy * 0.9 + magic * 1.8;
+    wisps.material.uniforms.uScale.value = 160 * (1 + magic * 0.5);
+    charm.material.uniforms.uGlow.value = Math.max(0, magic - 0.15) * 3.2;
+    charm.material.uniforms.uScale.value = 150 + magic * 120;
+    if (streakAt < 0 && (seconds > nextStreak || celebrating) && drift) {
       streakAt = seconds;
+      if (celebrating) celebrating -= 1;
       streakFrom.set(Math.sin(seconds * 7.3) * 38, 30 + Math.cos(seconds * 3.1) * 8, -72);
     }
     if (streakAt >= 0) {
       const progress = (seconds - streakAt) / 0.9;
       if (progress >= 1) {
         streakAt = -1;
-        nextStreak = seconds + 8 + Math.abs(Math.sin(seconds * 2.7)) * 10;
+        const lull = 1 - magic * 0.8;
+        nextStreak = seconds + 8 * lull + Math.abs(Math.sin(seconds * 2.7)) * 10 * lull;
         streak.material.opacity = 0;
       } else {
         streak.position.copy(streakFrom).addScaledVector(streakDir, progress * 26);
@@ -1643,10 +1688,13 @@ function createWorld() {
         for (const beacon of beacons.children) beacon.position.y = land.heightAt(beacon.position.x, beacon.position.z);
         paintSky(view, land.sun.position);
       }
-      scene.fog.color.setHex(view.sky);
-      scene.fog.density = key === "courtyard" ? 0.015 : key === "storm" ? 0.0052 : 0.0034;
+      fogTone.setHex(view.sky);
+      scene.fog.color.copy(fogTone);
+      fogBase = key === "courtyard" ? 0.015 : key === "storm" ? 0.0052 : 0.0034;
+      scene.fog.density = fogBase;
       moonlight.color.setHex(key === "dawn" ? 0xffc28b : key === "valley" ? 0xffeed2 : 0xb9d7ed);
-      moonlight.intensity = key === "lake" ? 1.2 : 2.5;
+      moonBase = key === "lake" ? 1.2 : 2.5;
+      moonlight.intensity = moonBase;
       const wide = key !== "courtyard";
       if (wide) moonlight.position.copy(landscape.sun.position).setY(Math.max(landscape.sun.position.y, 60)).normalize().multiplyScalar(130);
       else moonlight.position.set(-12, 24, -5);
@@ -1708,6 +1756,16 @@ function createWorld() {
       draw(time);
     },
     strike() { energy = 1; pendingFrames = 30; },
+    magic(level) {
+      magicGoal = Math.max(0, Math.min(1, level));
+      pendingFrames = 30;
+    },
+    celebrate() {
+      energy = 1;
+      celebrating = 3;
+      streakAt = -1;
+      pendingFrames = 60;
+    },
     redraw() { draw(performance.now()); },
   };
 }
@@ -1741,5 +1799,16 @@ export function createStage({ pan, onHit }) {
   requestAnimationFrame(loop);
   if (still) addEventListener("scroll", () => world.redraw(), { passive: true });
 
-  return { layout: drum.layout, set: drum.set, setTak: drum.setTak, environment: world.environment, motion: drum.motion };
+  return {
+    layout: drum.layout,
+    set: drum.set,
+    setTak: drum.setTak,
+    environment: world.environment,
+    motion: drum.motion,
+    magic(level) {
+      world.magic(level);
+      drum.magic(level);
+    },
+    celebrate: world.celebrate,
+  };
 }

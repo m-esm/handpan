@@ -17,6 +17,16 @@ const WEIGHTS = [1, 0.7, 0.4];
 const MIN_FUNDAMENTAL = 0.1;
 const MIN_SCORE = 0.9;
 const BAND_CENTS = 12;
+const FOCUS_GAIN = 2.2;
+const TONE_SPAN = 2.5;
+
+const unit = (x) => Math.max(0, Math.min(1, x));
+
+export function qualityOf(best, second, tonal) {
+  const focus = unit((1 - second / best) * FOCUS_GAIN);
+  const tone = unit((tonal - TONAL_RATIO) / (TONAL_RATIO * TONE_SPAN));
+  return unit(0.55 * focus + 0.45 * tone);
+}
 
 const power = (db) => 10 ** (db / 10);
 
@@ -73,7 +83,10 @@ export function createDetector(sampleRate) {
       if (amps[n][0] < MIN_FUNDAMENTAL * top) return;
       if (!best || score > best.score) best = { id: voice.id, score };
     });
-    return best && best.score >= MIN_SCORE ? { id: best.id, scores } : null;
+    if (!best || best.score < MIN_SCORE) return null;
+    const second = Math.max(0, ...Object.entries(scores).filter(([id]) => id !== best.id).map(([, score]) => score));
+    const tonal = spread > 0 ? top / spread : TONAL_RATIO * (TONE_SPAN + 1);
+    return { id: best.id, scores, quality: qualityOf(best.score, second, tonal) };
   }
 
   function fluxOf(smallDb) {

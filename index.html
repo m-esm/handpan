@@ -43,6 +43,31 @@
           <label class="mic-pick"><span class="sr">Input source</span><select id="mic-input"></select></label>
         </div>
         <div id="pan"></div>
+        <section id="game" class="game" hidden aria-label="Playing score" data-tier="0" style="--q: 0">
+          <div class="game-medallion">
+            <span class="game-ring" aria-hidden="true"></span>
+            <span id="game-note" class="game-note">&ndash;</span>
+          </div>
+          <div class="game-read">
+            <span id="game-word" class="game-word">Strike a note</span>
+            <span id="game-sub" class="game-sub">Clean strikes build a streak and wake the courtyard.</span>
+          </div>
+          <div class="game-streak">
+            <strong id="game-streak">0</strong>
+            <span class="game-label">streak</span>
+          </div>
+          <dl class="game-stats">
+            <div><dt>Best</dt><dd id="game-best">0</dd></div>
+            <div><dt>Combo</dt><dd id="game-combo">&times;1</dd></div>
+            <div><dt>Points</dt><dd id="game-points">0</dd></div>
+          </dl>
+          <div class="game-tier">
+            <span class="game-lanterns" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span id="game-tier" class="game-tier-name">Ember</span>
+            <span id="game-tier-next" class="game-tier-next">3 more to Spark</span>
+          </div>
+          <p id="game-pop" class="game-pop" role="status"></p>
+        </section>
         <p id="caption" class="caption sr">Tap a note to hear it.</p>
         <p id="motion-status" role="status"></p>
         <p id="scene-notice" class="scene-notice" role="status" hidden></p>

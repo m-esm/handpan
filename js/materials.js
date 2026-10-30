@@ -739,6 +739,7 @@ uniform vec3 uSun;
 uniform float uCover;
 uniform float uStars;
 uniform float uTime;
+uniform float uMagic;
 varying vec3 vDir;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -775,13 +776,21 @@ void main() {
     shade = cloud * smoothstep(-0.02, 0.16, h) * 0.9;
     color = mix(color, tone, shade);
   }
-  if (uStars > 0.0 && h > 0.0) {
+  float starlight = max(uStars, uMagic * 0.9);
+  if (starlight > 0.0 && h > 0.0) {
     vec3 cell = floor(dir * 260.0);
     float pick = hash3(cell);
     vec3 local = fract(dir * 260.0) - 0.5;
-    float star = step(0.986, pick) * smoothstep(0.32, 0.0, length(local));
+    float star = step(0.986 - uMagic * 0.014, pick) * smoothstep(0.32, 0.0, length(local));
     float twinkle = 0.7 + 0.3 * sin(uTime * (1.0 + pick * 3.0) + pick * 40.0);
-    color += vec3(0.9, 0.95, 1.0) * star * twinkle * uStars * smoothstep(0.02, 0.3, h) * (1.0 - shade) * (0.5 + fract(pick * 97.0));
+    color += vec3(0.9, 0.95, 1.0) * star * twinkle * starlight * (1.0 + uMagic * 1.2) * smoothstep(0.02, 0.3, h) * (1.0 - shade) * (0.5 + fract(pick * 97.0));
+  }
+  if (uMagic > 0.0 && h > 0.0) {
+    float band = fbm(vec2(dir.x * 2.6 + uTime * 0.03, h * 7.0 - uTime * 0.012));
+    float curtain = smoothstep(0.42, 0.78, band) * smoothstep(0.03, 0.22, h) * smoothstep(0.95, 0.45, h);
+    vec3 veil = mix(vec3(0.24, 0.72, 0.58), vec3(0.52, 0.36, 0.95), smoothstep(0.1, 0.6, h + sin(dir.x * 3.0 + uTime * 0.05) * 0.15));
+    color += veil * curtain * uMagic * 0.55 * (1.0 - shade);
+    color = mix(color, color + vec3(0.1, 0.04, 0.22), uMagic * smoothstep(0.1, 0.8, h));
   }
   color += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
   gl_FragColor = vec4(color, 1.0);
@@ -800,6 +809,7 @@ export function createSky() {
     uCover: { value: 0.4 },
     uStars: { value: 0 },
     uTime: { value: 0 },
+    uMagic: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({ uniforms, vertexShader: SKY_VERTEX, fragmentShader: SKY_FRAGMENT, side: THREE.BackSide, depthWrite: false, fog: false });
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(600, 48, 24), material);

@@ -14,6 +14,7 @@ import { ADDED } from "./added.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
+import { createGame, wordFor, TIERS } from "./game.js";
 import { VIEWS, viewFor } from "./environments.js";
 import { initExplore } from "./explore.js";
 import { initMotion } from "./motion.js";
@@ -103,6 +104,9 @@ document.getElementById("simple-view").addEventListener("click", () => {
 
 const player = createPlayer(audio, paint);
 const listener = createListener(onHeard, onMicEnded);
+const game = createGame(localStorage);
+const POP_MS = 1800;
+let popTimer = 0;
 const HEARD_MS = 450;
 const TAP_DEAF_MS = 500;
 let heard = null;
@@ -123,9 +127,10 @@ function onHeard(found) {
   if (practice || player.playing || performance.now() < deafUntil) return;
   let id = found.id;
   let miss = false;
+  let wanted = [];
   if (patternFromHash() && player.pattern) {
     skipTaks();
-    const wanted = pitched(player.snapshot().notes);
+    wanted = pitched(player.snapshot().notes);
     if (accepts(found, wanted)) {
       if (!wanted.includes(id)) id = wanted[0];
       player.step(1, true);
@@ -141,7 +146,81 @@ function onHeard(found) {
     heard = null;
     player.refresh();
   }, HEARD_MS);
+  const result = game.strike({ id, quality: found.quality, miss, wanted });
+  drawGame(result);
+  if (stage) {
+    stage.magic(game.snapshot().tier.magic);
+    if (result.milestone) stage.celebrate();
+  }
   player.refresh();
+}
+
+function bump(node) {
+  node.classList.remove("is-bump");
+  void node.offsetWidth;
+  node.classList.add("is-bump");
+}
+
+function popText(result, snap) {
+  if (result.milestone) return `${result.milestone} in a row. ${snap.tier.name}.`;
+  if (result.broke) return result.miss ? "Streak lost" : "Muffled. Streak lost";
+  if (result.newBest) return "New best!";
+  return "";
+}
+
+function qualityColor(quality) {
+  if (quality < 0.25) return "var(--bad)";
+  if (quality < 0.5) return "var(--brass)";
+  if (quality < 0.75) return "var(--teal)";
+  return "#fff3d6";
+}
+
+function strikeWords(last) {
+  if (!last) return ["Strike a note", "Clean strikes build a streak and wake the courtyard."];
+  if (last.miss) {
+    const wanted = last.wanted.map(numberOf).join(" or ");
+    return ["Wrong note", wanted ? `Heard ${numberOf(last.id)}. The piece wants ${wanted}.` : `Heard ${numberOf(last.id)}.`];
+  }
+  if (!last.clean) return ["Muffled", "Strike the centre of the note and let it ring."];
+  const combo = last.combo > 1 ? ` at \u00d7${last.combo}` : "";
+  return [`${wordFor(last.quality)} strike`, `+${last.gained} points${combo}.`];
+}
+
+function drawGame(result) {
+  const panel = document.getElementById("game");
+  const snap = game.snapshot();
+  const text = (id, value) => {
+    const node = document.getElementById(id);
+    if (node.textContent !== value) {
+      node.textContent = value;
+      if (node.tagName === "DD" || node.tagName === "STRONG") bump(node);
+    }
+  };
+  const last = snap.last;
+  panel.dataset.tier = String(snap.tier.index);
+  panel.dataset.heard = last ? (last.miss ? "miss" : last.clean ? "hit" : "dull") : "";
+  panel.style.setProperty("--q", last && !last.miss ? last.quality.toFixed(3) : "0");
+  panel.style.setProperty("--q-color", last ? (last.miss ? "var(--bad)" : qualityColor(last.quality)) : "var(--brass)");
+  text("game-note", last ? panLabel(last.id) : "\u2013");
+  const [word, sub] = strikeWords(last);
+  text("game-word", word);
+  text("game-sub", sub);
+  text("game-streak", String(snap.streak));
+  text("game-best", String(snap.best));
+  text("game-combo", `\u00d7${snap.combo}`);
+  text("game-points", String(snap.points));
+  text("game-tier", snap.tier.name);
+  text("game-tier-next", snap.tier.next ? `${snap.tier.next - snap.streak} more to ${TIERS[snap.tier.index + 1].name}` : "The courtyard is fully awake");
+  if (!result) return;
+  const pop = popText(result, snap);
+  if (!pop) return;
+  const node = document.getElementById("game-pop");
+  node.textContent = pop;
+  node.classList.remove("is-live");
+  void node.offsetWidth;
+  node.classList.add("is-live");
+  clearTimeout(popTimer);
+  popTimer = setTimeout(() => node.classList.remove("is-live"), POP_MS);
 }
 
 function flipHand(hand) {
@@ -2010,6 +2089,7 @@ function drawMic() {
   bar.dataset.state = micState;
   document.querySelector(".mic-meter").hidden = micState !== "on";
   document.querySelector(".mic-pick").hidden = micState !== "on";
+  document.getElementById("game").hidden = micState !== "on";
   if (micState === "asking") setMicText("Waiting for microphone permission");
   if (micState === "error") setMicText(micNote);
   const button = document.getElementById("listen");
@@ -2085,6 +2165,8 @@ async function startListening(deviceId) {
   }
   micState = "on";
   micQuietSince = performance.now();
+  game.rest();
+  drawGame(null);
   saveMic(listener.deviceId);
   await fillMicList();
   if (generation !== micGeneration) return;
@@ -2097,6 +2179,8 @@ function stopListening(note) {
   micGeneration += 1;
   listener.stop();
   audio.recordingMode(false);
+  game.rest();
+  if (stage) stage.magic(0);
   micNote = note || "";
   micState = note ? "error" : "off";
   drawMic();
