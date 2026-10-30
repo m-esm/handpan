@@ -664,7 +664,8 @@ body:not(.is-learn) #learn { display: none; }
 .list-options-toggle {
   min-height: 36px;
   min-width: 0;
-  padding: 6px 18px 6px 0;
+  padding: 6px 0;
+  padding-inline-end: 18px;
   border: 0;
   background: none;
   box-shadow: none;
@@ -679,7 +680,7 @@ body:not(.is-learn) #learn { display: none; }
 .list-options-toggle[aria-expanded="true"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 6.5 6 1.5 11 6.5' fill='none' stroke='%23bbc5be' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .list-options { display: grid; gap: 6px; padding: 4px 0 8px; }
 .option-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; }
-.option-row-name { min-width: 3.6em; margin-right: 6px; color: var(--soft); opacity: 0.6; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.option-row-name { min-width: 3.6em; margin-inline-end: 6px; color: var(--soft); opacity: 0.6; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
 .option {
   min-height: 30px;
   min-width: 0;
@@ -693,7 +694,7 @@ body:not(.is-learn) #learn { display: none; }
   transition: background-color var(--ease), color var(--ease);
 }
 .option[aria-pressed="true"] { background: rgba(217, 183, 122, 0.16); color: var(--brass-2); }
-.result-count { margin: 0 0 0 auto; color: var(--soft); font-size: 12px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.result-count { margin: 0; margin-inline-start: auto; color: var(--soft); font-size: 12px; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .empty { color: var(--soft); margin: 16px 0; line-height: 1.8; }
 
 #dock .kind {
@@ -1267,8 +1268,7 @@ body.is-exploring .world:active { cursor: grabbing; }
 :root[lang="fa"] #learn h1, :root[lang="fa"] .part-head h2, :root[lang="fa"] .explore-heading h1,
 :root[lang="fa"] .row-new, :root[lang="fa"] #dock .kind, :root[lang="fa"] .explore-eyebrow { letter-spacing: 0; }
 :root[lang="fa"] #dock .kind, :root[lang="fa"] .row-new, :root[lang="fa"] .explore-eyebrow, :root[lang="fa"] .option-row-name { text-transform: none; font-size: 13px; }
-[dir="rtl"] .list-options-toggle { padding: 6px 0 6px 18px; background-position: left 2px center; }
-[dir="rtl"] .option-row-name { margin-right: 0; margin-left: 6px; }
+[dir="rtl"] .list-options-toggle { background-position: left 2px center; }
 :root[lang="fa"] .explore-heading h1 { font-family: var(--serif); font-weight: 600; }
 
 [dir="rtl"] .tools { justify-content: start; }

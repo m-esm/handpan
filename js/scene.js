@@ -25,6 +25,11 @@ const DING = 0.44;
 const UP = new THREE.Vector3(0, 1, 0);
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const profiling = new URLSearchParams(location.search).has("perf");
+const coarse = matchMedia("(pointer: coarse)").matches;
+const DRUM_PIXEL_RATIO = Math.min(devicePixelRatio, coarse ? 1.5 : 2);
+const WORLD_PIXEL_RATIO = Math.min(devicePixelRatio, coarse ? 1.25 : 1.5);
+const SHADOW_SIZE = coarse ? 1024 : 2048;
+const WORLD_SHADOW_SIZE = coarse ? 2048 : 4096;
 
 const LOOKS = {
   idle: { color: BRASS, glow: 0, ring: 0, bright: false },
@@ -612,7 +617,9 @@ function createDrum(host, onHit, onStrike) {
   let inView = true;
   let lastFocused = "";
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(DRUM_PIXEL_RATIO);
+  renderer.debug.checkShaderErrors = profiling;
+  let compiled = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.9;
   renderer.shadowMap.enabled = true;
@@ -632,7 +639,7 @@ function createDrum(host, onHit, onStrike) {
   const key = new THREE.DirectionalLight(0xfff3e2, 1.45);
   key.position.set(-3.4, 7.2, 2.4);
   key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.set(SHADOW_SIZE, SHADOW_SIZE);
   key.shadow.camera.left = -2.8;
   key.shadow.camera.right = 2.8;
   key.shadow.camera.top = 2.8;
@@ -779,8 +786,9 @@ function createDrum(host, onHit, onStrike) {
     [0.75, "rgba(154,124,240,0.08)"],
     [1, "rgba(0,0,0,0)"],
   ]), 0xffffff, 0.16, 0.001);
-  const runes = flat(4.6, runeTexture(), BRASS, 0.22, 0.003);
-  const innerRunes = flat(3.2, runeTexture(), TEAL, 0.14, 0.004);
+  const runeMap = runeTexture();
+  const runes = flat(4.6, runeMap, BRASS, 0.22, 0.003);
+  const innerRunes = flat(3.2, runeMap, TEAL, 0.14, 0.004);
   const ambientMotes = motes({
     count: 110,
     color: BRASS,
@@ -935,10 +943,14 @@ function createDrum(host, onHit, onStrike) {
     });
   }
 
+  let domeKey = "";
+
   function layout(next) {
     pendingFrames = 40;
     specs = next;
-    if (specs.length) {
+    const key = specs.map((spec) => `${spec.deg}:${spec.ding ? 1 : 0}:${spec.text}`).join("|");
+    if (specs.length && key !== domeKey) {
+      domeKey = key;
       if (dome) {
         drum.remove(dome);
         dome.geometry.dispose();
@@ -1050,7 +1062,7 @@ function createDrum(host, onHit, onStrike) {
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     fitCamera();
-    renderer.render(scene, camera);
+    if (compiled) renderer.render(scene, camera);
   }
 
   new ResizeObserver(resize).observe(host);
@@ -1058,19 +1070,40 @@ function createDrum(host, onHit, onStrike) {
 
   const ray = new THREE.Raycaster();
   const point = new THREE.Vector2();
+  const shellCentre = new THREE.Vector3(0, DOME - SHELL, 0);
+  const toDrum = new THREE.Matrix4();
+  const localOrigin = new THREE.Vector3();
+  const localDir = new THREE.Vector3();
+  const offset = new THREE.Vector3();
+
+  function shellHit(out) {
+    toDrum.copy(drum.matrixWorld).invert();
+    localOrigin.copy(ray.ray.origin).applyMatrix4(toDrum);
+    localDir.copy(ray.ray.direction).transformDirection(toDrum);
+    offset.copy(localOrigin).sub(shellCentre);
+    const b = offset.dot(localDir);
+    const c = offset.lengthSq() - SHELL * SHELL;
+    const disc = b * b - c;
+    if (disc < 0) return false;
+    const t = -b - Math.sqrt(disc);
+    if (t < 0) return false;
+    out.copy(localOrigin).addScaledVector(localDir, t);
+    return out.y > -0.02 && Math.hypot(out.x, out.z) <= RADIUS + 0.03;
+  }
   const tilt = new THREE.Vector2();
   const motionTarget = new THREE.Vector3();
   let motionActive = false;
   const local = new THREE.Vector3();
+
+  if (profiling) host.alamutPerf.noteAt = (event) => noteAt(event);
+  if (profiling) host.alamutPerf.shellHit = (x, y, out) => { point.set(x, y); ray.setFromCamera(point, camera); return shellHit(out); };
 
   function noteAt(event) {
     if (!dome) return "";
     const box = canvas.getBoundingClientRect();
     point.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1);
     ray.setFromCamera(point, camera);
-    const found = ray.intersectObject(dome, false)[0];
-    if (!found) return "";
-    drum.worldToLocal(local.copy(found.point));
+    if (!shellHit(local)) return "";
     let best = "";
     let near = 1.3;
     for (const [id, item] of fields) {
@@ -1103,6 +1136,7 @@ function createDrum(host, onHit, onStrike) {
   let magicGoal = 0;
 
   function frame(time) {
+    if (!compiled) return;
     const active = document.activeElement;
     const target = active && active.closest && active.matches(":focus-visible") ? active.closest(".field") : null;
     const focused = target ? target.dataset.note : "";
@@ -1206,6 +1240,11 @@ function createDrum(host, onHit, onStrike) {
       motionTarget.copy(next);
     },
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
+    async compile() {
+      await renderer.compileAsync(scene, camera);
+      compiled = true;
+      resize();
+    },
     setTak(on) {
       if (tak !== on) pendingFrames = 40;
       tak = on;
@@ -1250,7 +1289,9 @@ function batchArchitecture(scene) {
 function createWorld() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.info.autoReset = false;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  renderer.setPixelRatio(WORLD_PIXEL_RATIO);
+  renderer.debug.checkShaderErrors = profiling;
+  let compiled = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.shadowMap.enabled = true;
@@ -1270,7 +1311,7 @@ function createWorld() {
   const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);
   moonlight.position.set(-12, 24, -5);
   moonlight.castShadow = true;
-  moonlight.shadow.mapSize.set(4096, 4096);
+  moonlight.shadow.mapSize.set(WORLD_SHADOW_SIZE, WORLD_SHADOW_SIZE);
   moonlight.shadow.radius = 3;
   moonlight.shadow.camera.left = -32;
   moonlight.shadow.camera.right = 32;
@@ -1390,7 +1431,7 @@ function createWorld() {
   scene.add(shade);
   const screen = textures("lantern", [3, 1]);
   const lamps = [];
-  const lantern = (x, y, z, scale = 1) => {
+  const lantern = (x, y, z, scale = 1, lit = true) => {
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.scale.setScalar(scale);
@@ -1420,9 +1461,11 @@ function createWorld() {
     const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.5, 8), gold);
     chain.position.y = 1.85;
     group.add(chain);
-    const light = new THREE.PointLight(0xffb660, 22 * scale, 10 * scale, 2);
-    light.position.set(x, y, z);
-    scene.add(light);
+    const light = lit ? new THREE.PointLight(0xffb660, 22 * scale, 10 * scale, 2) : null;
+    if (light) {
+      light.position.set(x, y, z);
+      scene.add(light);
+    }
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture([[0, "rgba(255,193,110,0.32)"], [0.3, "rgba(255,166,61,0.1)"], [1, "rgba(255,166,61,0)"]]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     halo.position.set(x, y, z);
     halo.scale.set(2.5 * scale, 2.5 * scale, 1);
@@ -1432,9 +1475,9 @@ function createWorld() {
   for (const x of [-10.5, 10.5]) {
     lantern(x, 5, -1, 1.2);
     lantern(x, 4.5, -13, 1);
-    lantern(x, 4.2, -23, 0.9);
+    lantern(x, 4.2, -23, 0.9, false);
   }
-  for (const x of [-5, 6]) lantern(x, 2, -19, 0.8);
+  for (const x of [-5, 6]) lantern(x, 2, -19, 0.8, false);
   const ridge = worldScale(new THREE.MeshStandardMaterial({ color: 0x2a4352, ...textures("ashlar"), roughness: 1 }), 3);
   for (let k = 0; k < 18; k += 1) {
     const height = 6 + Math.sin(k * 2.1) * 2 + k % 3;
@@ -1551,11 +1594,15 @@ function createWorld() {
     scene.environment = skyProbe.texture;
   }
   let landscape = null;
+  let landscapeReady = null;
+  let wantedKey = "courtyard";
   function ensureLandscape() {
     if (landscape) return landscape;
     landscape = createLandscape(textures);
     batchArchitecture(landscape.group);
+    landscape.group.visible = false;
     scene.add(landscape.group);
+    landscapeReady = renderer.compileAsync(scene, camera).catch(() => {}).then(() => { landscapeReady = null; });
     return landscape;
   }
   let view = VIEWS.courtyard;
@@ -1572,6 +1619,7 @@ function createWorld() {
   let energy = 0;
   let pendingFrames = 30;
   function draw(time) {
+    if (!compiled) return;
     renderer.info.reset();
     ease.lerp(look, 0.035);
     const seconds = time / 1000;
@@ -1591,7 +1639,7 @@ function createWorld() {
     if (Math.abs(magicGoal - magic) > 0.002) pendingFrames = Math.max(pendingFrames, 2);
     lamps.forEach(({ light, base, glass }, i) => {
       const flicker = (Math.sin(seconds * 13 + i * 2.1) + Math.sin(seconds * 31 + i * 5.3)) * 0.03 * drift;
-      light.intensity = base * (1 + energy * 0.15 + magic * 0.4 + flicker);
+      if (light) light.intensity = base * (1 + energy * 0.15 + magic * 0.4 + flicker);
       glass.emissiveIntensity = 2.1 + energy * 0.5 + magic * 1.2 + flicker * 4;
     });
     skyLight.intensity = skyBase + energy * 0.5 + magic * 0.7;
@@ -1646,6 +1694,12 @@ function createWorld() {
   resize();
   function environment(key) {
       if (!VIEWS[key] || key === viewKey) return;
+      wantedKey = key;
+      if (key !== "courtyard" && !landscape) {
+        ensureLandscape();
+        landscapeReady.then(() => { if (wantedKey === key) environment(key); });
+        return;
+      }
       viewKey = key;
       view = VIEWS[key];
       if (exploring) orbit = Math.atan2(view.eye[0], view.eye[2] + 25) * 0.7;
@@ -1708,6 +1762,11 @@ function createWorld() {
   return {
     environment,
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
+    async compile() {
+      await renderer.compileAsync(scene, camera);
+      compiled = true;
+      resize();
+    },
     frame(time) {
       if (time - last < 40) return;
       if (!pendingFrames && still) return;
@@ -1731,8 +1790,11 @@ function createWorld() {
 }
 
 export function createStage({ pan, onHit }) {
+  performance.mark("stage:start");
   const world = createWorld();
+  performance.mark("stage:world");
   const drum = createDrum(pan, onHit, (pitch, color) => world.strike(pitch, color));
+  performance.mark("stage:drum");
 
   let lastFrame = 0;
   const timings = [];
@@ -1760,6 +1822,7 @@ export function createStage({ pan, onHit }) {
   if (still) addEventListener("scroll", () => world.redraw(), { passive: true });
 
   return {
+    ready: () => Promise.all([world.compile(), drum.compile()]).then(() => performance.mark("stage:compiled")),
     layout: drum.layout,
     set: drum.set,
     setTak: drum.setTak,
