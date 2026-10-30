@@ -724,7 +724,8 @@ function renderList() {
   const welcome = document.createElement("div");
   welcome.className = "library-welcome";
   welcome.append(continuePractice, beginner);
-  dock.append(welcome, libraryHead, rows);
+  titleRow.after(welcome);
+  dock.append(libraryHead, rows);
   updateResume();
   fillRows();
 }

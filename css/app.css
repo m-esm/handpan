@@ -576,7 +576,7 @@ body:not(.is-learn) #learn { display: none; }
   z-index: 1;
   margin: 0 -16px;
   padding: 16px 16px 10px;
-  background: linear-gradient(180deg, rgba(13, 31, 39, 0.96), rgba(13, 31, 39, 0.82));
+  background: linear-gradient(180deg, rgba(13, 31, 39, 0.98), rgba(13, 31, 39, 0.9));
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 1px 0 var(--edge-2);
@@ -629,46 +629,51 @@ body:not(.is-learn) #learn { display: none; }
 
 .chips {
   display: flex;
-  gap: 6px;
+  gap: 18px;
   margin: 0 -16px;
-  padding: 2px 16px;
+  padding: 0 16px;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  box-shadow: inset 0 -1px 0 var(--line);
   mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
 }
 .chips::-webkit-scrollbar { display: none; }
-.chip {
+.chip, .chip[aria-pressed="true"] {
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 4px 12px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 0 8px;
   gap: 5px;
-  border-radius: 999px;
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 0 -2px 0 transparent;
   color: var(--soft);
   font-size: 13px;
+  text-shadow: none;
   white-space: nowrap;
 }
-.chip-count { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--soft); opacity: 0.7; }
-.chip[aria-pressed="true"] { text-shadow: none; }
-.chip[aria-pressed="true"] .chip-count { color: var(--ink); opacity: 0.7; }
-.list-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.chip[aria-pressed="true"] { color: var(--brass-2); box-shadow: inset 0 -2px 0 var(--brass); }
+.chip-count { font-size: 11px; font-variant-numeric: tabular-nums; opacity: 0.6; }
+.list-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin-top: 4px; }
 .list-pick { display: inline-flex; align-items: center; min-width: 0; }
 .list-pick-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .list-pick select {
+  flex: 0 1 auto;
+  width: auto;
+  field-sizing: content;
   max-width: 180px;
-  min-height: 32px;
-  padding: 4px 28px 4px 12px;
+  min-height: 36px;
+  padding: 4px 20px 4px 0;
   font-size: 13px;
   color: var(--soft);
   background-color: transparent;
-  background-position: right 10px center;
-  box-shadow: inset 0 0 0 1px var(--line);
-  border-radius: 999px;
+  background-position: right 4px center;
+  box-shadow: none;
+  border-radius: 0;
 }
-.result-count { margin: 0 0 0 auto; color: var(--soft); font-size: 12px; opacity: 0.8; font-variant-numeric: tabular-nums; }
+.result-count { margin: 0 0 0 auto; color: var(--soft); font-size: 12px; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .empty { color: var(--soft); margin: 16px 0; line-height: 1.8; }
 
 #dock .kind {
@@ -704,7 +709,8 @@ body:not(.is-learn) #learn { display: none; }
 .row h3 { margin: 0 0 4px; font: 400 19px/1.3 var(--serif); letter-spacing: 0.005em; overflow-wrap: anywhere; color: var(--brass-2); }
 .row .meta { margin: 0; color: var(--soft); font-size: 13px; line-height: 1.45; }
 .row-arrow { color: var(--brass); font-size: 24px; }
-.library-welcome { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 0; }
+.library-welcome { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 12px; }
+.library-welcome .practice-start { min-height: 36px; font-size: 13px; }
 .library-welcome .practice-start { text-align: left; justify-content: start; white-space: normal; }
 .library-welcome .practice-start:not(.is-main) { background: transparent; box-shadow: none; color: var(--soft); }
 .tool-context { max-width: 22ch; font-size: 13px; line-height: 1.45; color: var(--soft); }
@@ -1162,7 +1168,8 @@ input[type="range"]::-moz-range-thumb {
   .row.is-current:hover { background: rgba(217, 183, 122, 0.16); }
   .row h3 a:hover { color: var(--brass-2); }
   .library-site-nav a:hover { color: var(--brass-2); }
-  .chip:hover { background-color: var(--fill); color: var(--mist); }
+  .chip:hover { background-color: transparent; color: var(--mist); }
+  .list-pick select:hover { background-color: transparent; color: var(--mist); }
   .play:hover { filter: brightness(1.08); }
   .row-side .row-play:hover, .row-side .row-play:focus-visible { background: rgba(7, 20, 29, 0.65); border-color: var(--brass); }
   .back:hover { color: var(--mist); }
