@@ -163,7 +163,7 @@ export function createAudio() {
     const ring = note.ding ? 4.6 : 3.3 * Math.pow(220 / note.hz, 0.4);
     const bright = 0.55 + 0.6 * amp;
     const out = audio.createGain();
-    out.gain.value = (note.ding ? 0.19 : 0.145) * amp;
+    out.gain.value = (note.ding ? 0.18 : 0.135) * amp;
     openVowel(audio, t, out);
     return stopper([
       partial(audio, t, out, note.hz, 1, ring),
