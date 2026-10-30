@@ -495,6 +495,24 @@ body.is-learn #learn {
 .piece-modes { display: flex; gap: 8px; }
 .mode-link { min-width: 80px; background: transparent; box-shadow: none; }
 .about { margin: 3px 0 0; color: var(--soft); font-size: 13px; line-height: 1.4; }
+.rating { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; }
+.stars { display: flex; }
+.star {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-s);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--brass-dim);
+  background: transparent;
+  box-shadow: none;
+  transition: color var(--ease);
+}
+.star.is-on { color: var(--brass); }
+.rating-text { color: var(--soft); font-size: 13px; }
+.row-rating { color: var(--brass); white-space: nowrap; }
 .mirror-note { margin: 0 0 10px; color: var(--brass-2); font-size: 13px; max-width: 70ch; }
 
 .back { padding: 6px 14px 6px 12px; color: var(--soft); }
@@ -838,6 +856,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (hover: none) and (pointer: coarse) {
   .keys { display: none; }
+  .star { min-width: 44px; min-height: 44px; font-size: 24px; }
 }
 
 @media (hover: hover) {
@@ -853,6 +872,8 @@ input[type="range"]::-moz-range-thumb {
   }
   .step-btn:disabled:hover { background: var(--fill); }
   .row:hover { background: rgba(255, 240, 220, 0.04); }
+  .stars:hover .star { color: var(--brass-2); }
+  .stars .star:hover ~ .star { color: var(--brass-dim); }
   .row.is-current:hover { background: rgba(217, 183, 122, 0.16); }
   .row h3 a:hover { color: var(--brass-2); }
   .library-site-nav a:hover { color: var(--brass); }

@@ -644,6 +644,66 @@ function writeStore(key, value) {
 const LEARNED_KEY = "disc-kurd-learned";
 const learned = readStore(LEARNED_KEY);
 
+const RATINGS_KEY = "disc-kurd-ratings";
+const STAR_COUNT = 5;
+const ratings = readStore(RATINGS_KEY);
+
+function ratingOf(pattern) {
+  const stars = ratings[pattern.id];
+  return Number.isInteger(stars) && stars >= 1 && stars <= STAR_COUNT ? stars : 0;
+}
+
+function setRating(pattern, stars) {
+  if (stars) ratings[pattern.id] = stars;
+  else delete ratings[pattern.id];
+  writeStore(RATINGS_KEY, ratings);
+}
+
+function starLabel(stars) {
+  return `${stars} ${stars === 1 ? "star" : "stars"}`;
+}
+
+function paintStars(group, pattern) {
+  const current = ratingOf(pattern);
+  for (const star of group.querySelectorAll(".star")) {
+    const value = Number(star.dataset.stars);
+    star.classList.toggle("is-on", value <= current);
+    star.setAttribute("aria-pressed", String(value === current));
+    star.title = value === current ? "Clear rating" : `Rate ${starLabel(value)}`;
+  }
+  group.querySelector(".rating-text").textContent = current ? `Your rating: ${starLabel(current)}` : "Not rated";
+}
+
+function ratingControl(pattern) {
+  const group = document.createElement("div");
+  group.className = "rating";
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", `Rate ${pattern.title}`);
+  const stars = document.createElement("div");
+  stars.className = "stars";
+  for (let value = 1; value <= STAR_COUNT; value += 1) {
+    const star = document.createElement("button");
+    star.type = "button";
+    star.className = "star";
+    star.dataset.stars = String(value);
+    star.setAttribute("aria-label", starLabel(value));
+    star.textContent = "\u2605";
+    star.addEventListener("click", () => {
+      setRating(pattern, ratingOf(pattern) === value ? 0 : value);
+      paintStars(group, pattern);
+      fillRows();
+      paint(player.snapshot());
+    });
+    stars.append(star);
+  }
+  const text = document.createElement("span");
+  text.className = "rating-text";
+  text.setAttribute("aria-live", "polite");
+  group.append(stars, text);
+  paintStars(group, pattern);
+  return group;
+}
+
 function partNames(pattern) {
   return [...new Set((pattern.sections || [{ name: "" }]).map((section) => section.name))];
 }
@@ -714,6 +774,14 @@ function rowFor(pattern) {
   meta.className = "meta";
   const bars = Math.ceil(pattern.loopBeats / barBeats(pattern));
   meta.textContent = `${bars} ${bars === 1 ? "bar" : "bars"} · ${pattern.bpm} bpm${learnedLine(pattern)}`;
+  const stars = ratingOf(pattern);
+  if (stars) {
+    const rated = document.createElement("span");
+    rated.className = "row-rating";
+    rated.setAttribute("aria-label", `rated ${starLabel(stars)}`);
+    rated.textContent = `\u2605 ${stars}`;
+    meta.append(" \u00b7 ", rated);
+  }
   body.append(title, meta);
   const arrow = document.createElement("span");
   arrow.className = "row-arrow";
@@ -995,7 +1063,7 @@ function renderLearn(pattern) {
   about.textContent = pattern.blurb;
   const name = document.createElement("div");
   name.className = "learn-title";
-  name.append(title, about);
+  name.append(title, about, ratingControl(pattern));
   head.append(back, name);
   const modes = document.createElement("nav");
   modes.className = "piece-modes";
