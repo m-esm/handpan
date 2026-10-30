@@ -3,6 +3,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { createLandscape } from "./landscape.js";
 import { VIEWS } from "./environments.js";
+import { boxProject, createSky, materialKit, worldScale } from "./materials.js";
 
 const BRASS = 0xe6b15a;
 const CREAM = 0xf0e2d2;
@@ -673,7 +674,7 @@ function createDrum(host, onHit, onStrike) {
   felt.normal.repeat.set(6, 1);
   const cushion = new THREE.Mesh(
     new THREE.TorusGeometry(0.7, 0.09, 32, 160),
-    new THREE.MeshStandardMaterial({ color: 0x241914, roughness: 0.92, metalness: 0, normalMap: felt.normal, normalScale: new THREE.Vector2(0.6, 0.6) }),
+    new THREE.MeshPhysicalMaterial({ color: 0x2c1a14, roughness: 0.95, metalness: 0, normalMap: felt.normal, normalScale: new THREE.Vector2(0.6, 0.6), sheen: 1, sheenColor: 0x9a6a4a, sheenRoughness: 0.45 }),
   );
   cushion.rotation.x = Math.PI / 2;
   cushion.position.y = -0.67;
@@ -687,18 +688,12 @@ function createDrum(host, onHit, onStrike) {
   let dome = null;
 
   const pedestal = new THREE.Group();
-  const granite = grainMaps(512, 3, { scale: 2, strength: 1.6, base: 120, spread: 40 });
-  for (const map of [granite.normal, granite.albedo]) {
-    map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    map.repeat.set(3, 1);
-  }
   const pedestalStone = new THREE.MeshStandardMaterial({
-    color: 0x5a544c,
-    map: granite.albedo,
-    roughness: 0.9,
+    color: 0x4c463f,
+    ...materialKit(renderer)("limestone", [5, 1]),
+    roughness: 0.55,
     metalness: 0,
-    normalMap: granite.normal,
-    normalScale: new THREE.Vector2(0.7, 0.7),
+    normalScale: new THREE.Vector2(0.5, 0.5),
   });
   const pedestalProfile = [[0, -1.07], [2.08, -1.07], [2.14, -1.055], [2.18, -1.02], [2.2, -0.96], [2.2, -0.86], [2.18, -0.82], [2.16, -0.785], [2.12, -0.76], [0, -0.76]];
   const plinth = new THREE.Mesh(new THREE.LatheGeometry(pedestalProfile.map(([r, y]) => new THREE.Vector2(r, y)), 192), pedestalStone);
@@ -1183,40 +1178,6 @@ function createDrum(host, onHit, onStrike) {
   };
 }
 
-function mosaicTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 512;
-  const pen = canvas.getContext("2d");
-  pen.fillStyle = "#173d43";
-  pen.fillRect(0, 0, 512, 512);
-  for (let y = 0; y <= 512; y += 128) {
-    for (let x = 0; x <= 512; x += 128) {
-      pen.beginPath();
-      for (let n = 0; n < 16; n += 1) {
-        const angle = n * Math.PI / 8;
-        const r = n % 2 ? 24 : 51;
-        const px = x + Math.cos(angle) * r;
-        const py = y + Math.sin(angle) * r;
-        if (!n) pen.moveTo(px, py);
-        else pen.lineTo(px, py);
-      }
-      pen.closePath();
-      pen.fillStyle = "#32656a";
-      pen.fill();
-      pen.lineWidth = 3;
-      pen.strokeStyle = "#b99458";
-      pen.stroke();
-      pen.strokeStyle = "#688482";
-      pen.lineWidth = 1;
-      pen.strokeRect(x + 44, y + 44, 40, 40);
-    }
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  return texture;
-}
-
 function batchArchitecture(scene) {
   scene.updateMatrixWorld(true);
   const batches = new Map();
@@ -1227,10 +1188,12 @@ function batchArchitecture(scene) {
     batches.get(key).push(object);
   });
   for (const meshes of batches.values()) {
-    if (meshes.length < 2) continue;
+    const scale = meshes[0].material.userData.worldScale;
+    if (meshes.length < 2 && !scale) continue;
     const geometries = meshes.map((mesh) => {
       const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
-      return geometry.applyMatrix4(mesh.matrixWorld);
+      geometry.applyMatrix4(mesh.matrixWorld);
+      return scale ? boxProject(geometry, scale) : geometry;
     });
     const geometry = mergeGeometries(geometries, false);
     for (const item of geometries) item.dispose();
@@ -1260,7 +1223,7 @@ function createWorld() {
   scene.background = new THREE.Color(0x142c3c);
   scene.fog = new THREE.FogExp2(0x142c3c, 0.015);
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
-  const skyLight = new THREE.HemisphereLight(0x9dbdd4, 0x322517, 2);
+  const skyLight = new THREE.HemisphereLight(0x9dbdd4, 0x322517, 1.2);
   scene.add(skyLight);
   const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);
   moonlight.position.set(-12, 24, -5);
@@ -1277,18 +1240,13 @@ function createWorld() {
   const amber = new THREE.DirectionalLight(0xe9b16f, 1.2);
   amber.position.set(12, 6, 10);
   scene.add(amber);
-  const anisotropy = renderer.capabilities.getMaxAnisotropy();
-  const sandstone = grainMaps(512, 17, { scale: 1.5, strength: 1.4, base: 196, spread: 22 });
-  for (const map of [sandstone.normal, sandstone.albedo]) map.anisotropy = anisotropy;
-  const stoneMap = sandstone.albedo;
-  const stoneNormal = new THREE.Vector2(0.45, 0.45);
-  const stone = new THREE.MeshStandardMaterial({ color: 0xa89b85, map: stoneMap, roughness: 0.94, normalMap: sandstone.normal, normalScale: stoneNormal });
-  const pale = new THREE.MeshStandardMaterial({ color: 0xc4b99d, map: stoneMap, roughness: 0.9, normalMap: sandstone.normal, normalScale: stoneNormal });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x374749, roughness: 0.9, normalMap: sandstone.normal, normalScale: new THREE.Vector2(0.3, 0.3) });
-  const gold = new THREE.MeshStandardMaterial({ color: 0x897455, metalness: 0.72, roughness: 0.55 });
-  const mosaic = mosaicTexture();
-  mosaic.anisotropy = anisotropy;
-  const tile = new THREE.MeshStandardMaterial({ map: mosaic, roughness: 0.62, metalness: 0.05, color: 0xadc7c2 });
+  const textures = materialKit(renderer);
+  const brassSet = textures("brass");
+  const stone = worldScale(new THREE.MeshStandardMaterial({ color: 0xb9a68a, ...textures("ashlar"), roughness: 1, normalScale: new THREE.Vector2(0.9, 0.9) }), 3.4);
+  const pale = worldScale(new THREE.MeshStandardMaterial({ color: 0xd6cab2, ...textures("limestone"), roughness: 1, normalScale: new THREE.Vector2(0.7, 0.7) }), 1.6);
+  const dark = worldScale(new THREE.MeshStandardMaterial({ color: 0x3a4648, ...textures("limestone"), roughness: 1, normalScale: new THREE.Vector2(0.4, 0.4) }), 3);
+  const gold = worldScale(new THREE.MeshStandardMaterial({ color: 0xd8b98a, ...brassSet, metalnessMap: brassSet.roughnessMap, metalness: 1, roughness: 1, normalScale: new THREE.Vector2(0.5, 0.5) }), 0.7);
+  const tile = worldScale(new THREE.MeshStandardMaterial({ ...textures("zellige"), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.6, 0.6) }), 0.9);
   const box = (w, h, d, x, y, z, material = stone, parent = scene) => {
     const edge = Math.min(0.05, Math.min(w, h, d) * 0.25);
     const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 1, edge), material);
@@ -1327,13 +1285,13 @@ function createWorld() {
     return group;
   };
   box(70, 0.5, 90, 0, -0.28, -20, dark);
-  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x858c86, map: stoneMap, roughness: 0.58, normalMap: sandstone.normal, normalScale: new THREE.Vector2(0.6, 0.6) });
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xb4b5ae, ...textures("flagstone"), roughness: 1, normalScale: new THREE.Vector2(0.8, 0.8) });
   const paving = new THREE.InstancedMesh(new RoundedBoxGeometry(3.16, 0.06, 3.16, 1, 0.02), floorMaterial, 240);
   const pavingTransform = new THREE.Matrix4();
   let pavingIndex = 0;
   for (let z = 7; z > -38; z -= 3.2) {
     for (let x = -24; x <= 24; x += 3.2) {
-      pavingTransform.makeTranslation(x, 0, z);
+      pavingTransform.makeRotationY((Math.floor(Math.abs(Math.sin(pavingIndex * 12.9898) * 43758.5453)) % 4) * Math.PI / 2).setPosition(x, 0, z);
       paving.setMatrixAt(pavingIndex, pavingTransform);
       paving.setColorAt(pavingIndex, new THREE.Color().setScalar(0.87 + Math.sin(pavingIndex * 9.7) * 0.07));
       pavingIndex += 1;
@@ -1341,9 +1299,7 @@ function createWorld() {
   }
   paving.count = pavingIndex;
   scene.add(paving);
-  const runnerMap = mosaicTexture();
-  runnerMap.repeat.set(2, 12);
-  const runner = new THREE.MeshStandardMaterial({ map: runnerMap, roughness: 0.8, metalness: 0 });
+  const runner = new THREE.MeshPhysicalMaterial({ ...textures("kilim", [1, 3]), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.7, 0.7), sheen: 1, sheenColor: 0xd9a08a, sheenRoughness: 0.6 });
   box(4.5, 0.08, 28, 3, 0.07, -9, runner);
   for (const x of [0.65, 5.35]) box(0.08, 0.1, 28, x, 0.07, -9, gold);
   for (let i = 0; i < 3; i += 1) box(18 - i * 0.7, 0.18, 9 - i * 0.7, 1, i * 0.18 + 0.06, -22, stone);
@@ -1364,12 +1320,13 @@ function createWorld() {
     box(2, 1.2, 30, side * 15, 12, -7, stone);
     box(2.1, 0.25, 30, side * 15, 11.2, -7, tile);
   }
-  const nicheMaterial = new THREE.MeshStandardMaterial({ color: 0x103b43, roughness: 0.48 });
+  const nicheMaterial = worldScale(new THREE.MeshStandardMaterial({ color: 0x1d5862, ...textures("limestone"), roughness: 0.8, normalScale: new THREE.Vector2(0.5, 0.5) }), 2.2);
   for (const x of [-17, -10, -3, 4, 11, 18]) {
     box(0.9, 7.2, 0.3, x, 4.6, -21.95, tile);
     box(5.3, 5.5, 0.3, x + 3.5, 2.9, -29, nicheMaterial);
   }
-  const cloth = new THREE.MeshStandardMaterial({ color: 0x683a38, side: THREE.DoubleSide, roughness: 0.9 });
+  const velvet = textures("velvet");
+  const cloth = new THREE.MeshPhysicalMaterial({ ...velvet, metalnessMap: velvet.roughnessMap, metalness: 1, roughness: 1, side: THREE.DoubleSide, sheen: 1, sheenColor: 0xff9a8a, sheenRoughness: 0.35 });
   for (const x of [-12.4, 12.4]) {
     const geometry = new THREE.PlaneGeometry(2, 5.3, 48, 72);
     const p = geometry.attributes.position;
@@ -1426,7 +1383,7 @@ function createWorld() {
     lantern(x, 4.2, -23, 0.9);
   }
   for (const x of [-5, 6]) lantern(x, 2, -19, 0.8);
-  const ridge = new THREE.MeshStandardMaterial({ color: 0x1e3441, roughness: 1 });
+  const ridge = worldScale(new THREE.MeshStandardMaterial({ color: 0x2a4352, ...textures("ashlar"), roughness: 1 }), 3);
   for (let k = 0; k < 18; k += 1) {
     const height = 6 + Math.sin(k * 2.1) * 2 + k % 3;
     box(4.5, height, 5, k * 5 - 42, height / 2 + 6, -48 - k % 3 * 2, ridge);
@@ -1436,7 +1393,7 @@ function createWorld() {
       scene.add(dome);
     }
   }
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(2.1, 32, 24), new THREE.MeshBasicMaterial({ color: 0xffe8bf, fog: false }));
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(2.1, 32, 24), new THREE.MeshBasicMaterial({ color: 0xffe8bf, fog: false, ...textures("moon") }));
   moon.position.set(46, 35, -64);
   scene.add(moon);
   const moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1509,12 +1466,32 @@ function createWorld() {
   const streakDir = new THREE.Vector3(-1, -0.32, 0).normalize();
   let streakAt = -1;
   let nextStreak = 5;
-  const landscape = createLandscape();
-  batchArchitecture(landscape.group);
-  landscape.group.visible = false;
-  scene.add(landscape.group);
+  const sky = createSky();
+  scene.add(sky.mesh);
+  scene.background = null;
+  const skyRoom = new THREE.Scene();
+  skyRoom.add(new THREE.Mesh(sky.mesh.geometry, sky.mesh.material));
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  let skyProbe = null;
+  const sunDirection = new THREE.Vector3();
+  function paintSky(palette, sun) {
+    sky.set(palette, sunDirection.copy(sun).sub(new THREE.Vector3(...palette.eye)));
+    skyProbe?.dispose();
+    skyProbe = pmrem.fromScene(skyRoom, 0.02);
+    scene.environment = skyProbe.texture;
+  }
+  let landscape = null;
+  function ensureLandscape() {
+    if (landscape) return landscape;
+    landscape = createLandscape(textures);
+    batchArchitecture(landscape.group);
+    scene.add(landscape.group);
+    return landscape;
+  }
   let view = VIEWS.courtyard;
   let viewKey = "courtyard";
+  let skyBase = 1.2;
+  paintSky(view, moon.position);
   let exploring = false;
   let savedView = "courtyard";
   let orbit = 0;
@@ -1527,7 +1504,7 @@ function createWorld() {
     const angle = (index / Object.keys(VIEWS).length) * Math.PI * 2;
     const beacon = new THREE.Group();
     beacon.position.set(Math.cos(angle) * 24, 0, Math.sin(angle) * 18 - 15);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 48), new THREE.MeshStandardMaterial({ color: 0x97764d, metalness: 0.5, roughness: 0.45 }));
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.6, 48), gold);
     const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.8), new THREE.MeshPhysicalMaterial({ color: 0xffd898, emissive: 0xe6b15a, emissiveIntensity: 1.8, metalness: 0.1, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }));
     gem.position.y = 2.8;
     gem.userData.view = key;
@@ -1570,7 +1547,9 @@ function createWorld() {
       light.intensity = base * (1 + energy * 0.15 + flicker);
       glass.emissiveIntensity = 2.1 + energy * 0.5 + flicker * 4;
     });
-    skyLight.intensity = 2 + energy * 0.5;
+    skyLight.intensity = skyBase + energy * 0.5;
+    sky.uniforms.uTime.value = seconds;
+    if (landscape?.group.visible) landscape.update(seconds);
     moonHalo.scale.setScalar(20 + Math.sin(seconds * 0.4) * 1.2 * drift + energy * 2);
     for (const points of [dust, fireflies, wisps]) points.material.uniforms.uTime.value = seconds;
     fireflies.material.uniforms.uGlow.value = 1.3 + energy * 1.2;
@@ -1617,13 +1596,20 @@ function createWorld() {
         gem.material.emissive.setHex(selected ? 0x469c94 : 0xe6b15a);
       });
       courtyard.visible = key === "courtyard";
-      landscape.group.visible = key !== "courtyard";
-      landscape.set(key);
-      scene.background.setHex(view.sky);
+      if (key === "courtyard") {
+        if (landscape) landscape.group.visible = false;
+        paintSky(view, moon.position);
+      } else {
+        const land = ensureLandscape();
+        land.group.visible = true;
+        land.set(key);
+        paintSky(view, land.sun.position);
+      }
       scene.fog.color.setHex(view.sky);
       scene.fog.density = key === "courtyard" ? 0.015 : 0.006;
       moonlight.color.setHex(key === "dawn" ? 0xffc28b : key === "valley" ? 0xffeed2 : 0xb9d7ed);
       moonlight.intensity = key === "lake" ? 1.2 : 2.5;
+      skyBase = key === "courtyard" ? 1.2 : key === "lake" ? 0.9 : 1.4;
       renderer.shadowMap.needsUpdate = true;
       pendingFrames = 30;
       draw(performance.now());
