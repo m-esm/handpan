@@ -164,9 +164,9 @@ function bump(node) {
 }
 
 function popText(result, snap) {
-  if (result.milestone) return `${result.milestone} in a row. ${snap.tier.name}.`;
-  if (result.broke) return result.miss ? "Streak lost" : "Muffled. Streak lost";
-  if (result.newBest) return "New best!";
+  if (result.milestone) return t("game.row", { n: result.milestone, tier: t(`tier.${snap.tier.name}`) });
+  if (result.broke) return result.miss ? t("game.lost") : t("game.muffledLost");
+  if (result.newBest) return t("game.newBest");
   return "";
 }
 
@@ -178,14 +178,14 @@ function qualityColor(quality) {
 }
 
 function strikeWords(last) {
-  if (!last) return ["Strike a note", "Clean strikes build a streak and wake the courtyard."];
+  if (!last) return [t("game.start"), t("game.start.sub")];
   if (last.miss) {
-    const wanted = last.wanted.map(numberOf).join(" or ");
-    return ["Wrong note", wanted ? `Heard ${numberOf(last.id)}. The piece wants ${wanted}.` : `Heard ${numberOf(last.id)}.`];
+    const wanted = last.wanted.map(numberOf).join(t("game.or"));
+    return [t("game.wrong"), wanted ? t("game.wrong.sub", { heard: numberOf(last.id), wanted }) : t("game.heard", { heard: numberOf(last.id) })];
   }
-  if (!last.clean) return ["Muffled", "Strike the centre of the note and let it ring."];
-  const combo = last.combo > 1 ? ` at \u00d7${last.combo}` : "";
-  return [`${wordFor(last.quality)} strike`, `+${last.gained} points${combo}.`];
+  if (!last.clean) return [t("game.muffled"), t("game.muffled.sub")];
+  const combo = last.combo > 1 ? t("game.at", { n: last.combo }) : "";
+  return [t("game.strike", { word: t(`quality.${wordFor(last.quality)}`) }), t("game.gained", { n: last.gained, combo })];
 }
 
 function drawGame(result) {
@@ -207,12 +207,12 @@ function drawGame(result) {
   const [word, sub] = strikeWords(last);
   text("game-word", word);
   text("game-sub", sub);
-  text("game-streak", String(snap.streak));
-  text("game-best", String(snap.best));
-  text("game-combo", `\u00d7${snap.combo}`);
-  text("game-points", String(snap.points));
-  text("game-tier", snap.tier.name);
-  text("game-tier-next", snap.tier.next ? `${snap.tier.next - snap.streak} more to ${TIERS[snap.tier.index + 1].name}` : "The courtyard is fully awake");
+  text("game-streak", digits(snap.streak));
+  text("game-best", digits(snap.best));
+  text("game-combo", `\u00d7${digits(snap.combo)}`);
+  text("game-points", digits(snap.points));
+  text("game-tier", t(`tier.${snap.tier.name}`));
+  text("game-tier-next", snap.tier.next ? t("game.more", { n: snap.tier.next - snap.streak, tier: t(`tier.${TIERS[snap.tier.index + 1].name}`) }) : t("game.awake"));
   if (!result) return;
   const pop = popText(result, snap);
   if (!pop) return;
@@ -270,7 +270,7 @@ function drawPan() {
     })
     .join("");
   const ding = fieldMarkup("D3", 210, 210, 54, true);
-  document.getElementById("pan").innerHTML = `<svg class="pan-svg" viewBox="0 0 420 420" role="group" aria-label="Handpan, ten notes">
+  document.getElementById("pan").innerHTML = `<svg class="pan-svg" viewBox="0 0 420 420" role="group" aria-label="${t("pan.label")}">
     <defs>
       <radialGradient id="shell" cx="38%" cy="32%" r="75%">
         <stop offset="0%" stop-color="#e0b27a"/>

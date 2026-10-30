@@ -1280,3 +1280,8 @@ body.is-exploring .world:active { cursor: grabbing; }
   [dir="rtl"] .tempo { margin-right: 0; }
 }
 [dir="rtl"] .about, [dir="rtl"] #learn h1, [dir="rtl"] .row h3, [dir="rtl"] .explore-piece strong, [dir="rtl"] .part-head h2, [dir="rtl"] .part-chip { unicode-bidi: plaintext; }
+[dir="rtl"] .game-stats { padding-left: 0; padding-right: 16px; border-left: 0; border-right: 1px solid var(--line); }
+[dir="rtl"] .game-tier-next { margin-left: 0; margin-right: auto; }
+@media (max-width: 1000px), (max-height: 520px) {
+  [dir="rtl"] .game-stats { padding-right: 0; border-right: 0; }
+}

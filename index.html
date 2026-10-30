@@ -44,28 +44,28 @@
           <label class="mic-pick"><span class="sr" data-i18n="mic.input">Input source</span><select id="mic-input"></select></label>
         </div>
         <div id="pan"></div>
-        <section id="game" class="game" hidden aria-label="Playing score" data-tier="0" style="--q: 0">
+        <section id="game" class="game" hidden aria-label="Playing score" data-i18n-label="game.label" data-tier="0" style="--q: 0">
           <div class="game-medallion">
             <span class="game-ring" aria-hidden="true"></span>
             <span id="game-note" class="game-note">&ndash;</span>
           </div>
           <div class="game-read">
-            <span id="game-word" class="game-word">Strike a note</span>
-            <span id="game-sub" class="game-sub">Clean strikes build a streak and wake the courtyard.</span>
+            <span id="game-word" class="game-word" data-i18n="game.start">Strike a note</span>
+            <span id="game-sub" class="game-sub" data-i18n="game.start.sub">Clean strikes build a streak and wake the courtyard.</span>
           </div>
           <div class="game-streak">
             <strong id="game-streak">0</strong>
-            <span class="game-label">streak</span>
+            <span class="game-label" data-i18n="game.streak">streak</span>
           </div>
           <dl class="game-stats">
-            <div><dt>Best</dt><dd id="game-best">0</dd></div>
-            <div><dt>Combo</dt><dd id="game-combo">&times;1</dd></div>
-            <div><dt>Points</dt><dd id="game-points">0</dd></div>
+            <div><dt data-i18n="game.best">Best</dt><dd id="game-best">0</dd></div>
+            <div><dt data-i18n="game.combo">Combo</dt><dd id="game-combo">&times;1</dd></div>
+            <div><dt data-i18n="game.points">Points</dt><dd id="game-points">0</dd></div>
           </dl>
           <div class="game-tier">
             <span class="game-lanterns" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-            <span id="game-tier" class="game-tier-name">Ember</span>
-            <span id="game-tier-next" class="game-tier-next">3 more to Spark</span>
+            <span id="game-tier" class="game-tier-name" data-i18n="tier.Ember">Ember</span>
+            <span id="game-tier-next" class="game-tier-next"></span>
           </div>
           <p id="game-pop" class="game-pop" role="status"></p>
         </section>
