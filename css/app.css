@@ -771,7 +771,8 @@ body.is-learn #learn {
 .learn-title { min-width: 0; }
 #learn h1 { margin: 0; font-family: var(--serif); font-size: 28px; font-weight: 400; line-height: 1.2; overflow-wrap: anywhere; }
 #learn h1:focus { outline: none; }
-.piece-modes { display: inline-grid; }
+.piece-modes { display: inline-grid; gap: 4px; }
+.share-link { color: var(--soft); font-weight: 500; }
 .mode-link { min-width: 72px; min-height: 40px; color: var(--brass-2); font-weight: 600; }
 .about { margin: 3px 0 0; color: var(--soft); font-size: 13px; line-height: 1.4; }
 .rating { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin-top: 4px; margin-left: -6px; }

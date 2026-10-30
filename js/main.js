@@ -1334,6 +1334,30 @@ function updatePractice(snap) {
   }
 }
 
+function shareUrl(pattern) {
+  return new URL(`p/${pattern.id}`, document.baseURI).href;
+}
+
+async function sharePiece(pattern) {
+  const url = shareUrl(pattern);
+  const status = document.getElementById("status");
+  const data = { title: t("piece.title", { title: pieceText(pattern, "title") }), text: pieceText(pattern, "blurb"), url };
+  if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+    try {
+      await navigator.share(data);
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    status.textContent = t("share.copied");
+  } catch {
+    status.textContent = t("share.failed", { url });
+  }
+}
+
 function renderLearn(pattern) {
   lastScroll = -2;
   settled = false;
@@ -1365,7 +1389,13 @@ function renderLearn(pattern) {
   link.className = "mode-link";
   link.href = `#/p/${pattern.id}/${other}`;
   link.textContent = other === "learn" ? t("learn") : t("play");
-  modes.append(link);
+  const share = document.createElement("button");
+  share.type = "button";
+  share.className = "mode-link share-link";
+  share.textContent = t("share");
+  share.title = t("share.hint");
+  share.addEventListener("click", () => sharePiece(pattern));
+  modes.append(link, share);
   head.append(modes);
 
   const warn = document.createElement("p");
