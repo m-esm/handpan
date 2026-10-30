@@ -10,7 +10,7 @@ const CREAM = 0xf0e2d2;
 const TEAL = 0x6fcfb0;
 const VIOLET = 0x9a7cf0;
 const RED = 0xd9735c;
-const INK = "#1a140f";
+const LIT_LABEL = "#fffaf0";
 const RADIUS = 1.6;
 // Both shells are spherical caps, so they meet at the rim in a sharp edge, as on a real pan.
 const DOME = 0.56;
@@ -27,12 +27,12 @@ const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const profiling = new URLSearchParams(location.search).has("perf");
 
 const LOOKS = {
-  idle: { color: BRASS, glow: 0, ring: 0, ink: false },
-  next: { color: BRASS, glow: 0, ring: 0.85, ink: false },
-  place: { color: BRASS, glow: 0.22, ring: 1, ink: false },
-  on: { color: BRASS, glow: 1, ring: 1, ink: true },
-  heard: { color: TEAL, glow: 1, ring: 1, ink: true },
-  miss: { color: RED, glow: 1, ring: 1, ink: true },
+  idle: { color: BRASS, glow: 0, ring: 0, bright: false },
+  next: { color: CREAM, glow: 0, ring: 0.45, bright: false },
+  place: { color: BRASS, glow: 0.22, ring: 1, bright: false },
+  on: { color: BRASS, glow: 1, ring: 1, bright: true },
+  heard: { color: TEAL, glow: 1, ring: 1, bright: true },
+  miss: { color: RED, glow: 1, ring: 1, bright: true },
 };
 
 const smooth = (lo, hi, x) => {
@@ -62,6 +62,10 @@ function labelTexture(text, color) {
   pen.font = `600 180px ${getComputedStyle(document.body).fontFamily}`;
   pen.textAlign = "center";
   pen.textBaseline = "middle";
+  pen.lineJoin = "round";
+  pen.lineWidth = 26;
+  pen.strokeStyle = "rgba(26, 20, 15, 0.82)";
+  pen.strokeText(text, 128, 138);
   pen.fillStyle = color;
   pen.fillText(text, 128, 138);
   const texture = new THREE.CanvasTexture(canvas);
@@ -840,6 +844,7 @@ function createDrum(host, onHit, onStrike) {
         transparent: true,
         opacity: 0,
         depthWrite: false,
+        depthTest: false,
         blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide,
       });
@@ -850,6 +855,7 @@ function createDrum(host, onHit, onStrike) {
     ring.position.z = 0.004;
     const ripple = new THREE.Mesh(ringGeometry, additive(null));
     ripple.position.z = 0.008;
+    for (const mesh of [glow, ring, ripple]) mesh.renderOrder = 5;
     const flare = new THREE.Sprite(
       new THREE.SpriteMaterial({
         map: flareMap,
@@ -882,9 +888,9 @@ function createDrum(host, onHit, onStrike) {
     pillar.visible = false;
     marks.add(pillar);
     const styles = getComputedStyle(document.documentElement);
-    const tint = styles.getPropertyValue(spec.hand === "left" ? "--brass-2" : "--mist").trim();
+    const tint = styles.getPropertyValue(spec.hand === "left" ? "--left" : "--right").trim();
     const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.text, tint), depthTest: false, transparent: true, toneMapped: false });
-    const dark = new THREE.SpriteMaterial({ map: labelTexture(spec.text, INK), depthTest: false, transparent: true, toneMapped: false });
+    const bright = new THREE.SpriteMaterial({ map: labelTexture(spec.text, LIT_LABEL), depthTest: false, transparent: true, toneMapped: false });
     const label = new THREE.Sprite(plain);
     const size = spec.ding ? 0.56 : 0.44;
     label.scale.set(size, size, 1);
@@ -901,7 +907,9 @@ function createDrum(host, onHit, onStrike) {
       pillar,
       label,
       plain,
-      dark,
+      bright,
+      size,
+      pop: 0,
       pitch: Number(spec.text),
       spot: frame.center.clone().addScaledVector(frame.normal, 0.55),
       state: "idle",
@@ -926,7 +934,7 @@ function createDrum(host, onHit, onStrike) {
       drum.add(dome);
     }
     for (const item of fields.values()) {
-      for (const material of [item.plain, item.dark]) {
+      for (const material of [item.plain, item.bright]) {
         material.map.dispose();
         material.dispose();
       }
@@ -950,13 +958,14 @@ function createDrum(host, onHit, onStrike) {
     item.state = state;
     const look = LOOKS[state] || LOOKS.idle;
     item.goal.setHex(look.color);
-    item.label.material = look.ink ? item.dark : item.plain;
+    item.label.material = look.bright ? item.bright : item.plain;
     const struck = state === "on" || state === "heard" || state === "miss";
     if (!struck || (before === state && !again)) return;
     item.wave = 0;
     item.echo = -0.3;
     item.rise = 0;
     item.flash = 1;
+    item.pop = 1;
     item.ripple.material.color.setHex(look.color);
     item.flare.material.color.setHex(look.color);
     item.pillar.children[0].material.color.setHex(look.color);
@@ -1116,6 +1125,11 @@ function createDrum(host, onHit, onStrike) {
       item.ring.material.opacity += ((lit ? 1 : look.ring) - item.ring.material.opacity) * 0.3;
       item.flash *= 0.9;
       item.flare.material.opacity = item.flash * 0.85;
+      if (item.pop > 0.001) {
+        item.pop *= 0.84;
+        const swell = item.size * (1 + item.pop * 0.35);
+        item.label.scale.set(swell, swell, 1);
+      }
       if (item.wave < 1) {
         item.wave = Math.min(1, item.wave + 0.024);
         const grow = 1 + item.wave * 2.4;
