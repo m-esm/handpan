@@ -236,22 +236,22 @@ export function createLandscape(textures) {
   const land = mesh(terrain, steppe);
   land.castShadow = false;
 
-  const rock = new THREE.PlaneGeometry(1, 1, 260, 150);
+  const rock = new THREE.PlaneGeometry(1, 1, 260, 210);
   rock.rotateX(-Math.PI / 2);
   const rockPoints = rock.attributes.position;
   const rockUv = rock.attributes.uv;
   const rockSeason = new Float32Array(rockPoints.count * 3);
   const rockSnow = new Float32Array(rockPoints.count * 3);
   const rockCols = 261;
-  const rockRows = 151;
+  const rockRows = 211;
   const heights = new Float32Array(rockPoints.count);
-  for (let i = 0; i < rockPoints.count; i += 1) heights[i] = ridge(-9 + rockPoints.getX(i) * 70, -31 + rockPoints.getZ(i) * 46);
+  for (let i = 0; i < rockPoints.count; i += 1) heights[i] = ridge(-9 + rockPoints.getX(i) * 70, -22 + rockPoints.getZ(i) * 64);
   const heightAtCell = (col, row) => heights[Math.min(rockRows - 1, Math.max(0, row)) * rockCols + Math.min(rockCols - 1, Math.max(0, col))];
   for (let i = 0; i < rockPoints.count; i += 1) {
     const col = i % rockCols;
     const row = Math.floor(i / rockCols);
     const x = -9 + rockPoints.getX(i) * 70;
-    const z = -31 + rockPoints.getZ(i) * 46;
+    const z = -22 + rockPoints.getZ(i) * 64;
     const floor = ground(x, z);
     const h = heights[i];
     const y = skirt(h, floor);
