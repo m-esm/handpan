@@ -22,6 +22,10 @@ export function createPlayer(audio, emit) {
     ended: false,
   };
 
+  function heardNow() {
+    return audio.now() - audio.latency() + 0.04;
+  }
+
   function posOf(index) {
     return state.events.findIndex((event) => event.index === index);
   }
@@ -109,7 +113,7 @@ export function createPlayer(audio, emit) {
 
   function soundingOrdinal() {
     if (audio.ready() && state.armed.length) {
-      const t = audio.now() + 0.04;
+      const t = heardNow();
       let current = null;
       for (const item of state.armed) {
         if (item.time <= t) current = item;
@@ -163,7 +167,7 @@ export function createPlayer(audio, emit) {
 
   function frame() {
     if (!state.playing) return;
-    const t = audio.now() + 0.04;
+    const t = heardNow();
     let current = null;
     for (const item of state.armed) {
       if (item.time <= t) current = item;

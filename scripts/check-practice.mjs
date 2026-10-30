@@ -104,7 +104,7 @@ function mockAudio(resume = async () => {}) {
   let now = 0;
   const hits = [];
   return {
-    resume, ready: () => true, now: () => now,
+    resume, ready: () => true, now: () => now, latency: () => 0,
     strikeChord(notes, when) { hits.push({ notes, when }); return () => {}; },
     hits,
     advance(time) {

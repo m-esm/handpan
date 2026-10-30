@@ -172,6 +172,7 @@ export function createAudio() {
     strike,
     strikeChord,
     ready: () => !!ctx,
+    latency: () => (ctx ? (ctx.baseLatency || 0) + (ctx.outputLatency || 0) : 0),
     now: () => context().currentTime,
   };
 }
