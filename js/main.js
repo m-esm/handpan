@@ -319,7 +319,6 @@ function drawPan() {
   const svg = document.querySelector(".pan-svg");
   svg.addEventListener("click", onPanHit);
   svg.addEventListener("keydown", onPanKey);
-  syncMirror();
   if (stage) stage.layout(panLayout());
 }
 
@@ -435,12 +434,6 @@ function soundNote(id) {
 function audioError() {
   const message = t("sound.failed");
   document.getElementById("status").textContent = message;
-}
-
-function syncMirror() {
-  const button = document.getElementById("mirror");
-  button.setAttribute("aria-pressed", mirrored ? "true" : "false");
-  button.textContent = mirrored ? t("mirror.on") : t("mirror");
 }
 
 function readHash() {
@@ -2037,16 +2030,6 @@ function captionText(snap) {
 
 document.getElementById("listen").addEventListener("click", toggleListen);
 
-document.getElementById("mirror").addEventListener("click", () => {
-  mirrored = !mirrored;
-  try {
-    localStorage.setItem("disc-kurd-mirror", mirrored ? "1" : "0");
-  } catch (err) {
-    void err;
-  }
-  drawPan();
-  route();
-});
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
@@ -2151,7 +2134,7 @@ function drawMic() {
   const button = document.getElementById("listen");
   button.setAttribute("aria-pressed", listener.on ? "true" : "false");
   button.disabled = learnMode();
-  button.textContent = listener.on ? t("mic.on") : t("mic");
+  button.querySelector(".tool-text").textContent = listener.on ? t("mic.on") : t("mic");
   button.title = learnMode() ? t("mic.hint.learn") : t("mic.hint");
   document.getElementById("mic-context").hidden = !learnMode();
 }

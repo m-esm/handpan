@@ -146,10 +146,16 @@ button, select, .open, .back, .brand { cursor: pointer; }
 
 .brand img { flex: 0 0 auto; width: 34px; height: 34px; }
 
-.tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 8px; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 6px; }
+.ico { flex: 0 0 auto; width: 18px; height: 18px; opacity: 0.85; }
+.top #listen, .top #explore-world, .top #tools-toggle { min-height: 40px; padding: 6px 14px 6px 11px; }
+.top .scene-pick { align-items: center; gap: 8px; padding-left: 11px; background: var(--fill); border-radius: var(--r-s); box-shadow: var(--ring); }
+.top .scene-pick .ico { color: var(--mist); }
+.top .scene-pick select { min-height: 40px; padding-left: 0; background-color: transparent; box-shadow: none; border-radius: 0 var(--r-s) var(--r-s) 0; }
+.top .lang-switch { min-height: 40px; }
 .motion-controls { display: flex; align-items: center; gap: 8px; }
 
-#listen, #mirror, #tools-toggle, #explore-world, #motion-toggle, #motion-center, #simple-view,
+#listen, #tools-toggle, #explore-world, #motion-toggle, #motion-center, #simple-view,
 .open, .back, .stepper, .loop, .range, .chip, .step-btn, .part-loop, .part-chip,
 .mode-link, .practice-start, .practice-control, .play {
   display: inline-flex;
@@ -172,11 +178,11 @@ button, select, .open, .back, .brand { cursor: pointer; }
   transition: background-color var(--ease), color var(--ease), box-shadow var(--ease), scale var(--ease);
 }
 
-#listen:active, #mirror:active, #tools-toggle:active, #explore-world:active, .open:active, .back:active,
+#listen:active, #tools-toggle:active, #explore-world:active, .open:active, .back:active,
 .stepper:active, .loop:active, .range:active, .chip:active, .step-btn:active, .part-loop:active,
 .part-chip:active, .step-chip:active, .play:active, .row-play:active { scale: 0.96; }
 
-#listen[aria-pressed="true"], #mirror[aria-pressed="true"], #motion-toggle[aria-pressed="true"],
+#listen[aria-pressed="true"], #motion-toggle[aria-pressed="true"],
 #tools-toggle[aria-expanded="true"], .loop[aria-pressed="true"], .chip[aria-pressed="true"],
 .part-loop[aria-pressed="true"], .is-main, .practice-panel .is-main, .play,
 .part-chip.is-current, .practice-mode[aria-pressed="true"] {
@@ -186,15 +192,9 @@ button, select, .open, .back, .brand { cursor: pointer; }
 }
 
 .tools { padding: 4px; border-radius: 14px; }
+.top { gap: 12px; }
 
-#listen[aria-pressed="true"]::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ink);
-  animation: pulse 1.2s ease-in-out infinite;
-}
+#listen[aria-pressed="true"] .ico { animation: pulse 1.2s ease-in-out infinite; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -1103,7 +1103,9 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 18px;
   }
   body.tools-open .tools { display: flex; }
-  .tools button { min-height: 44px; }
+  .tools button, .top #listen, .top #explore-world { min-height: 44px; justify-content: start; }
+  .top .scene-pick { padding-left: 11px; }
+  .top .scene-pick select { min-height: 44px; }
   .motion-controls { flex-direction: column; align-items: stretch; }
   .scene-pick select { max-width: none; min-height: 44px; }
   .split { display: flex; flex-direction: column; gap: 12px; }
@@ -1172,12 +1174,12 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (hover: hover) {
-  #listen:hover, #mirror:hover, #tools-toggle:hover, #explore-world:hover, #simple-view:hover, .open:hover, .back:hover,
+  #listen:hover, #tools-toggle:hover, #explore-world:hover, #simple-view:hover, .open:hover, .back:hover,
   .stepper:hover, .loop:hover, .range:hover, .chip:hover, .step-btn:hover, .part-loop:hover, .part-chip:hover,
   .step-chip:hover, .scene-pick select:hover, .mic-pick select:hover {
     background-color: var(--fill-2);
   }
-  #listen[aria-pressed="true"]:hover, #mirror[aria-pressed="true"]:hover, .loop[aria-pressed="true"]:hover,
+  #listen[aria-pressed="true"]:hover, .loop[aria-pressed="true"]:hover,
   .chip[aria-pressed="true"]:hover, .part-loop[aria-pressed="true"]:hover, .step-btn.is-main:hover,
   .part-chip.is-current:hover, .step-chip.is-current:hover {
     background: linear-gradient(180deg, #f3dcae, #d9b77a);
@@ -1272,6 +1274,9 @@ body.is-exploring .world:active { cursor: grabbing; }
 :root[lang="fa"] .explore-heading h1 { font-family: var(--serif); font-weight: 600; }
 
 [dir="rtl"] .tools { justify-content: start; }
+[dir="rtl"] .top .scene-pick { padding-left: 0; padding-right: 11px; }
+[dir="rtl"] .top .scene-pick select { padding-right: 0; border-radius: var(--r-s) 0 0 var(--r-s); }
+[dir="rtl"] .top #listen, [dir="rtl"] .top #explore-world, [dir="rtl"] .top #tools-toggle { padding: 6px 11px 6px 14px; }
 [dir="rtl"] .scene-pick select, [dir="rtl"] .mic-pick select {
   padding: 6px 12px 6px 34px;
   background-position: left 12px center;
