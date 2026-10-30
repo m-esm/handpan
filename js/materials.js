@@ -802,7 +802,7 @@ export function createSky() {
     uTime: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({ uniforms, vertexShader: SKY_VERTEX, fragmentShader: SKY_FRAGMENT, side: THREE.BackSide, depthWrite: false, fog: false });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(150, 48, 24), material);
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(600, 48, 24), material);
   mesh.renderOrder = -1;
   mesh.frustumCulled = false;
   mesh.userData.keepSeparate = true;

@@ -1250,7 +1250,7 @@ function createWorld() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x142c3c);
   scene.fog = new THREE.FogExp2(0x142c3c, 0.015);
-  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 900);
   const skyLight = new THREE.HemisphereLight(0x9dbdd4, 0x322517, 1.2);
   scene.add(skyLight);
   const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);

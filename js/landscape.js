@@ -46,6 +46,19 @@ function piecewise(points, x) {
   return points.at(-1)[1];
 }
 
+const segmentDistance = (x, z, ax, az, bx, bz) => {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - ax - dx * t, z - az - dz * t);
+};
+const pathDistance = (x, z, points) => {
+  let best = Infinity;
+  for (let i = 1; i < points.length; i += 1) best = Math.min(best, segmentDistance(x, z, points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]));
+  return best;
+};
+const TRACK = [[-44, -6], [-40, -14], [-39, -22], [-36, -29], [-33, -33.5], [-27, -34.8], [-23, -33]];
+const LANE = [[22, 2], [10, 6], [-4, 9], [-20, 7], [-36, 1], [-44, -6]];
 const riverZ = (x) => 21 + Math.sin(x * 0.031) * 7 + Math.sin(x * 0.011 + 2) * 4;
 const spineZ = (x) => SPINE_Z + Math.sin((x + 10) * 0.09) * 1.1 + (x < -25 ? (x + 25) * 0.14 : 0);
 
@@ -58,7 +71,8 @@ function ground(x, z) {
   y += Math.pow(south / 28, 1.7) * 9;
   y += (fbm(x * 0.022 + 5, z * 0.022) - 0.5) * 5 * smooth(Math.abs(dz), 6, 30);
   const back = Math.max(0, -(z + 42));
-  y += Math.pow(back / 26, 1.5) * 13 + (fbm(x * 0.05, z * 0.05 + 9) - 0.5) * 4 * smooth(back, 0, 20);
+  y += Math.pow(back / 40, 1.6) * 9 + (fbm(x * 0.05, z * 0.05 + 9) - 0.5) * 5 * smooth(back, 0, 14) + (1 - Math.abs(2 * fbm(x * 0.02, z * 0.02 + 4, 3) - 1)) * 6 * smooth(back, 10, 30);
+  y += Math.pow(Math.max(0, Math.abs(x + 9) - 120) / 60, 1.6) * 14 + Math.pow(Math.max(0, z - 60) / 50, 1.6) * 16;
   const hill = Math.hypot((x + 15) / 11, (z + 53) / 8.5);
   y += 9.5 * Math.max(0, 1 - hill * hill) ** 1.3;
   const ravine = Math.exp(-(((x - 23.5) / 4.2) ** 2)) * smooth(26 - Math.abs(z + 31), 0, 14);
@@ -87,15 +101,15 @@ function ridge(x, z) {
   const plain = top - round * slope;
   let h = plain;
   const sideness = smooth(over, 0, 1.4);
-  h += Math.sin(x * 0.52 + d * 0.3) * Math.sin(x * 0.21 - 1) * 0.35 * sideness;
-  h += (fbm(x * 0.28, z * 0.28) - 0.5) * 0.5 * sideness;
-  const dip = (plain - d * 0.42 + x * 0.12) * 0.22;
+  h += (fbm(x * 0.09, z * 0.09) - 0.5) * 1.8 * sideness;
+  h += (fbm(x * 0.3, z * 0.3) - 0.5) * 0.35 * sideness;
+  const dip = (plain - d * 0.42 + x * 0.12) * 0.13;
   const ledge = dip - Math.floor(dip);
-  h += smooth(ledge, 0.62, 0.92) * 0.42 * sideness;
+  h += smooth(ledge, 0.7, 0.95) * 0.28 * sideness * smooth(fbm(x * 0.07 + 3, z * 0.07), 0.4, 0.55);
   if (d > 0) {
     const level = h / top;
-    const groove = smooth(level, 0.4, 0.45) * (1 - smooth(level, 0.5, 0.56)) * smooth(x, -25, -19) * (1 - smooth(x, 5, 9));
-    h -= groove * 1.05;
+    const groove = smooth(level, 0.43, 0.455) * (1 - smooth(level, 0.475, 0.5)) * smooth(x, -25, -19) * (1 - smooth(x, 5, 9));
+    h -= groove * 0.7;
   }
   return h;
 }
@@ -126,9 +140,9 @@ export function createLandscape(textures) {
   const group = new THREE.Group();
   const random = seeded(71);
   const strata = textures("strata");
-  const rockMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 1, ...strata, normalScale: new THREE.Vector2(0.9, 0.9) });
+  const rockMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 1, ...strata, normalScale: new THREE.Vector2(0.4, 0.4) });
   const steppeSet = textures("meadow");
-  const steppe = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, ...steppeSet, normalScale: new THREE.Vector2(0.7, 0.7), roughness: 1 });
+  const steppe = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, ...steppeSet, normalScale: new THREE.Vector2(0.4, 0.4), roughness: 1 });
   const leaf = new THREE.MeshStandardMaterial({ color: 0x4d6e3c, roughness: 1, ...textures("foliage", [6, 7]), normalScale: new THREE.Vector2(1.4, 1.4) });
   const plaster = worldScale(new THREE.MeshStandardMaterial({ color: 0xd8c3a0, roughness: 1, ...textures("limestone"), normalScale: new THREE.Vector2(0.6, 0.6) }), 1.7);
   const rubble = worldScale(new THREE.MeshStandardMaterial({ color: 0xa27d66, roughness: 1, ...textures("ashlar"), normalScale: new THREE.Vector2(1, 1) }), 1.9);
@@ -148,7 +162,7 @@ export function createLandscape(textures) {
     return item;
   };
 
-  const terrain = warpedPlane(250, 190, [-9, -31], [150, 150], [115, 105], 0.13);
+  const terrain = warpedPlane(300, 230, [-9, -31], [330, 330], [300, 260], 0.09);
   const terrainPoints = terrain.attributes.position;
   const terrainUv = terrain.attributes.uv;
   const seasonColours = new Float32Array(terrainPoints.count * 3);
@@ -161,7 +175,7 @@ export function createLandscape(textures) {
     const z = terrainPoints.getZ(i);
     const y = ground(x, z);
     terrainPoints.setY(i, y);
-    terrainUv.setXY(i, x / 9, z / 9);
+    terrainUv.setXY(i, x / 23, z / 23);
     const dz = z - riverZ(x);
     const wet = 1 - smooth(Math.abs(dz), 6, 16);
     const high = smooth(y, 1, 9);
@@ -180,6 +194,17 @@ export function createLandscape(textures) {
       const crop = terrace % 3;
       colour.setHex(crop === 0 ? 0xc8ab5e : crop === 1 ? 0x86a04a : 0xa98f66).lerp(tintB.setHex(0xffffff), (grain - 0.5) * 0.2);
     }
+    const plots = Math.min(Math.hypot((x + 43) / 26, (z + 9) / 18), Math.hypot((x - 22) / 18, z / 12), Math.hypot((x + 8) / 40, (dz + 16) / 9));
+    const field = (1 - smooth(plots, 0.6, 1.05)) * (1 - smooth(Math.abs(y - ground(x + 2, z)), 0.35, 0.8)) * smooth(Math.abs(dz), 6, 9);
+    if (field > 0 && terrace < 0) {
+      const cell = hash(Math.floor((x + z * 0.32) / 5.5), Math.floor((z - x * 0.18) / 4));
+      const crop = cell < 0.3 ? 0xc9ad5c : cell < 0.5 ? 0xa0924f : cell < 0.75 ? 0x7d9a44 : 0x9a7756;
+      colour.lerp(tintB.setHex(crop), field * 0.85);
+      const edge = Math.min(Math.abs(((x + z * 0.32) / 5.5) % 1), Math.abs(((z - x * 0.18) / 4) % 1));
+      if (edge < 0.07) colour.lerp(tintB.setHex(0x6b6a4a), field * 0.6);
+    }
+    const track = Math.min(pathDistance(x, z, TRACK), pathDistance(x, z, LANE));
+    colour.lerp(tintB.setHex(0xd9ccb0), (1 - smooth(track, 0.35, 0.8)) * 0.75);
     if (Math.abs(dz) < 5) colour.setHex(0x9c9484).lerp(tintB.setHex(0x6c8f44), smooth(Math.abs(dz), 3.2, 5));
     colour.multiplyScalar(1.1);
     seasonColours.set([colour.r, colour.g, colour.b], i * 3);
@@ -207,7 +232,7 @@ export function createLandscape(textures) {
     const y = Math.max(h, floor - 0.7);
     rockPoints.setXYZ(i, x, y, z);
     const d = z - spineZ(x);
-    rockUv.setXY(i, x / 11 + z / 30, (y - d * 0.42 + x * 0.12) / 11);
+    rockUv.setXY(i, x / 26 + z / 60, (y - d * 0.42 + x * 0.12) / 26);
     const band = fbm((y - d * 0.42 + x * 0.12) * 0.3, x * 0.06, 3);
     const grit = fbm(x * 0.9, z * 0.9, 2);
     tintA.setHex(0x87685a).lerp(tintB.setHex(0x7f7876), smooth(band, 0.4, 0.62));
@@ -217,9 +242,14 @@ export function createLandscape(textures) {
     tintA.lerp(tintB.setHex(0x8f8a62), summit * 0.75);
     if (d > 0) {
       const level = h / top;
-      const groove = smooth(level, 0.4, 0.45) * (1 - smooth(level, 0.5, 0.56)) * smooth(x, -25, -19) * (1 - smooth(x, 5, 9));
-      tintA.lerp(tintB.setHex(0x3c3230), groove * 0.8);
+      const groove = smooth(level, 0.43, 0.455) * (1 - smooth(level, 0.475, 0.5)) * smooth(x, -25, -19) * (1 - smooth(x, 5, 9));
+      tintA.lerp(tintB.setHex(0x3a302c), groove * 0.75);
     }
+    const around = (ridge(x + 0.7, z) + ridge(x - 0.7, z) + ridge(x, z + 0.7) + ridge(x, z - 0.7)) / 4 - h;
+    tintA.multiplyScalar(1 - Math.min(0.5, Math.max(0, around) * 0.9) + Math.min(0.18, Math.max(0, -around) * 0.5));
+    const lit = smooth(ridge(x, z + 0.6) - h, -0.9, 0.2);
+    tintA.multiplyScalar(0.82 + lit * 0.26);
+    if (y > floor + 0.5) tintA.lerp(tintB.setHex(0xc9bca2), (1 - smooth(pathDistance(x, z, TRACK), 0.12, 0.3)) * 0.4);
     if (h < floor + 0.6) tintA.lerp(tintB.setHex(0xa8977a), 0.7);
     rockSeason.set([tintA.r, tintA.g, tintA.b], i * 3);
     const ledgeSnow = smooth(1 - Math.min(1, Math.abs(h - ridge(x, z + 0.4)) / 0.4), 0.35, 0.9);
@@ -231,40 +261,46 @@ export function createLandscape(textures) {
   const crag = mesh(rock, rockMaterial);
   crag.castShadow = true;
 
-  const ranges = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, ...textures("strata"), normalScale: new THREE.Vector2(2, 2) });
+  const ranges = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, ...textures("strata"), normalScale: new THREE.Vector2(0.8, 0.8) });
   const rangeSeason = [];
   const rangeSnow = [];
-  for (let layer = 0; layer < 4; layer += 1) {
-    const geometry = new THREE.PlaneGeometry(300, 70, 240, 56);
+  const crest = (x, z) => 1 - Math.abs(2 * fbm(x, z, 4) - 1);
+  for (let layer = 0; layer < 5; layer += 1) {
+    const geometry = new THREE.PlaneGeometry(760, 120, 300, 60);
     geometry.rotateX(-Math.PI / 2);
     const vertices = geometry.attributes.position;
     const uv = geometry.attributes.uv;
     const season = [];
     const snow = [];
+    const centreZ = -112 - layer * 48;
     for (let i = 0; i < vertices.count; i += 1) {
       const x = vertices.getX(i);
       const z = vertices.getZ(i);
-      const curve = Math.abs(x) * 0.09 * (1 - layer * 0.15);
-      const spine = Math.max(0, 1 - Math.abs(z + Math.sin(x * 0.07) * 7) / 36);
-      const ridges = Math.abs(Math.sin(x * 0.27 + z * 0.15 + layer)) * 2 + Math.abs(Math.sin(x * 0.8 - z * 0.4)) * 0.7;
-      const peak = (fbm(x * 0.04 + layer * 13, z * 0.04, 3) - 0.3) * 18;
-      const height = Math.pow(spine, 1.35) * (18 + layer * 9 + curve + peak + ridges);
-      vertices.setY(i, height - 5);
-      uv.setXY(i, x / 20 + layer * 0.37, height / 10);
-      const streak = fbm(x * 0.05 + layer, z * 0.05, 3);
-      tintA.setHex(layer === 0 ? 0xa88a6a : layer === 1 ? 0x9b8a86 : 0x8a8d98).lerp(tintB.setHex(layer === 0 ? 0xb0795c : 0xa99aa3), smooth(streak, 0.45, 0.65));
-      tintA.multiplyScalar(0.85 + fbm(x * 0.2, z * 0.2, 2) * 0.25);
-      const snowline = 20 + layer * 4 + fbm(x * 0.3, z * 0.3, 2) * 4;
-      const cap = layer === 0 ? 0 : smooth(height, snowline - 2, snowline + 2);
-      tintB.setHex(0xe6ecef);
+      const wx = x;
+      const wz = z + centreZ;
+      const spine = Math.max(0, 1 - Math.abs(z + 8 + Math.sin(x * 0.05 + layer) * 8) / 44);
+      const sharp = crest(wx * 0.012 + layer * 7, wz * 0.012);
+      const detail = crest(wx * 0.045 + layer, wz * 0.045) * 0.35 + (fbm(wx * 0.15, wz * 0.15, 3) - 0.5) * 0.3;
+      const bowl = 1 + Math.abs(x) / 380 * 0.5;
+      const height = Math.pow(spine, 1.2) * (12 + layer * 9 + sharp * (28 + layer * 10) + detail * 10) * bowl;
+      vertices.setY(i, height - 6);
+      uv.setXY(i, wx / 40 + layer * 0.37, height / 18);
+      const streak = fbm(wx * 0.04 + layer, wz * 0.04, 3);
+      tintA.setHex(layer === 0 ? 0xa48a6e : layer === 1 ? 0x978788 : 0x87899a).lerp(tintB.setHex(layer === 0 ? 0xb08268 : 0xa89ca8), smooth(streak, 0.45, 0.65));
+      tintA.multiplyScalar(0.8 + fbm(wx * 0.3, wz * 0.3, 2) * 0.3);
+      const snowline = 26 + layer * 6 + fbm(wx * 0.2, wz * 0.2, 2) * 6;
+      const cap = layer === 0 ? smooth(height, 34, 40) : smooth(height, snowline - 3, snowline + 3);
+      tintB.setHex(0xe9eef1);
       season.push(...colour.copy(tintA).lerp(tintB, cap).toArray());
-      snow.push(...colour.copy(tintA).lerp(tintB, Math.max(cap, smooth(height, 4, 12))).toArray());
+      snow.push(...colour.copy(tintA).lerp(tintB, Math.max(cap, smooth(height, 6, 16))).toArray());
     }
     geometry.setAttribute("color", new THREE.Float32BufferAttribute(season, 3));
     geometry.computeVertexNormals();
     rangeSeason.push(new Float32Array(season));
     rangeSnow.push(new Float32Array(snow));
-    mesh(geometry, ranges, [0, 0, -70 - layer * 27]).userData.layer = layer;
+    const range = mesh(geometry, ranges, [0, 0, centreZ]);
+    range.userData.layer = layer;
+    range.castShadow = false;
   }
 
   const riverSteps = 150;
@@ -298,10 +334,10 @@ export function createLandscape(textures) {
   group.add(bar);
 
   const topAt = (x, z) => ridge(x, z);
-  const block = (x, z, w, h, d, material = plaster, lift = 0, rotation = 0) => mesh(new THREE.BoxGeometry(w, h, d), material, [x, topAt(x, z) + lift + h / 2, z], rotation);
+  const block = (x, z, w, h, d, material = plaster, lift = 0, rotation = 0) => mesh(new THREE.BoxGeometry(w, h + 1.4, d), material, [x, topAt(x, z) + lift + h / 2 - 0.7, z], rotation);
   const tower = (x, z, radius, height, material = rubble) => {
     const base = topAt(x, z);
-    const drum = mesh(new THREE.CylinderGeometry(radius * 0.92, radius, height, 20), material, [x, base + height / 2 - 0.3, z]);
+    const drum = mesh(new THREE.CylinderGeometry(radius * 0.92, radius, height + 1.4, 20), material, [x, base + height / 2 - 1, z]);
     mesh(new THREE.CylinderGeometry(radius * 1.02, radius * 0.92, 0.35, 20), plaster, [x, base + height - 0.3, z]);
     for (let k = 0; k < 8; k += 1) {
       const angle = (k / 8) * Math.PI * 2;
@@ -310,7 +346,7 @@ export function createLandscape(textures) {
     return drum;
   };
   const wallAlong = (x0, x1, side, height, thickness = 0.5, inset = 0.25, material = plaster) => {
-    const steps = Math.max(2, Math.round((x1 - x0) / 1.6));
+    const steps = Math.max(2, Math.round((x1 - x0) / 0.8));
     for (let k = 0; k < steps; k += 1) {
       const a = x0 + (k / steps) * (x1 - x0);
       const b = x0 + ((k + 1) / steps) * (x1 - x0);
@@ -319,7 +355,7 @@ export function createLandscape(textures) {
       const angle = -Math.atan2(spineZ(b) + side * (piecewise(WIDTH, b) - inset) - (spineZ(a) + side * (piecewise(WIDTH, a) - inset)), b - a);
       const length = Math.hypot(b - a, 0.4) + 0.08;
       block(xm, z, length, height, thickness, material, -0.25, angle);
-      for (let m = -1; m <= 1; m += 1) block(xm + Math.cos(angle) * m * 0.5, z - Math.sin(angle) * m * 0.5, 0.3, 0.3, thickness + 0.04, material, height - 0.25, angle);
+      block(xm, z, 0.3, 0.3, thickness + 0.04, material, height - 0.25, angle);
     }
   };
   const wallAcross = (x, z0, z1, height, thickness = 0.6, material = plaster) => {
@@ -372,24 +408,7 @@ export function createLandscape(textures) {
   opening(10.4, spineZ(10.4) + 2.6, 0.9, 1.1, 0.7);
   opening(10.4, spineZ(10.4) - 2.5, 0.9, 1.1, 0.7);
   for (const [x, dz] of [[14.6, 2.1], [15.6, 0.3], [15.2, -1.6]]) block(x, spineZ(x) + dz, 1.1, 0.5, 1, rubble, -0.1);
-  for (const x of [-27.5, -26.2]) mesh(new THREE.BoxGeometry(0.9, 0.7, 0.5), dark, [x, ridge(x, spineZ(x) + 1.3) - 3.4, spineZ(x) + 1.3 + 3.4 / SOUTH_SLOPE + 0.7]);
-  const guard = spineZ(-4) + piecewise(WIDTH, -4) + 2.2;
-  mesh(new THREE.BoxGeometry(1.1, 0.8, 0.6), dark, [-4, ridge(-4, guard) + 0.2, guard]);
 
-  const channel = new THREE.PlaneGeometry(1, 1, 60, 1);
-  const channelPoints = channel.attributes.position;
-  for (let i = 0; i < channelPoints.count; i += 1) {
-    const x = -22 + (channelPoints.getX(i) + 0.5) * 29;
-    const side = channelPoints.getY(i) > 0 ? 0.05 : 0.55;
-    const top = piecewise(TOP, x);
-    const level = top * 0.46;
-    const z = spineZ(x) + piecewise(WIDTH, x) + (top - level) / SOUTH_SLOPE + 0.55 + side;
-    channelPoints.setXYZ(i, x, ridge(x, z) + 0.12, z);
-  }
-  channel.computeVertexNormals();
-  const still = new THREE.MeshStandardMaterial({ color: 0x1f2d33, roughness: 0.25, metalness: 0 });
-  const qanat = mesh(channel, still);
-  qanat.castShadow = false;
 
   const house = (x, z, w, h, d, rotation) => {
     const y = ground(x, z);
@@ -503,6 +522,58 @@ export function createLandscape(textures) {
   stones.count = placedStones;
   group.add(poplars, trunks, shrub, stones);
 
+  const vine = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), leaf, 120);
+  vine.castShadow = true;
+  let vines = 0;
+  for (let row = 0; row < 8 && vines < 120; row += 1) {
+    for (let k = 0; k < 15 && vines < 120; k += 1) {
+      const x = -46 + k * 0.9 + row * 0.15;
+      const z = -17 - row * 1.1 + Math.sin(k) * 0.1;
+      if (isRock(x, z)) continue;
+      matrix.compose(new THREE.Vector3(x, ground(x, z) + 0.28, z), unit, new THREE.Vector3(0.38, 0.3, 0.3));
+      vine.setMatrixAt(vines, matrix);
+      vine.setColorAt(vines, new THREE.Color().setHSL(0.26, 0.45, 0.5 + random() * 0.1));
+      vines += 1;
+    }
+  }
+  vine.count = vines;
+  const sheep = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xe8e1d2, roughness: 1 }), 60);
+  sheep.castShadow = true;
+  let flock = 0;
+  for (const [cx, cz] of [[-62, -22], [34, -14], [-8, 13]]) {
+    for (let k = 0; k < 20; k += 1) {
+      const x = cx + (random() - 0.5) * 9;
+      const z = cz + (random() - 0.5) * 6;
+      if (isRock(x, z) || Math.abs(z - riverZ(x)) < 6) continue;
+      spin.setFromAxisAngle(new THREE.Vector3(0, 1, 0), random() * 6.3);
+      matrix.compose(new THREE.Vector3(x, ground(x, z) + 0.18, z), spin, new THREE.Vector3(0.3, 0.2, 0.2));
+      sheep.setMatrixAt(flock, matrix);
+      flock += 1;
+    }
+  }
+  sheep.count = flock;
+  const wing = new THREE.BufferGeometry();
+  wing.setAttribute("position", new THREE.Float32BufferAttribute([-1.1, 0.25, 0.15, 0, 0, 0, 0, 0, -0.35, 0, 0, 0, 1.1, 0.25, 0.15, 0, 0, -0.35], 3));
+  wing.computeVertexNormals();
+  const eagles = new THREE.InstancedMesh(wing, new THREE.MeshBasicMaterial({ color: 0x2a211c, side: THREE.DoubleSide }), 7);
+  const eagleEuler = new THREE.Euler();
+  const smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xcfc6ba, transparent: true, opacity: 0.22, depthWrite: false });
+  const plumes = [[-45, -7], [-41, -12], [-38, -4], [23, 1], [19, -2]].map(([x, z]) => {
+    const plume = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.12, 6, 8, 1, true), smokeMaterial);
+    plume.position.set(x, ground(x, z) + 4.2, z);
+    group.add(plume);
+    return plume;
+  });
+  const lamp = new THREE.MeshBasicMaterial({ color: 0xffb765 });
+  const windows = new THREE.Group();
+  for (const [x, dz, lift] of [[-14.5, 2.05, 1.2], [-19.5, -2.7, 1.4], [-12, -3.35, 1.1], [1.6, -2.3, 1.1], [-21.5, 3.3, 0.6], [-23, 0.3, 2.2]]) {
+    const z = spineZ(x) + dz;
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.22), lamp);
+    glow.position.set(x, topAt(x, z) + lift, z);
+    windows.add(glow);
+  }
+  windows.visible = false;
+  group.add(vine, sheep, eagles, windows);
   const sun = mesh(new THREE.SphereGeometry(2, 48, 32), new THREE.MeshBasicMaterial({ color: 0xffd29a, fog: false }), [35, 31, -100]);
   sun.castShadow = false;
   const swapColours = (snowy) => {
@@ -520,6 +591,22 @@ export function createLandscape(textures) {
     heightAt,
     update(seconds) {
       ripples.normalMap.offset.set(seconds * 0.004, seconds * 0.011);
+      for (let i = 0; i < 7; i += 1) {
+        const angle = seconds * (0.09 + i * 0.017) + i * 1.9;
+        const radius = 9 + i * 2.1;
+        const x = -11 + Math.cos(angle) * radius;
+        const z = -31 + Math.sin(angle) * radius * 0.7;
+        const y = 30 + Math.sin(seconds * 0.5 + i) * 1.6 + i * 0.9;
+        eagleEuler.set(Math.sin(seconds * 6 + i) * 0.12, -angle, 0.28);
+        spin.setFromEuler(eagleEuler);
+        matrix.compose(new THREE.Vector3(x, y, z), spin, new THREE.Vector3(0.9, 0.9, 0.9));
+        eagles.setMatrixAt(i, matrix);
+      }
+      eagles.instanceMatrix.needsUpdate = true;
+      plumes.forEach((plume, i) => {
+        plume.rotation.z = 0.25 + Math.sin(seconds * 0.4 + i) * 0.08;
+        plume.rotation.x = Math.sin(seconds * 0.3 + i * 2) * 0.06;
+      });
     },
     set(key) {
       const cold = key === "winter";
@@ -533,6 +620,9 @@ export function createLandscape(textures) {
       mud.color.setHex(cold ? 0xd9cfbf : 0xb8926a);
       water.color.setHex(key === "lake" ? 0x12263a : cold ? 0x4a5d66 : key === "storm" ? 0x3f4d52 : 0x3f6b74);
       sun.visible = key !== "storm" && key !== "winter";
+      windows.visible = key === "lake";
+      eagles.visible = key !== "lake";
+      smokeMaterial.opacity = key === "lake" ? 0.1 : cold ? 0.3 : 0.22;
       sun.material.color.setHex(key === "lake" || cold ? 0xe1edfa : 0xffd29a);
       sun.position.x = key === "lake" ? -25 : 35;
     },
