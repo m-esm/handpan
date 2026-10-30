@@ -371,3 +371,6 @@ body.site:has(.site-hero) {
 @media (min-width: 800px) {
   .piece-grid { grid-template-columns: 1fr 1fr; }
 }
+
+.site-top .lang-switch::before { display: none; }
+.site-top .lang-switch { margin-inline-start: 0; }

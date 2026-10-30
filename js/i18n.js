@@ -685,7 +685,8 @@ export function applyDocument() {
 
 export function wireLanguageSwitch(button) {
   const other = lang === "fa" ? "en" : "fa";
-  button.textContent = lang === "fa" ? "ENGLISH" : LANGS.fa.name;
+  const label = button.querySelector(".lang-text") || button;
+  label.textContent = lang === "fa" ? "ENGLISH" : LANGS.fa.name;
   button.lang = other;
   button.dir = LANGS[other].dir;
   button.setAttribute("aria-label", t("lang.pick"));
