@@ -165,7 +165,7 @@ button, select, .open, .back, .brand { cursor: pointer; }
 
 .scene-pick { display: flex; min-width: 0; }
 
-.scene-pick select, .mic-pick select {
+.scene-pick select, .mic-pick select, .list-pick select {
   flex: 1;
   min-width: 0;
   max-width: 230px;
@@ -418,6 +418,10 @@ body:not(.is-learn) #learn { display: none; }
 .chip { padding: 6px 13px; border-radius: var(--r-s); }
 .chip-count { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--soft); }
 .chip[aria-pressed="true"] .chip-count { color: var(--ink); opacity: 0.75; }
+.list-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.list-pick { display: flex; flex: 1 1 160px; align-items: center; gap: 8px; min-width: 0; }
+.list-pick-name { min-width: 3.5em; color: var(--soft); font-size: 13px; }
+.list-pick select { max-width: none; }
 .result-count { margin: 10px 0 0; color: var(--soft); font-size: 13px; }
 .empty { color: var(--soft); margin: 16px 0; line-height: 1.8; }
 
@@ -862,7 +866,7 @@ input[type="range"]::-moz-range-thumb {
 @media (hover: hover) {
   #listen:hover, #mirror:hover, #tools-toggle:hover, #explore-world:hover, #simple-view:hover, .open:hover, .back:hover,
   .stepper:hover, .loop:hover, .range:hover, .chip:hover, .step-btn:hover, .part-loop:hover, .part-chip:hover,
-  .step-chip:hover, .scene-pick select:hover, .mic-pick select:hover {
+  .step-chip:hover, .scene-pick select:hover, .mic-pick select:hover, .list-pick select:hover {
     background-color: var(--fill-2);
   }
   #listen[aria-pressed="true"]:hover, #mirror[aria-pressed="true"]:hover, .loop[aria-pressed="true"]:hover,

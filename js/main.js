@@ -39,6 +39,8 @@ const KIND_NOTE = {
 };
 let query = "";
 let kindFilter = "All";
+let ratingFilter = "any";
+let sortOrder = "library";
 let lastScroll = -2;
 let settled = false;
 let lastListed = "";
@@ -371,9 +373,13 @@ function applyListParams(params) {
   const nextScene = params.get("scene");
   sceneChoice = nextScene && Object.hasOwn(VIEWS, nextScene) ? nextScene : "auto";
   sceneSelect.value = sceneChoice;
-  if (nextQuery === query && nextKind === kindFilter) return;
+  const nextRating = optionId(RATING_FILTERS, params.get("rating"));
+  const nextSort = optionId(SORT_ORDERS, params.get("sort"));
+  if (nextQuery === query && nextKind === kindFilter && nextRating === ratingFilter && nextSort === sortOrder) return;
   query = nextQuery;
   kindFilter = nextKind;
+  ratingFilter = nextRating;
+  sortOrder = nextSort;
   if (document.getElementById("find")) renderList();
 }
 
@@ -381,6 +387,8 @@ function stateHash() {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (kindFilter !== "All") params.set("kind", kindFilter.toLowerCase());
+  if (ratingFilter !== RATING_FILTERS[0].id) params.set("rating", ratingFilter);
+  if (sortOrder !== SORT_ORDERS[0].id) params.set("sort", sortOrder);
   if (sceneChoice !== "auto") params.set("scene", sceneChoice);
   const view = explore?.view();
   if (view) params.set("explore", view);
@@ -468,13 +476,46 @@ function hitsQuery(pattern) {
   return words.every((token) => hay.some((word) => wordHit(word, token)));
 }
 
+const RATING_FILTERS = [
+  { id: "any", label: "Any rating", keep: () => true },
+  { id: "rated", label: "Rated", keep: (stars) => stars > 0 },
+  { id: "unrated", label: "Not rated", keep: (stars) => stars === 0 },
+  { id: "4", label: "4 stars and up", keep: (stars) => stars >= 4 },
+  { id: "5", label: "5 stars", keep: (stars) => stars === 5 },
+];
+
+function lengthSeconds(pattern) {
+  return (pattern.loopBeats * 60) / pattern.bpm;
+}
+
+const SORT_ORDERS = [
+  { id: "library", label: "Library order" },
+  { id: "rating", label: "Highest rated", compare: (a, b) => ratingOf(b) - ratingOf(a) },
+  { id: "title", label: "Title A to Z", compare: (a, b) => a.title.localeCompare(b.title) },
+  { id: "slow", label: "Slowest first", compare: (a, b) => a.bpm - b.bpm },
+  { id: "fast", label: "Fastest first", compare: (a, b) => b.bpm - a.bpm },
+  { id: "short", label: "Shortest first", compare: (a, b) => lengthSeconds(a) - lengthSeconds(b) },
+];
+
+function optionId(options, value) {
+  return options.some((option) => option.id === value) ? value : options[0].id;
+}
+
+function optionFor(options, id) {
+  return options.find((option) => option.id === id) || options[0];
+}
+
+function hitsRating(pattern) {
+  return optionFor(RATING_FILTERS, ratingFilter).keep(ratingOf(pattern));
+}
+
 function matches(pattern) {
   if (kindFilter !== "All" && pattern.kind !== kindFilter) return false;
-  return hitsQuery(pattern);
+  return hitsRating(pattern) && hitsQuery(pattern);
 }
 
 function chipCount(kind) {
-  const hits = PATTERNS.filter(hitsQuery);
+  const hits = PATTERNS.filter((pattern) => hitsRating(pattern) && hitsQuery(pattern));
   if (kind === "All") return hits.length;
   return hits.filter((pattern) => pattern.kind === kind).length;
 }
@@ -530,6 +571,12 @@ function renderList() {
     });
     chips.append(chip);
   }
+  const listTools = document.createElement("div");
+  listTools.className = "list-tools";
+  listTools.append(
+    listPick("rating-filter", "Rating", RATING_FILTERS, ratingFilter, (id) => { ratingFilter = id; }),
+    listPick("sort-order", "Sort", SORT_ORDERS, sortOrder, (id) => { sortOrder = id; }),
+  );
   const rows = document.createElement("div");
   rows.id = "rows";
   const libraryHead = document.createElement("div");
@@ -544,7 +591,7 @@ function renderList() {
   features.href = "features.html";
   features.textContent = "Features";
   siteNav.append(about, features);
-  libraryHead.append(heading, siteNav, find, chips);
+  libraryHead.append(heading, siteNav, find, chips, listTools);
   const resultCount = document.createElement("p");
   resultCount.id = "result-count";
   resultCount.className = "result-count";
@@ -568,6 +615,37 @@ function renderList() {
   fillRows();
 }
 
+function listPick(id, name, options, current, choose) {
+  const label = document.createElement("label");
+  label.className = "list-pick";
+  const caption = document.createElement("span");
+  caption.className = "list-pick-name";
+  caption.textContent = name;
+  const select = document.createElement("select");
+  select.id = id;
+  for (const option of options) select.append(new Option(option.label, option.id, false, option.id === current));
+  select.addEventListener("change", () => {
+    choose(select.value);
+    fillRows();
+    paint(player.snapshot());
+    syncUrl();
+  });
+  label.append(caption, select);
+  return label;
+}
+
+function libraryOrder(patterns) {
+  const kinds = kindList();
+  return patterns
+    .map((pattern, index) => ({ pattern, index }))
+    .sort((a, b) => kinds.indexOf(a.pattern.kind) - kinds.indexOf(b.pattern.kind) || a.index - b.index)
+    .map((entry) => entry.pattern);
+}
+
+function filtersActive() {
+  return kindFilter !== "All" || ratingFilter !== RATING_FILTERS[0].id;
+}
+
 function fillRows() {
   const rows = document.getElementById("rows");
   if (!rows) return;
@@ -580,10 +658,12 @@ function fillRows() {
     const empty = document.createElement("p");
     empty.className = "empty";
     empty.textContent = kindFilter === "All" ? "No patterns match. " : `No ${kindFilter} patterns match. `;
-    const clear = textButton("step-btn", "Clear search");
+    const clear = textButton("step-btn", filtersActive() ? "Clear search and filters" : "Clear search");
     clear.addEventListener("click", () => {
       query = "";
       kindFilter = "All";
+      ratingFilter = RATING_FILTERS[0].id;
+      document.getElementById("rating-filter").value = ratingFilter;
       const find = document.getElementById("find");
       find.value = "";
       for (const chip of document.querySelectorAll("#dock .chip")) {
@@ -596,6 +676,15 @@ function fillRows() {
     });
     empty.append(clear);
     rows.append(empty);
+    return;
+  }
+  const sort = optionFor(SORT_ORDERS, sortOrder);
+  if (sort.compare) {
+    const section = document.createElement("section");
+    section.className = "group";
+    section.setAttribute("aria-label", sort.label);
+    for (const pattern of libraryOrder(visible).sort(sort.compare)) section.append(rowFor(pattern));
+    rows.append(section);
     return;
   }
   for (const kind of kindList()) {
