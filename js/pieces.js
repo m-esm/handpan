@@ -1,5 +1,30 @@
 export const PIECES = [
   {
+    id: "seven-nation-army",
+    title: "Seven Nation Army",
+    category: "Songs",
+    bpm: 124,
+    meter: "eighths",
+    blurb: "The White Stripes riff in D minor: 4 4 6 4 3 2 1, then the ding joins for the chorus.",
+    about:
+      "The riff from Seven Nation Army by The White Stripes, moved from E minor to D minor so that it sits on this D Kurd pan. The record is at about 124 BPM. The riff is seven notes over two bars: D on 4 held on beat one, D again on the and of two, up to F on the and of three, D on four, C on the and of four, then B-flat on beat one and the low A held on beat two. Count ONE and two AND three AND four AND, with the accent on the first D. Riff is the bass line alone, four times. Chorus strikes the ding together with the first D so the bass drops an octave, the way the record's fuzz bass fills out under the vocal, and lands the low A hard. Keep every note short except the first D and the last A, which ring. Learn the two-bar riff with the right hand on 3 and 1 and the left on 4, 6 and 2 until it loops without a gap, then add the ding.",
+    form: ["Riff", "Riff", "Chorus", "Chorus"],
+    parts: {
+      Riff: [
+        "4^ . . 4 . 6 4 3",
+        "2 . 1^ . . . . .",
+        "4^ . . 4 . 6 4 3",
+        "2 . 1^ . . . . .",
+      ],
+      Chorus: [
+        "[D4]^ . . 4 . 6 4 3",
+        "2 . [D1]^ . . . . .",
+        "[D4]^ . . 4 . 6 4 3",
+        "2 . [D1]^ . . . . .",
+      ],
+    },
+  },
+  {
     id: "nothing-else-matters",
     title: "Nothing Else Matters (Intro)",
     category: "Songs",
