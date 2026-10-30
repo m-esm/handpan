@@ -59,36 +59,45 @@ function radialTexture(stops) {
   return texture;
 }
 
-function labelTexture(text, color) {
+function labelTexture(text, color, lit) {
   const canvas = document.createElement("canvas");
   canvas.width = 256;
   canvas.height = 256;
   const pen = canvas.getContext("2d");
   const persian = document.documentElement.lang === "fa";
-  const size = persian ? (text === "\u06f0" ? 420 : 250) : 270;
-  pen.font = `${persian ? 700 : 400} ${size}px ${getComputedStyle(document.documentElement).getPropertyValue("--script")}`;
+  const styles = getComputedStyle(document.documentElement);
+  const family = persian ? `"Vazirmatn", ${styles.getPropertyValue("--sans")}` : styles.getPropertyValue("--serif");
+  pen.font = `700 ${persian ? 210 : 200}px ${family}`;
   pen.textAlign = "center";
   pen.textBaseline = "middle";
   pen.lineJoin = "round";
-  pen.shadowColor = "rgba(255, 214, 140, 0.55)";
-  pen.shadowBlur = 18;
-  pen.lineWidth = 24;
-  pen.strokeStyle = "rgba(26, 20, 15, 0.86)";
+  pen.lineWidth = 14;
+  pen.strokeStyle = "rgba(8, 5, 3, 0.85)";
+  pen.strokeText(text, 122, 120);
+  pen.lineWidth = 10;
+  pen.strokeStyle = "rgba(8, 5, 3, 1)";
   pen.strokeText(text, 128, 128);
-  pen.shadowBlur = 0;
-  const gild = pen.createLinearGradient(0, 40, 0, 216);
-  gild.addColorStop(0, "#fffaf0");
-  gild.addColorStop(0.5, color);
-  gild.addColorStop(1, color);
-  pen.fillStyle = gild;
+  const floor = pen.createLinearGradient(0, 40, 0, 216);
+  if (lit) {
+    floor.addColorStop(0, "#ffffff");
+    floor.addColorStop(1, color);
+  } else {
+    floor.addColorStop(0, "#fff3dc");
+    floor.addColorStop(0.55, "#ead9bc");
+    floor.addColorStop(1, color);
+  }
+  pen.fillStyle = floor;
   pen.fillText(text, 128, 128);
-  pen.lineWidth = 3;
-  pen.strokeStyle = "rgba(255, 246, 228, 0.5)";
-  pen.strokeText(text, 128, 128);
+  pen.lineWidth = 2;
+  pen.strokeStyle = "rgba(255, 250, 240, 0.9)";
+  pen.strokeText(text, 130, 130);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
   return texture;
 }
+
+const labelGeometry = new THREE.PlaneGeometry(1, 1);
 
 const MOTE_VERTEX = `
 attribute vec4 seed;
@@ -913,12 +922,15 @@ function createDrum(host, onHit, onStrike, prepared) {
     marks.add(pillar);
     const styles = getComputedStyle(document.documentElement);
     const tint = styles.getPropertyValue(spec.hand === "left" ? "--left" : "--right").trim();
-    const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.label, tint), depthTest: false, transparent: true, toneMapped: false });
-    const bright = new THREE.SpriteMaterial({ map: labelTexture(spec.label, LIT_LABEL), depthTest: false, transparent: true, toneMapped: false });
-    const label = new THREE.Sprite(plain);
-    const size = spec.ding ? 0.56 : 0.44;
+    const engraved = (map) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+    const plain = engraved(labelTexture(spec.label, tint, false));
+    const bright = engraved(labelTexture(spec.label, LIT_LABEL, true));
+    const label = new THREE.Mesh(labelGeometry, plain);
+    const size = spec.ding ? 0.38 : 0.32;
     label.scale.set(size, size, 1);
-    label.position.z = 0.05;
+    label.position.z = 0.012;
+    const toward = new THREE.Vector3(0, 0, -1).addScaledVector(frame.normal, frame.normal.z).normalize();
+    label.rotation.z = Math.atan2(-toward.dot(frame.u), toward.dot(frame.v));
     label.renderOrder = 6;
     group.add(glow, ring, ripple, flare, label);
     marks.add(group);
