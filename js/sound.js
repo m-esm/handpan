@@ -129,16 +129,16 @@ export function createAudio() {
   function openVowel(audio, t, out) {
     const first = audio.createBiquadFilter();
     first.type = "peaking";
-    first.Q.value = 1.6;
-    first.gain.value = 7;
-    first.frequency.setValueAtTime(430, t);
-    first.frequency.exponentialRampToValueAtTime(760, t + 0.1);
+    first.Q.value = 1.3;
+    first.gain.value = 10;
+    first.frequency.setValueAtTime(380, t);
+    first.frequency.exponentialRampToValueAtTime(820, t + 0.16);
     const second = audio.createBiquadFilter();
     second.type = "peaking";
-    second.Q.value = 2.4;
-    second.gain.value = 3.5;
-    second.frequency.setValueAtTime(900, t);
-    second.frequency.exponentialRampToValueAtTime(1250, t + 0.1);
+    second.Q.value = 2;
+    second.gain.value = 5;
+    second.frequency.setValueAtTime(850, t);
+    second.frequency.exponentialRampToValueAtTime(1300, t + 0.16);
     out.connect(first);
     first.connect(second);
     second.connect(master);
@@ -163,7 +163,7 @@ export function createAudio() {
     const ring = note.ding ? 4.6 : 3.3 * Math.pow(220 / note.hz, 0.4);
     const bright = 0.55 + 0.6 * amp;
     const out = audio.createGain();
-    out.gain.value = (note.ding ? 0.2 : 0.16) * amp;
+    out.gain.value = (note.ding ? 0.19 : 0.145) * amp;
     openVowel(audio, t, out);
     return stopper([
       partial(audio, t, out, note.hz, 1, ring),
