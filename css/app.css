@@ -613,6 +613,11 @@ input[type="range"]::-moz-range-thumb {
 .sheet.is-focus { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; }
 .sheet.is-focus .part { flex: 1 0 100%; min-width: 0; }
 .sheet.is-focus .part.is-folded { display: none; }
+.sheet.is-solo .part.is-away { display: none; }
+.sheet.is-dense .bars { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--cols) * 26px + 44px)), 1fr)); gap: 6px; }
+.sheet.is-dense .slots { grid-template-columns: repeat(var(--cols), minmax(26px, 1fr)); }
+.sheet.is-dense .slot { min-height: 44px; padding-top: 12px; font-size: 17px; }
+.sheet.is-dense .part-head { margin-bottom: 4px; }
 .part.is-folded .bars, .part.is-folded .part-done, .sheet.is-focus .part-loop { display: none; }
 .part-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 8px; }
 .part-head h2 { margin: 0; font-family: var(--sans); font-size: 18px; font-weight: 650; line-height: 1.3; letter-spacing: -0.015em; }
@@ -890,6 +895,7 @@ body.is-exploring .world:active { cursor: grabbing; }
 .explore-places button[aria-pressed="true"] { background: #cfad6d; color: #122b33; border-color: #f0dba9; box-shadow: 0 0 24px #cfad6d33; }
 .explore-hud button:focus-visible, .explore-hud a:focus-visible { outline: 2px solid #f5d68d; outline-offset: 4px; }
 @media (max-width: 650px) {
+  body.is-learn:has(.deck) .about, body.is-learn .legend { display: none; }
   .explore-hud { padding: 20px 16px max(16px, env(safe-area-inset-bottom)); grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; gap: 14px; }
   .explore-heading { gap: 10px; }
   .explore-heading h1 { font-size: 28px; }

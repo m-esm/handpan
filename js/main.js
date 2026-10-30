@@ -1052,6 +1052,11 @@ function renderLearn(pattern) {
   } else dock.append(deck, legend(), notation, keys);
   fillGuide(pattern);
   focusSheet(pattern);
+  if (!practice) {
+    const snap = player.snapshot();
+    const slot = snap.patternId === pattern.id && snap.index >= 0 ? notation.querySelector(`.slot[data-event="${snap.index}"]`) : null;
+    showPart(slot ? slot.closest(".part").dataset.section : "0");
+  }
   updatePractice(player.snapshot());
 }
 
@@ -1068,11 +1073,45 @@ function fillGuide(pattern) {
   if (guide && !practice) guide.replaceChildren(partMap(pattern, sheetOf(pattern)));
 }
 
+let soloPart = "";
+
+function showPart(section) {
+  const sheet = document.getElementById("sheet");
+  if (!sheet || practice) return;
+  soloPart = section;
+  const parts = sheet.querySelectorAll(".part");
+  sheet.classList.toggle("is-solo", parts.length > 1);
+  for (const part of parts) part.classList.toggle("is-away", part.dataset.section !== section);
+  fitSheet();
+}
+
+function fitSheet() {
+  const sheet = document.getElementById("sheet");
+  const learn = document.getElementById("learn");
+  if (!sheet || !learn || practice) return;
+  sheet.style.zoom = "";
+  sheet.classList.remove("is-dense");
+  const inner = /auto|scroll/.test(getComputedStyle(learn).overflowY);
+  const bottom = inner ? learn.getBoundingClientRect().bottom - parseFloat(getComputedStyle(learn).paddingBottom) : window.innerHeight - 16;
+  let after = 0;
+  for (let node = sheet.nextElementSibling; node; node = node.nextElementSibling) after += node.getBoundingClientRect().height;
+  const room = () => bottom - after - sheet.getBoundingClientRect().top;
+  const over = () => sheet.getBoundingClientRect().height > room() + 1;
+  if (!over()) return;
+  sheet.classList.add("is-dense");
+  if (!over()) return;
+  const scale = Math.max(0.55, Math.min(1, room() / sheet.getBoundingClientRect().height));
+  sheet.style.zoom = String(scale);
+}
+
+addEventListener("resize", () => fitSheet());
+
 function focusSheet(pattern) {
   const sheet = document.getElementById("sheet");
   if (!sheet) return;
   const step = practice?.pattern.id === pattern.id ? practice.phrases[practice.at] : null;
   sheet.classList.toggle("is-focus", !!step);
+  if (step) sheet.classList.remove("is-solo");
   for (const part of sheet.querySelectorAll(".part")) {
     let shown = 0;
     for (const bar of part.querySelectorAll(".bar")) {
@@ -1102,6 +1141,7 @@ function partMap(pattern, sheet) {
       if (learnMode()) return;
       const first = section.bars.flatMap((bar) => bar.slots).find(Boolean);
       if (first) player.seek(first.index, player.playing, listener.on);
+      showPart(String(i));
       const target = document.querySelector(`.part[data-section="${i}"]`);
       if (target) keepInView(target, true);
     });
@@ -1413,6 +1453,7 @@ function paint(snap) {
       if (settled) keepInView(slot.closest(".bar"));
       settled = true;
       const part = slot.closest(".part").dataset.section;
+      if (part !== soloPart) showPart(part);
       for (const chip of document.querySelectorAll(".part-chip")) {
         const here = chip.dataset.section === part;
         chip.classList.toggle("is-current", here);
