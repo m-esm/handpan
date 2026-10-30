@@ -978,6 +978,49 @@ function createDrum(host, onHit, onStrike) {
     onStrike(item.pitch, look.color);
   }
 
+  const frameBounds = [new THREE.Vector3(0, DOME + 0.1, 0)];
+  for (let i = 0; i < 36; i++) {
+    const t = (i / 36) * Math.PI * 2;
+    frameBounds.push(new THREE.Vector3(Math.cos(t) * 2.3, -1.07, Math.sin(t) * 2.3));
+    frameBounds.push(new THREE.Vector3(Math.cos(t) * RADIUS, 0, Math.sin(t) * RADIUS));
+  }
+  const FRAME_FILL = 0.94;
+  const projected = new THREE.Vector3();
+
+  function placeCamera(back, targetY) {
+    camera.position.set(0, 5.3 * back, 4.3 * back);
+    camera.lookAt(0, targetY, 0.2);
+    camera.updateProjectionMatrix();
+  }
+
+  function frameExtent() {
+    let xMax = 0;
+    let yMin = Infinity;
+    let yMax = -Infinity;
+    for (const point of frameBounds) {
+      projected.copy(point).project(camera);
+      xMax = Math.max(xMax, Math.abs(projected.x));
+      yMin = Math.min(yMin, projected.y);
+      yMax = Math.max(yMax, projected.y);
+    }
+    return { xMax, yMin, yMax };
+  }
+
+  function fitCamera() {
+    let back = 1.13 * Math.max(1, 1.3 / camera.aspect);
+    let targetY = -0.4;
+    for (let pass = 0; pass < 6; pass++) {
+      placeCamera(back, targetY);
+      const { xMax, yMin, yMax } = frameExtent();
+      const over = Math.max(xMax, (yMax - yMin) / 2) / FRAME_FILL;
+      const centre = (yMin + yMax) / 2;
+      if (over <= 1 && Math.abs(centre) < 0.01) break;
+      if (over > 1) back *= over;
+      const halfHeight = camera.position.distanceTo(new THREE.Vector3(0, targetY, 0.2)) * Math.tan((camera.fov * Math.PI) / 360);
+      targetY += centre * halfHeight * 0.9;
+    }
+  }
+
   function resize() {
     pendingFrames = 40;
     const width = host.clientWidth;
@@ -985,10 +1028,7 @@ function createDrum(host, onHit, onStrike) {
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
-    const back = 1.13 * Math.max(1, 1.3 / camera.aspect);
-    camera.position.set(0, 5.3 * back, 4.3 * back);
-    camera.lookAt(0, -0.4, 0.2);
-    camera.updateProjectionMatrix();
+    fitCamera();
     renderer.render(scene, camera);
   }
 
