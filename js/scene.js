@@ -6,6 +6,7 @@ import { VIEWS } from "./environments.js";
 const BRASS = 0xe6b15a;
 const CREAM = 0xf0e2d2;
 const TEAL = 0x6fcfb0;
+const VIOLET = 0x9a7cf0;
 const RED = 0xd9735c;
 const INK = "#1a140f";
 const RADIUS = 1.6;
@@ -66,6 +67,207 @@ function labelTexture(text, color) {
   return texture;
 }
 
+const MOTE_VERTEX = `
+attribute vec4 seed;
+uniform float uTime;
+uniform float uPixelRatio;
+uniform float uRise;
+uniform float uSwirl;
+uniform float uSpeed;
+uniform float uScale;
+varying float vAlpha;
+void main() {
+  float life = fract(uTime * uSpeed * (0.6 + seed.w * 0.8) + seed.z);
+  vec3 p = position;
+  p.x += sin(uTime * 0.6 + seed.z * 40.0) * uSwirl;
+  p.z += cos(uTime * 0.5 + seed.z * 23.0) * uSwirl;
+  p.y += life * uRise;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vAlpha = sin(life * 3.14159) * (0.5 + seed.w * 0.5);
+  gl_PointSize = uScale * (0.6 + seed.w) * uPixelRatio / -mv.z;
+  gl_Position = projectionMatrix * mv;
+}`;
+
+const SPARK_VERTEX = `
+attribute vec4 seed;
+uniform float uTime;
+uniform float uStart;
+uniform vec3 uOrigin;
+uniform vec3 uNormal;
+uniform float uPixelRatio;
+varying float vAlpha;
+void main() {
+  float t = clamp((uTime - uStart) / 1.4, 0.0, 1.0);
+  vec3 scatter = normalize(seed.xyz * 2.0 - 1.0);
+  vec3 dir = normalize(uNormal * 1.6 + scatter);
+  float reach = t * (0.3 + seed.w * 0.8);
+  vec3 p = uOrigin + dir * reach + vec3(0.0, t * t * 0.5, 0.0);
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vAlpha = (1.0 - t) * (1.0 - t);
+  gl_PointSize = (9.0 + seed.w * 12.0) * (1.0 - t * 0.6) * uPixelRatio / -mv.z;
+  gl_Position = projectionMatrix * mv;
+}`;
+
+const MOTE_FRAGMENT = `
+uniform vec3 uColor;
+uniform float uGlow;
+varying float vAlpha;
+void main() {
+  float d = length(gl_PointCoord - 0.5);
+  float m = smoothstep(0.5, 0.05, d);
+  float core = smoothstep(0.2, 0.0, d);
+  gl_FragColor = vec4(uColor * (m + core) * uGlow, m * vAlpha);
+}`;
+
+function seededRandom(seed) {
+  let state = seed;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
+function glowPoints(count, place, vertexShader, uniforms) {
+  const random = seededRandom(11 + count);
+  const positions = new Float32Array(count * 3);
+  const seeds = new Float32Array(count * 4);
+  for (let i = 0; i < count; i += 1) {
+    positions.set(place(random, i), i * 3);
+    seeds.set([random(), random(), random(), random()], i * 4);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("seed", new THREE.BufferAttribute(seeds, 4));
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader,
+    fragmentShader: MOTE_FRAGMENT,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  return points;
+}
+
+function motes({ count, color, place, rise, swirl, speed, scale, glow = 1, pixelRatio }) {
+  return glowPoints(count, place, MOTE_VERTEX, {
+    uTime: { value: 0 },
+    uPixelRatio: { value: pixelRatio },
+    uRise: { value: rise },
+    uSwirl: { value: swirl },
+    uSpeed: { value: speed },
+    uScale: { value: scale },
+    uColor: { value: new THREE.Color(color) },
+    uGlow: { value: glow },
+  });
+}
+
+function sparks(pixelRatio) {
+  return glowPoints(36, (random) => [random(), random(), random()], SPARK_VERTEX, {
+    uTime: { value: 0 },
+    uStart: { value: -10 },
+    uOrigin: { value: new THREE.Vector3() },
+    uNormal: { value: new THREE.Vector3(0, 1, 0) },
+    uPixelRatio: { value: pixelRatio },
+    uColor: { value: new THREE.Color(BRASS) },
+    uGlow: { value: 1.4 },
+  });
+}
+
+function pillarTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 256;
+  const pen = canvas.getContext("2d");
+  const up = pen.createLinearGradient(0, 256, 0, 0);
+  up.addColorStop(0, "rgba(255,255,255,0.95)");
+  up.addColorStop(0.45, "rgba(255,255,255,0.35)");
+  up.addColorStop(1, "rgba(255,255,255,0)");
+  pen.fillStyle = up;
+  pen.fillRect(0, 0, 64, 256);
+  const across = pen.createLinearGradient(0, 0, 64, 0);
+  across.addColorStop(0, "rgba(0,0,0,1)");
+  across.addColorStop(0.5, "rgba(0,0,0,0)");
+  across.addColorStop(1, "rgba(0,0,0,1)");
+  pen.globalCompositeOperation = "destination-out";
+  pen.fillStyle = across;
+  pen.fillRect(0, 0, 64, 256);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function runeTexture() {
+  const size = 1024;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const pen = canvas.getContext("2d");
+  const mid = size / 2;
+  const random = seededRandom(23);
+  pen.strokeStyle = "#ffffff";
+  pen.lineCap = "round";
+  const circle = (r, width, dash = []) => {
+    pen.setLineDash(dash);
+    pen.lineWidth = width;
+    pen.beginPath();
+    pen.arc(mid, mid, r, 0, Math.PI * 2);
+    pen.stroke();
+  };
+  circle(470, 3);
+  circle(432, 1.5);
+  circle(352, 2, [16, 26]);
+  pen.setLineDash([]);
+  for (let n = 0; n < 72; n += 1) {
+    const a = (n / 72) * Math.PI * 2;
+    const long = n % 6 === 0;
+    const from = long ? 436 : 452;
+    pen.lineWidth = long ? 2.5 : 1.2;
+    pen.beginPath();
+    pen.moveTo(mid + Math.cos(a) * from, mid + Math.sin(a) * from);
+    pen.lineTo(mid + Math.cos(a) * 466, mid + Math.sin(a) * 466);
+    pen.stroke();
+  }
+  pen.lineWidth = 2.2;
+  for (let n = 0; n < 18; n += 1) {
+    const a = (n / 18) * Math.PI * 2;
+    const cx = mid + Math.cos(a) * 392;
+    const cy = mid + Math.sin(a) * 392;
+    pen.save();
+    pen.translate(cx, cy);
+    pen.rotate(a + Math.PI / 2);
+    pen.beginPath();
+    const strokes = 3 + Math.floor(random() * 3);
+    for (let k = 0; k <= strokes; k += 1) {
+      const x = (random() - 0.5) * 26;
+      const y = (random() - 0.5) * 26;
+      if (k) pen.lineTo(x, y);
+      else pen.moveTo(x, y);
+    }
+    pen.stroke();
+    if (random() > 0.5) {
+      pen.beginPath();
+      pen.arc((random() - 0.5) * 14, (random() - 0.5) * 14, 3, 0, Math.PI * 2);
+      pen.stroke();
+    }
+    pen.restore();
+  }
+  pen.lineWidth = 1.4;
+  for (let n = 0; n < 6; n += 1) {
+    const a = (n / 6) * Math.PI * 2;
+    const b = a + (Math.PI * 2) / 3;
+    pen.beginPath();
+    pen.moveTo(mid + Math.cos(a) * 330, mid + Math.sin(a) * 330);
+    pen.lineTo(mid + Math.cos(b) * 330, mid + Math.sin(b) * 330);
+    pen.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
 function studio(renderer) {
   const room = new THREE.Scene();
   room.add(
@@ -87,6 +289,8 @@ function studio(renderer) {
   card(1, 0.97, 0.9, 2.6, 18, 6, 0, 12, 1);
   card(1, 0.78, 0.48, 1.1, 14, 4, 0, -4, 8);
   card(1, 0.94, 0.8, 3.2, 2.2, 10, 1.5, 4, -9);
+  card(0.5, 0.78, 1, 1.4, 9, 10, 9, 1.5, 6);
+  card(0.68, 0.5, 1, 0.9, 12, 5, -2, -3, -8);
   const maker = new THREE.PMREMGenerator(renderer);
   const texture = maker.fromScene(room, 0.03).texture;
   maker.dispose();
@@ -347,7 +551,10 @@ function createDrum(host, onHit, onStrike) {
   const kicker = new THREE.DirectionalLight(0xffe2b8, 0.28);
   kicker.position.set(0.8, 3.4, -6);
   const strike = new THREE.PointLight(BRASS, 0, 3.4, 1.5);
-  scene.add(key, fill, kicker, strike);
+  const moonRim = new THREE.DirectionalLight(0x8fb8ff, 0.35);
+  moonRim.position.set(4, 1.2, -5);
+  scene.add(key, fill, kicker, strike, moonRim);
+  const pixelRatio = renderer.getPixelRatio();
 
   const drum = new THREE.Group();
   scene.add(drum);
@@ -438,6 +645,64 @@ function createDrum(host, onHit, onStrike) {
   const halo = line(2.02, 0.009, BRASS, 0.3, 0, Math.PI * 2);
   const wave = line(1.7, 0.03, BRASS, 0, 0, Math.PI * 2);
   let waveAt = 1;
+  const flat = (size, map, color, opacity, z) => {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(size, size),
+      new THREE.MeshBasicMaterial({ map, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }),
+    );
+    mesh.position.z = z;
+    floor.add(mesh);
+    return mesh;
+  };
+  const aurora = flat(5.6, radialTexture([
+    [0, "rgba(111,207,176,0.55)"],
+    [0.42, "rgba(154,124,240,0.3)"],
+    [0.75, "rgba(154,124,240,0.08)"],
+    [1, "rgba(0,0,0,0)"],
+  ]), 0xffffff, 0.16, 0.001);
+  const runes = flat(4.6, runeTexture(), BRASS, 0.22, 0.003);
+  const innerRunes = flat(3.2, runeTexture(), TEAL, 0.14, 0.004);
+  const ambientMotes = motes({
+    count: 110,
+    color: BRASS,
+    rise: 2.4,
+    swirl: 0.09,
+    speed: 0.05,
+    scale: 34,
+    glow: 0.9,
+    pixelRatio,
+    place: (random) => {
+      const a = random() * Math.PI * 2;
+      const r = 1.35 + random() * 1.4;
+      return [Math.cos(a) * r, -0.7 + random() * 0.4, Math.sin(a) * r];
+    },
+  });
+  const coolMotes = motes({
+    count: 40,
+    color: TEAL,
+    rise: 1.8,
+    swirl: 0.14,
+    speed: 0.035,
+    scale: 26,
+    glow: 0.7,
+    pixelRatio,
+    place: (random) => {
+      const a = random() * Math.PI * 2;
+      const r = 0.6 + random() * 1.8;
+      return [Math.cos(a) * r, -0.4 + random() * 0.6, Math.sin(a) * r];
+    },
+  });
+  scene.add(ambientMotes, coolMotes);
+  const bursts = Array.from({ length: 6 }, () => {
+    const burst = sparks(pixelRatio);
+    burst.visible = false;
+    drum.add(burst);
+    return burst;
+  });
+  let nextBurst = 0;
+  const pillarMap = pillarTexture();
+  const pillarGeometry = new THREE.PlaneGeometry(0.42, 1.5);
+  pillarGeometry.translate(0, 0.75, 0);
 
   const glowMap = radialTexture([
     [0, "rgba(255,255,255,1)"],
@@ -495,6 +760,25 @@ function createDrum(host, onHit, onStrike) {
       }),
     );
     flare.scale.set(1.5, 1.5, 1);
+    const pillarMaterial = new THREE.MeshBasicMaterial({
+      map: pillarMap,
+      color: BRASS,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const pillar = new THREE.Group();
+    for (const turn of [0, Math.PI / 2]) {
+      const sheet = new THREE.Mesh(pillarGeometry, pillarMaterial);
+      sheet.rotation.y = turn;
+      pillar.add(sheet);
+    }
+    pillar.position.copy(frame.center).addScaledVector(frame.normal, 0.02);
+    pillar.scale.set(1, 0.2, 1);
+    pillar.visible = false;
+    marks.add(pillar);
     const styles = getComputedStyle(document.documentElement);
     const tint = styles.getPropertyValue(spec.hand === "left" ? "--brass-2" : "--mist").trim();
     const plain = new THREE.SpriteMaterial({ map: labelTexture(spec.text, tint), depthTest: false, transparent: true, toneMapped: false });
@@ -512,6 +796,7 @@ function createDrum(host, onHit, onStrike) {
       ring,
       ripple,
       flare,
+      pillar,
       label,
       plain,
       dark,
@@ -519,7 +804,9 @@ function createDrum(host, onHit, onStrike) {
       spot: frame.center.clone().addScaledVector(frame.normal, 0.55),
       state: "idle",
       wave: 1,
+      echo: 1,
       flash: 0,
+      rise: 1,
       goal: new THREE.Color(BRASS),
     });
   }
@@ -541,6 +828,7 @@ function createDrum(host, onHit, onStrike) {
         material.dispose();
       }
       for (const part of [item.glow, item.ring, item.ripple, item.flare]) part.material.dispose();
+      item.pillar.children[0].material.dispose();
     }
     marks.clear();
     fields.clear();
@@ -561,9 +849,20 @@ function createDrum(host, onHit, onStrike) {
     const struck = state === "on" || state === "heard" || state === "miss";
     if (!struck || before === state) return;
     item.wave = 0;
+    item.echo = -0.3;
+    item.rise = 0;
     item.flash = 1;
     item.ripple.material.color.setHex(look.color);
     item.flare.material.color.setHex(look.color);
+    item.pillar.children[0].material.color.setHex(look.color);
+    const burst = bursts[nextBurst];
+    nextBurst = (nextBurst + 1) % bursts.length;
+    burst.material.uniforms.uStart.value = lastSeconds;
+    burst.material.uniforms.uOrigin.value.copy(item.frame.center).addScaledVector(item.frame.normal, 0.03);
+    burst.material.uniforms.uNormal.value.copy(item.frame.normal);
+    burst.material.uniforms.uColor.value.setHex(look.color);
+    burst.visible = true;
+    energy = 1;
     strike.color.setHex(look.color);
     strike.position.copy(item.spot);
     strike.intensity = 10;
@@ -629,15 +928,40 @@ function createDrum(host, onHit, onStrike) {
   canvas.addEventListener("pointerleave", () => { tilt.set(0, 0); pendingFrames = 40; });
 
   const white = new THREE.Color(0xffffff);
+  let lastSeconds = 0;
+  let lastDraw = -1000;
+  let energy = 0;
 
   function frame(time) {
     const active = document.activeElement;
     const target = active && active.closest && active.matches(":focus-visible") ? active.closest(".field") : null;
     const focused = target ? target.dataset.note : "";
     if (focused !== lastFocused) { pendingFrames = 40; lastFocused = focused; }
-    if (!pendingFrames) return;
-    pendingFrames -= 1;
+    const ambient = !still && time - lastDraw >= 33;
+    if (!pendingFrames && !ambient) return;
+    if (pendingFrames) pendingFrames -= 1;
+    lastDraw = time;
+    const seconds = time / 1000;
+    lastSeconds = seconds;
     renderer.info.reset();
+    energy *= 0.94;
+    for (const points of [ambientMotes, coolMotes]) {
+      points.material.uniforms.uTime.value = seconds;
+      points.material.uniforms.uGlow.value = (points === coolMotes ? 0.7 : 0.9) + energy * 0.8;
+    }
+    for (const burst of bursts) {
+      if (!burst.visible) continue;
+      burst.material.uniforms.uTime.value = seconds;
+      if (seconds - burst.material.uniforms.uStart.value > 1.4) burst.visible = false;
+    }
+    const breath = still ? 0 : Math.sin(seconds * 0.5);
+    aurora.material.opacity = 0.13 + breath * 0.04 + energy * 0.3;
+    aurora.rotation.z = seconds * 0.03;
+    aurora.scale.setScalar(1 + breath * 0.03 + energy * 0.08);
+    runes.material.opacity = 0.2 + breath * 0.05 + energy * 0.55;
+    runes.rotation.z = seconds * 0.02;
+    innerRunes.material.opacity = 0.12 + energy * 0.4;
+    innerRunes.rotation.z = -seconds * 0.045;
     for (const [id, item] of fields) {
       const look = LOOKS[item.state] || LOOKS.idle;
       const lit = id === focused;
@@ -648,10 +972,25 @@ function createDrum(host, onHit, onStrike) {
       item.flash *= 0.9;
       item.flare.material.opacity = item.flash * 0.85;
       if (item.wave < 1) {
-        item.wave = Math.min(1, item.wave + 0.03);
-        const grow = 1 + item.wave * 1.9;
+        item.wave = Math.min(1, item.wave + 0.024);
+        const grow = 1 + item.wave * 2.4;
         item.ripple.scale.set(item.frame.along * grow, item.frame.across * grow, 1);
         item.ripple.material.opacity = (1 - item.wave) ** 2;
+      }
+      if (item.echo < 1) {
+        item.echo = Math.min(1, item.echo + 0.02);
+        if (item.echo > 0 && item.wave >= 1) {
+          const grow = 1 + item.echo * 1.6;
+          item.ripple.scale.set(item.frame.along * grow, item.frame.across * grow, 1);
+          item.ripple.material.opacity = (1 - item.echo) ** 2 * 0.5;
+        }
+      }
+      if (item.rise < 1) {
+        item.rise = Math.min(1, item.rise + 0.018);
+        const lift = 0.2 + smooth(0, 0.6, item.rise) * 0.8;
+        item.pillar.scale.set(1 + item.rise * 0.6, lift, 1 + item.rise * 0.6);
+        item.pillar.children[0].material.opacity = (1 - item.rise) ** 1.5 * 0.7;
+        item.pillar.visible = item.rise < 1;
       }
       for (const mesh of [item.glow, item.ring, item.ripple, item.flare]) mesh.visible = mesh.material.opacity > 0.005;
     }
@@ -662,14 +1001,16 @@ function createDrum(host, onHit, onStrike) {
       wave.scale.set(grow, grow, 1);
       wave.material.opacity = (1 - waveAt) ** 2 * 0.9;
     }
-    lip.material.emissiveIntensity += ((tak ? 2 : 0) - lip.material.emissiveIntensity) * 0.3;
-    const targetX = motionActive ? motionTarget.x : still ? 0 : tilt.y * 0.06;
-    const targetY = motionActive ? motionTarget.y : 0;
-    const targetZ = motionActive ? motionTarget.z : still ? 0 : -tilt.x * 0.06;
+    lip.material.emissiveIntensity += ((tak ? 2 : 0) + energy * 0.5 - lip.material.emissiveIntensity) * 0.3;
+    const sway = still ? 0 : 1;
+    const targetX = (motionActive ? motionTarget.x : still ? 0 : tilt.y * 0.06) + Math.sin(seconds * 0.37) * 0.012 * sway;
+    const targetY = (motionActive ? motionTarget.y : 0) + Math.sin(seconds * 0.23) * 0.035 * sway;
+    const targetZ = (motionActive ? motionTarget.z : still ? 0 : -tilt.x * 0.06) + Math.cos(seconds * 0.31) * 0.012 * sway;
     drum.rotation.x += (targetX - drum.rotation.x) * 0.12;
     drum.rotation.y += (targetY - drum.rotation.y) * 0.12;
     drum.rotation.z += (targetZ - drum.rotation.z) * 0.12;
-    halo.material.opacity = 0.28;
+    drum.position.y = Math.sin(seconds * 0.6) * 0.035 * sway + energy * 0.02;
+    halo.material.opacity = 0.24 + breath * 0.06 + energy * 0.4;
     if (profiling) host.dataset.rotation = JSON.stringify([drum.rotation.x, drum.rotation.y, drum.rotation.z]);
     renderer.render(scene, camera);
   }
@@ -772,7 +1113,8 @@ function createWorld() {
   scene.background = new THREE.Color(0x142c3c);
   scene.fog = new THREE.FogExp2(0x142c3c, 0.015);
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
-  scene.add(new THREE.HemisphereLight(0x9dbdd4, 0x322517, 2));
+  const skyLight = new THREE.HemisphereLight(0x9dbdd4, 0x322517, 2);
+  scene.add(skyLight);
   const moonlight = new THREE.DirectionalLight(0xb9d7ed, 2.5);
   moonlight.position.set(-12, 24, -5);
   moonlight.castShadow = true;
@@ -956,16 +1298,6 @@ function createWorld() {
   moonHalo.position.copy(moon.position);
   moonHalo.scale.set(20, 20, 1);
   scene.add(moonHalo);
-  const spots = new Float32Array(120 * 3);
-  for (let i = 0; i < 120; i += 1) {
-    spots[i * 3] = Math.sin(i * 127.1) * 25;
-    spots[i * 3 + 1] = (i % 31) / 2;
-    spots[i * 3 + 2] = Math.cos(i * 311.7) * 26 - 13;
-  }
-  const dustGeometry = new THREE.BufferGeometry();
-  dustGeometry.setAttribute("position", new THREE.BufferAttribute(spots, 3));
-  const dust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0xf3d7a2, size: 0.035, transparent: true, opacity: 0.45, depthWrite: false }));
-  scene.add(dust);
   scene.traverse((object) => {
     if (object.isMesh && object.material.isMeshStandardMaterial) {
       object.castShadow = !object.isInstancedMesh && object.material.emissiveIntensity <= 1;
@@ -980,6 +1312,55 @@ function createWorld() {
     if (!child.isLight || child.isPointLight) courtyard.add(child);
   }
   scene.add(courtyard);
+  const pixelRatio = renderer.getPixelRatio();
+  const dust = motes({
+    count: 420,
+    color: 0xf3d7a2,
+    rise: 7,
+    swirl: 0.7,
+    speed: 0.02,
+    scale: 110,
+    glow: 0.8,
+    pixelRatio,
+    place: (random) => [random() * 64 - 32, random() * 16 - 2, random() * 50 - 40],
+  });
+  const fireflies = motes({
+    count: 70,
+    color: 0xffc46a,
+    rise: 2.2,
+    swirl: 1.1,
+    speed: 0.09,
+    scale: 220,
+    glow: 1.3,
+    pixelRatio,
+    place: (random) => {
+      const side = random() > 0.5 ? 1 : -1;
+      return [side * (6 + random() * 7), 1 + random() * 5, -random() * 24];
+    },
+  });
+  const wisps = motes({
+    count: 90,
+    color: 0x8fd8c8,
+    rise: 3,
+    swirl: 1.6,
+    speed: 0.05,
+    scale: 160,
+    glow: 0.6,
+    pixelRatio,
+    place: (random) => [random() * 50 - 25, random() * 6, random() * 30 - 30],
+  });
+  scene.add(dust, fireflies, wisps);
+  const streak = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: radialTexture([[0, "rgba(255,255,255,1)"], [0.25, "rgba(220,235,255,0.5)"], [1, "rgba(220,235,255,0)"]]),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0,
+  }));
+  streak.scale.set(6, 0.16, 1);
+  streak.material.rotation = 0.3;
+  scene.add(streak);
+  const streakFrom = new THREE.Vector3();
+  const streakDir = new THREE.Vector3(-1, -0.32, 0).normalize();
+  let streakAt = -1;
+  let nextStreak = 5;
   const landscape = createLandscape();
   batchArchitecture(landscape.group);
   landscape.group.visible = false;
@@ -1023,17 +1404,44 @@ function createWorld() {
   function draw(time) {
     renderer.info.reset();
     ease.lerp(look, 0.035);
+    const seconds = time / 1000;
+    const drift = still ? 0 : 1;
     if (exploring) {
       camera.position.set(Math.sin(orbit) * 58, 23, Math.cos(orbit) * 58 - 12);
       camera.lookAt(-3, 7, -22);
     } else {
-      camera.position.set(view.eye[0] + ease.x * 0.65, view.eye[1] - ease.y * 0.3, view.eye[2]);
+      camera.position.set(
+        view.eye[0] + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+        view.eye[1] - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+        view.eye[2],
+      );
       camera.lookAt(...view.target);
     }
     lamps.forEach(({ light, base, glass }, i) => {
-      light.intensity = base * (1 + energy * 0.15);
-      glass.emissiveIntensity = 2.1 + energy * 0.5;
+      const flicker = (Math.sin(seconds * 13 + i * 2.1) + Math.sin(seconds * 31 + i * 5.3)) * 0.03 * drift;
+      light.intensity = base * (1 + energy * 0.15 + flicker);
+      glass.emissiveIntensity = 2.1 + energy * 0.5 + flicker * 4;
     });
+    skyLight.intensity = 2 + energy * 0.5;
+    moonHalo.scale.setScalar(20 + Math.sin(seconds * 0.4) * 1.2 * drift + energy * 2);
+    for (const points of [dust, fireflies, wisps]) points.material.uniforms.uTime.value = seconds;
+    fireflies.material.uniforms.uGlow.value = 1.3 + energy * 1.2;
+    wisps.material.uniforms.uGlow.value = 0.6 + energy * 0.9;
+    if (streakAt < 0 && seconds > nextStreak && drift) {
+      streakAt = seconds;
+      streakFrom.set(Math.sin(seconds * 7.3) * 38, 30 + Math.cos(seconds * 3.1) * 8, -72);
+    }
+    if (streakAt >= 0) {
+      const progress = (seconds - streakAt) / 0.9;
+      if (progress >= 1) {
+        streakAt = -1;
+        nextStreak = seconds + 8 + Math.abs(Math.sin(seconds * 2.7)) * 10;
+        streak.material.opacity = 0;
+      } else {
+        streak.position.copy(streakFrom).addScaledVector(streakDir, progress * 26);
+        streak.material.opacity = Math.sin(progress * Math.PI) * 0.9;
+      }
+    }
     energy *= 0.96;
     renderer.render(scene, camera);
   }
@@ -1111,8 +1519,9 @@ function createWorld() {
     environment,
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     frame(time) {
-      if (!pendingFrames || time - last < 40) return;
-      pendingFrames -= 1;
+      if (time - last < 40) return;
+      if (!pendingFrames && still) return;
+      if (pendingFrames) pendingFrames -= 1;
       last = time;
       draw(time);
     },
