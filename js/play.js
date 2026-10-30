@@ -20,6 +20,8 @@ export function createPlayer(audio, emit) {
     armed: [],
     token: 0,
     ended: false,
+    current: null,
+    strikes: 0,
   };
 
   function heardNow() {
@@ -61,6 +63,7 @@ export function createPlayer(audio, emit) {
     return {
       playing: state.playing,
       ended: state.ended,
+      strike: state.strikes,
       patternId: state.pattern ? state.pattern.id : null,
       index: state.index,
       notes: event ? event.notes : [],
@@ -171,6 +174,10 @@ export function createPlayer(audio, emit) {
     let current = null;
     for (const item of state.armed) {
       if (item.time <= t) current = item;
+    }
+    if (current && current !== state.current) {
+      state.current = current;
+      state.strikes += 1;
     }
     if (current) state.index = current.index;
     state.armed = state.armed.filter((item) => item === current || item.time > t - 0.5);

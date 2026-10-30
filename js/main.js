@@ -106,6 +106,7 @@ const listener = createListener(onHeard, onMicEnded);
 const HEARD_MS = 450;
 const TAP_DEAF_MS = 500;
 let heard = null;
+let heardCount = 0;
 let heardTimer = 0;
 let deafUntil = 0;
 let micNote = "";
@@ -133,7 +134,8 @@ function onHeard(found) {
       miss = true;
     }
   }
-  heard = { id, miss };
+  heardCount += 1;
+  heard = { id, miss, count: heardCount };
   clearTimeout(heardTimer);
   heardTimer = setTimeout(() => {
     heard = null;
@@ -295,6 +297,7 @@ function onPanKey(event) {
 }
 
 const tapTimers = new Map();
+const tapCounts = new Map();
 
 function soundNote(id) {
   const session = practice;
@@ -315,6 +318,7 @@ function soundNote(id) {
   const field = document.querySelector(`.field[data-note="${id}"]`);
   if (field) {
     field.classList.add("is-tap");
+    tapCounts.set(id, (tapCounts.get(id) || 0) + 1);
     clearTimeout(tapTimers.get(id));
     tapTimers.set(
       id,
@@ -1721,9 +1725,11 @@ function paint(snap) {
     field.classList.toggle("is-place", !sounding && on);
     field.classList.toggle("is-next", !on && nextNotes.has(id));
     if (stage) {
-      const lit = sounding || field.classList.contains("is-tap");
+      const tapped = field.classList.contains("is-tap");
+      const lit = sounding || tapped;
       const look = echo ? (heard.miss ? "miss" : "heard") : lit ? "on" : on ? "place" : nextNotes.has(id) ? "next" : "idle";
-      stage.set(id, look);
+      const strikeKey = echo ? `heard ${heard.count}` : tapped ? `tap ${tapCounts.get(id)}` : sounding ? `play ${snap.strike}` : null;
+      stage.set(id, look, strikeKey);
     }
     const shade = field.querySelector(".field-shade");
     const face = field.querySelector(".field-face");

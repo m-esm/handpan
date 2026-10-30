@@ -823,6 +823,7 @@ function createDrum(host, onHit, onStrike) {
   drum.add(marks);
   const fields = new Map();
   const states = new Map();
+  const strikes = new Map();
   let specs = [];
   let tak = false;
 
@@ -938,9 +939,11 @@ function createDrum(host, onHit, onStrike) {
     for (const [id, state] of states) set(id, state);
   }
 
-  function set(id, state) {
+  function set(id, state, strikeKey = null) {
     const before = states.get(id);
-    if (before !== state) pendingFrames = 40;
+    const again = strikeKey !== null && strikeKey !== strikes.get(id);
+    strikes.set(id, strikeKey);
+    if (before !== state || again) pendingFrames = 40;
     states.set(id, state);
     const item = fields.get(id);
     if (!item) return;
@@ -949,7 +952,7 @@ function createDrum(host, onHit, onStrike) {
     item.goal.setHex(look.color);
     item.label.material = look.ink ? item.dark : item.plain;
     const struck = state === "on" || state === "heard" || state === "miss";
-    if (!struck || before === state) return;
+    if (!struck || (before === state && !again)) return;
     item.wave = 0;
     item.echo = -0.3;
     item.rise = 0;
