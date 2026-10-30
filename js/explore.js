@@ -78,16 +78,22 @@ export function initExplore({ onOpen } = {}) {
   }
   entry.setAttribute("aria-haspopup", "dialog");
   entry.setAttribute("aria-expanded", "false");
-  entry.addEventListener("click", () => {
+  function open(view = selected) {
+    if (!overlay.hidden) {
+      if (view !== selected) select(view);
+      return;
+    }
     onOpen?.();
     restoreFocus = document.activeElement;
     overlay.hidden = false;
     wrap.inert = true;
     document.body.classList.add("is-exploring");
     entry.setAttribute("aria-expanded", "true");
-    select(selected);
+    select(Object.hasOwn(VIEWS, view) ? view : selected);
     exit.focus({ preventScroll: true });
-  });
+  }
+
+  entry.addEventListener("click", () => open());
   exit.addEventListener("click", close);
   document.addEventListener("alamut-place", (event) => {
     if (!overlay.hidden) select(event.detail?.view);
@@ -110,4 +116,9 @@ export function initExplore({ onOpen } = {}) {
       first.focus();
     }
   });
+  return {
+    open,
+    close: () => { if (!overlay.hidden) close(); },
+    view: () => (overlay.hidden ? "" : selected),
+  };
 }

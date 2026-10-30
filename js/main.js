@@ -49,6 +49,7 @@ let sceneChoice = "auto";
 let lastEnvironment = "";
 let practice = null;
 let practiceSaved = null;
+let explore = null;
 try {
   practiceSaved = readPractice(localStorage, PATTERNS);
 } catch {
@@ -65,6 +66,7 @@ for (const [key, view] of Object.entries(VIEWS)) {
 sceneSelect.addEventListener("change", () => {
   sceneChoice = sceneSelect.value;
   paint(player.snapshot());
+  syncUrl();
 });
 
 const toolsToggle = document.getElementById("tools-toggle");
@@ -338,14 +340,78 @@ function syncMirror() {
   button.textContent = mirrored ? "Mirror on" : "Mirror";
 }
 
+function readHash() {
+  const raw = location.hash || "#/";
+  const cut = raw.indexOf("?");
+  return {
+    path: cut < 0 ? raw : raw.slice(0, cut),
+    params: new URLSearchParams(cut < 0 ? "" : raw.slice(cut + 1)),
+  };
+}
+
 function patternFromHash() {
-  const match = /^#\/p\/([\w-]+)(?:\/(play|learn))?$/.exec(location.hash);
+  const match = /^#\/p\/([\w-]+)(?:\/(play|learn))?$/.exec(readHash().path);
   if (!match) return null;
   return PATTERNS.find((pattern) => pattern.id === match[1]) || null;
 }
 
 function learnMode() {
-  return !!patternFromHash() && location.hash.endsWith("/learn");
+  return !!patternFromHash() && readHash().path.endsWith("/learn");
+}
+
+function numberParam(params, key) {
+  const value = Number(params.get(key));
+  return params.has(key) && Number.isFinite(value) ? value : null;
+}
+
+function applyListParams(params) {
+  const nextQuery = params.get("q") || "";
+  const kinds = ["All", ...kindList()];
+  const nextKind = kinds.find((kind) => kind.toLowerCase() === (params.get("kind") || "").toLowerCase()) || "All";
+  const nextScene = params.get("scene");
+  sceneChoice = nextScene && Object.hasOwn(VIEWS, nextScene) ? nextScene : "auto";
+  sceneSelect.value = sceneChoice;
+  if (nextQuery === query && nextKind === kindFilter) return;
+  query = nextQuery;
+  kindFilter = nextKind;
+  if (document.getElementById("find")) renderList();
+}
+
+function stateHash() {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (kindFilter !== "All") params.set("kind", kindFilter.toLowerCase());
+  if (sceneChoice !== "auto") params.set("scene", sceneChoice);
+  const view = explore?.view();
+  if (view) params.set("explore", view);
+  let path = "#/";
+  const pattern = patternFromHash();
+  if (pattern && practice) {
+    path = `#/p/${pattern.id}/learn`;
+    if (practice.at > 0) params.set("phrase", String(practice.at + 1));
+    if (practice.tempo !== practiceTempo(pattern.bpm * 0.7)) params.set("bpm", String(practice.tempo));
+  } else if (pattern) {
+    path = `#/p/${pattern.id}`;
+    if (player.pattern?.id === pattern.id && player.bpm !== pattern.bpm) params.set("bpm", String(player.bpm));
+  }
+  const tail = params.toString();
+  return tail ? `${path}?${tail}` : path;
+}
+
+let syncTimer = 0;
+let routing = false;
+
+function syncUrl() {
+  if (routing) return;
+  clearTimeout(syncTimer);
+  syncTimer = 0;
+  const next = stateHash();
+  if (next !== (location.hash || "#/")) history.replaceState(history.state, "", next);
+}
+
+function scheduleSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncUrl, 250);
 }
 
 function handLine(hands) {
@@ -439,6 +505,7 @@ function renderList() {
     query = find.value;
     fillRows();
     paint(player.snapshot());
+    scheduleSync();
   });
   const chips = document.createElement("div");
   chips.className = "chips";
@@ -459,6 +526,7 @@ function renderList() {
       }
       fillRows();
       paint(player.snapshot());
+      syncUrl();
     });
     chips.append(chip);
   }
@@ -523,6 +591,7 @@ function fillRows() {
       }
       fillRows();
       paint(player.snapshot());
+      syncUrl();
       find.focus();
     });
     empty.append(clear);
@@ -675,6 +744,7 @@ function rememberPractice() {
     void 0;
   }
   updateResume();
+  scheduleSync();
 }
 
 function requestPractice(pattern) {
@@ -686,7 +756,7 @@ function enterPractice(pattern, saved = null) {
   stopListening("");
   const phrases = phrasesOf(pattern);
   if (!phrases.length) return;
-  const at = saved?.phrase ?? 0;
+  const at = Math.min(phrases.length - 1, Math.max(0, saved?.phrase ?? 0));
   practice = {
     pattern,
     phrases,
@@ -1006,6 +1076,7 @@ function renderLearn(pattern) {
     bpm.textContent = range.value;
     range.setAttribute("aria-valuetext", `${range.value} bpm`);
     player.setTempo(Number(range.value));
+    scheduleSync();
   });
   tempoLabel.append(bpm, unit, range);
 
@@ -1337,15 +1408,29 @@ function keepInView(node, toTop) {
 }
 
 function route() {
+  routing = true;
+  try {
+    routeNow();
+  } finally {
+    routing = false;
+  }
+  syncUrl();
+}
+
+function routeNow() {
   setTools(false);
+  const { path, params } = readHash();
   const pattern = patternFromHash();
   const learning = learnMode();
   const changed = routed !== pattern?.id;
   const modeChanged = learning !== !!practice;
-  if (!pattern && location.hash && location.hash !== "#/") {
-    location.hash = "#/";
+  if (!pattern && path !== "#/" && path !== "#") {
+    history.replaceState(history.state, "", "#/");
+    routeNow();
     return;
   }
+  if (routed === null || [...params.keys()].length) applyListParams(params);
+  routeExplore(params.get("explore"));
   if (practice && (changed || !learning)) leavePractice();
   if (changed || modeChanged) {
     player.pause();
@@ -1369,14 +1454,27 @@ function route() {
     return;
   }
   if (!player.pattern || player.pattern.id !== pattern.id) player.load(pattern);
+  const askedBpm = numberParam(params, "bpm");
+  const askedPhrase = numberParam(params, "phrase");
   if (learning && !practice) {
-    enterPractice(pattern, practiceSaved?.patternId === pattern.id ? practiceSaved : null);
+    const saved = practiceSaved?.patternId === pattern.id ? { ...practiceSaved } : {};
+    if (askedPhrase !== null) saved.phrase = Math.max(0, Math.round(askedPhrase) - 1);
+    if (askedBpm !== null) saved.tempo = practiceTempo(askedBpm);
+    enterPractice(pattern, saved);
+  } else if (learning) {
+    const tempo = askedBpm === null ? practice.tempo : practiceTempo(askedBpm);
+    const at = askedPhrase === null ? practice.at : Math.round(askedPhrase) - 1;
+    if (tempo !== practice.tempo || at !== practice.at) {
+      practice.tempo = tempo;
+      selectPhrase(at);
+    }
   } else {
     if (modeChanged) {
       player.setRange(null);
       player.setLoop(pattern.loop !== false);
       player.setTempo(pattern.bpm);
     }
+    if (askedBpm !== null) player.setTempo(askedBpm);
     renderLearn(pattern);
   }
   drawMic();
@@ -1384,6 +1482,12 @@ function route() {
   routed = pattern.id;
   if (changed && window.scrollY !== 0) window.scrollTo(0, 0);
   paint(player.snapshot());
+}
+
+function routeExplore(view) {
+  if (!explore) return;
+  if (view && Object.hasOwn(VIEWS, view)) explore.open(view);
+  else explore.close();
 }
 
 function paint(snap) {
@@ -1808,7 +1912,8 @@ if (navigator.mediaDevices) {
   });
 }
 
-initExplore({ onOpen: () => {
+document.addEventListener("alamut-explore", () => syncUrl());
+explore = initExplore({ onOpen: () => {
   if (practice) {
     practice.pending = false;
     practice.run += 1;
