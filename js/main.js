@@ -389,6 +389,7 @@ async function bootStage() {
     document.fonts.load(lang === "fa" ? "700 200px \"Vazirmatn\"" : "700 200px Georgia", digits("0123456789") + "\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
+    stage.selectCourtyard(!!patternFromHash());
     paint(player.snapshot());
     requestAnimationFrame(() => finishLoading());
     void Promise.race([
@@ -1847,6 +1848,7 @@ function routeNow() {
     routeNow();
     return;
   }
+  if (stage) stage.selectCourtyard(!!pattern);
   if (routed === null || [...params.keys()].length) applyListParams(params);
   if (practice && (changed || !learning)) leavePractice();
   if (changed || modeChanged) {
