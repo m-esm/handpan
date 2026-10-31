@@ -442,7 +442,7 @@ export const PATTERNS = [
     ],
   },
   ...PIECES.map(compile),
-];
+].filter((pattern) => ["in-the-end", "nothing-else-matters", "seven-nation-army"].includes(pattern.id));
 
 export function pretty(id) {
   if (id === TAK) return TAK;
