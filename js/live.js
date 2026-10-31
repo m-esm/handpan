@@ -17,7 +17,7 @@
   let cursor = 0;
   let busy = false;
   async function probe(url) {
-    const response = await fetch(url, { method: "HEAD", cache: "no-store" });
+    const response = await fetch(url, { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(5000) });
     const mark = response.headers.get("etag") || response.headers.get("last-modified") || "";
     if (!marks.has(url)) {
       marks.set(url, mark);
