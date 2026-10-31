@@ -47,28 +47,6 @@ press(false);
 press(true);
 assert.equal(practicePauses, 1);
 
-const scene = await readFile(new URL("../js/scene.js", import.meta.url), "utf8");
-for (const cancel of [false, true]) {
-  let release;
-  const ready = new Promise(resolve => { release = resolve; });
-  const scope = {
-    VIEWS: { dawn: {}, courtyard: {} },
-    viewKey: "courtyard",
-    wantedKey: "courtyard",
-    landscape: null,
-    landscapeReady: ready,
-  };
-  scope.ensureLandscape = () => { scope.landscape = {}; };
-  vm.createContext(scope);
-  vm.runInContext(between(scene, "  function environment(key) {", '  document.addEventListener("alamut-explore"'), scope);
-  scope.environment("dawn");
-  if (cancel) scope.environment("courtyard");
-  const applied = [];
-  scope.environment = key => applied.push(key);
-  release();
-  await ready;
-  assert.deepEqual(applied, cancel ? [] : ["dawn"], "a deferred landscape must respect the latest selection");
-}
 const seekHandlers = {};
 const seekInput = {
   setAttribute() {},
@@ -131,4 +109,4 @@ controlBox.bottom = 130;
 assert.equal(boundsContext.scoreBounds().top, 130, "a sticky desktop player reserves its full height");
 assert.equal(boundsContext.scoreBounds().bottom, 800);
 
-console.log("Interaction checks passed: blocked storage, held Space, native controls, practice pause, deferred landscape cancellation, silent/playing seek, seek keyboard boundaries and score visibility.");
+console.log("Interaction checks passed: blocked storage, held Space, native controls, practice pause, seeking and score visibility.");

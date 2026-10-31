@@ -16,8 +16,6 @@ import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
 import { createGame, wordFor, TIERS } from "./game.js";
-import { VIEWS, viewFor } from "./environments.js";
-import { initExplore } from "./explore.js";
 import { initMotion } from "./motion.js";
 import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPractice, savePractice } from "./practice.js";
 import { t, raw, has, plural, digits, pieceText, partName, lang, wireLanguageSwitch, applyDocument } from "./i18n.js";
@@ -54,36 +52,20 @@ let lastListed = "";
 let routed = null;
 let stage = null;
 let sceneLoadCancelled = false;
-let sceneChoice = "auto";
-let lastEnvironment = "";
 let practice = null;
 let practiceSaved = null;
-let explore = null;
 try {
   practiceSaved = readPractice(localStorage, PATTERNS);
 } catch {
   practiceSaved = null;
 }
 
-const sceneSelect = document.getElementById("environment");
-for (const [key, view] of Object.entries(VIEWS)) {
-  const option = document.createElement("option");
-  option.value = key;
-  option.textContent = t(`env.${key}`);
-  sceneSelect.append(option);
-}
 function syncPickTitle(select) {
   select.title = select.selectedOptions[0]?.textContent ?? "";
 }
 for (const select of document.querySelectorAll(".pick select")) {
   select.addEventListener("change", () => syncPickTitle(select));
 }
-syncPickTitle(sceneSelect);
-sceneSelect.addEventListener("change", () => {
-  sceneChoice = sceneSelect.value;
-  paint(player.snapshot());
-  syncUrl();
-});
 
 wireLanguageSwitch(document.getElementById("language"));
 
@@ -98,7 +80,6 @@ toolsToggle.addEventListener("click", () => setTools(!document.body.classList.co
 document.addEventListener("pointerdown", (event) => {
   if (!event.target.closest("#tools, #tools-toggle")) setTools(false);
 });
-document.getElementById("explore-world").addEventListener("click", () => setTools(false));
 
 const loader = document.getElementById("scene-loader");
 const loaderBar = document.getElementById("loading-bar");
@@ -379,13 +360,14 @@ async function bootStage() {
   }, 8000);
   try {
     setLoading(0.02, "loader.modules");
-    const { prepareTextures, COURTYARD } = await import("./textures.js");
+    const { prepareTextures, COURTYARD, LANDSCAPE } = await import("./textures.js");
     const textures = prepareTextures();
     const { createStage } = await import("./scene.js");
     performance.mark("boot:scene-module");
     setLoading(0.15, "loader.textures");
     let baked = 0;
-    await textures.ready(COURTYARD, () => setLoading(0.15 + (0.45 * ++baked) / COURTYARD.length));
+    const worldTextures = [...COURTYARD, ...LANDSCAPE];
+    await textures.ready(worldTextures, () => setLoading(0.15 + (0.45 * ++baked) / worldTextures.length));
     performance.mark("boot:textures");
     if (sceneLoadCancelled) return;
     setLoading(0.6, "loader.building");
@@ -506,10 +488,6 @@ function applyListParams(params) {
   const nextQuery = params.get("q") || "";
   const kinds = ["All", ...kindList()];
   const nextKind = kinds.find((kind) => kind.toLowerCase() === (params.get("kind") || "").toLowerCase()) || "All";
-  const nextScene = params.get("scene");
-  sceneChoice = nextScene && Object.hasOwn(VIEWS, nextScene) ? nextScene : "auto";
-  sceneSelect.value = sceneChoice;
-  syncPickTitle(sceneSelect);
   const nextRating = optionId(RATING_FILTERS, params.get("rating"));
   const nextSort = optionId(SORT_ORDERS, params.get("sort"));
   if (nextQuery === query && nextKind === kindFilter && nextRating === ratingFilter && nextSort === sortOrder) return;
@@ -526,9 +504,6 @@ function stateHash() {
   if (kindFilter !== "All") params.set("kind", kindFilter.toLowerCase());
   if (ratingFilter !== RATING_FILTERS[0].id) params.set("rating", ratingFilter);
   if (sortOrder !== SORT_ORDERS[0].id) params.set("sort", sortOrder);
-  if (sceneChoice !== "auto") params.set("scene", sceneChoice);
-  const view = explore?.view();
-  if (view) params.set("explore", view);
   let path = "#/";
   const pattern = patternFromHash();
   if (pattern && practice) {
@@ -1844,7 +1819,6 @@ function routeNow() {
     return;
   }
   if (routed === null || [...params.keys()].length) applyListParams(params);
-  routeExplore(params.get("explore"));
   if (practice && (changed || !learning)) leavePractice();
   if (changed || modeChanged) {
     player.pause();
@@ -1900,24 +1874,19 @@ function routeNow() {
   paint(player.snapshot());
 }
 
-function routeExplore(view) {
-  if (!explore) return;
-  if (view && Object.hasOwn(VIEWS, view)) explore.open(view);
-  else explore.close();
-}
-
 function paint(snap) {
+  document.body.classList.toggle("is-playing", !!snap.playing && !practice);
+  const playingNotes = document.getElementById("playing-notes");
+  if (playingNotes) {
+    playingNotes.hidden = !snap.playing || !!practice;
+    const showNote = id => id === TAK ? t("practice.tak.name") : digits(numberOf(id));
+    playingNotes.querySelector(".playing-current").textContent = snap.notes.map(showNote).join(" · ");
+    playingNotes.querySelector(".playing-next").textContent = snap.nextNotes.map(showNote).join(" · ");
+  }
   if (practice && (!practice.phrases[practice.at].events.length || (practice.mode === "try" && practice.attempt.snapshot().complete))) {
     snap = { ...snap, index: -1, notes: [], nextIndex: -1, nextNotes: [] };
   }
   updatePractice(snap);
-  const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
-  if (stage && environment !== lastEnvironment) {
-    stage.environment(environment);
-    lastEnvironment = environment;
-    sceneSelect.options[0].textContent = t("scene.autoNamed", { name: t(`env.${environment}`) });
-    syncPickTitle(sceneSelect);
-  }
   const onNotes = new Set(snap.notes);
   const nextNotes = new Set(snap.nextNotes);
   document.querySelectorAll(".field").forEach((field) => {
@@ -1972,7 +1941,7 @@ function paint(snap) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) scrollStrip(slot.parentElement, slot);
-    if (slot && !practice) {
+    if (slot && !practice && !matchMedia("(max-width: 600px)").matches) {
       if (settled && !followPaused) keepInView(slot.closest(".bar"));
       settled = true;
     }
@@ -2120,7 +2089,7 @@ document.getElementById("listen").addEventListener("click", toggleListen);
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
-  if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
+  if (event.defaultPrevented) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("input, textarea, select") || event.target.isContentEditable) return;
   if (/^(Digit[0-9]|Numpad[0-9]|KeyT)$/.test(event.code)) {
@@ -2340,15 +2309,6 @@ if (navigator.mediaDevices) {
   });
 }
 
-document.addEventListener("alamut-explore", () => syncUrl());
-explore = initExplore({ onOpen: () => {
-  if (practice) {
-    practice.pending = false;
-    practice.run += 1;
-  }
-  player.pause();
-  stopListening("");
-} });
 drawPan();
 route();
 bootStage();
