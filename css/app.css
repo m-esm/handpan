@@ -1184,11 +1184,9 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (min-width: 1001px) and (min-height: 521px) {
-  .deck { right: auto; inset-inline-end: calc(50% + 28px); }
-}
-
-@media (min-width: 1001px) and (max-width: 1180px) and (min-height: 521px) {
-  .deck { inset-inline-end: calc(45% + 28px); }
+  .transport-settings { position: sticky; top: 0; z-index: 20; background: var(--solid); }
+  .deck { position: static; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  .deck .play { width: 44px; height: 44px; min-width: 44px; }
 }
 
 @media (min-width: 1001px) {
