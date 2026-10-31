@@ -1233,7 +1233,8 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 360px) {
   .top, .top-end { gap: 4px; }
-  .brand { gap: 4px; font-size: 23px; }
+  .top .brand { gap: 4px; font-size: 20px; }
+  .top .brand img { width: 26px; height: 26px; }
   .top .lang-switch, .top #tools-toggle, [dir="rtl"] .top .lang-switch, [dir="rtl"] .top #tools-toggle { padding-inline: 8px; }
 }
 
