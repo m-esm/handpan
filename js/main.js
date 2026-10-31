@@ -1446,10 +1446,11 @@ function renderLearn(pattern) {
     player.play(pattern, 0, { keepTempo: true }).catch(audioError);
   });
 
-  const tempoLabel = document.createElement("label");
+  const tempoLabel = document.createElement("div");
   tempoLabel.className = "tempo";
-  const unit = document.createElement("span");
+  const unit = document.createElement("label");
   unit.className = "tempo-unit";
+  unit.htmlFor = "tempo";
   unit.textContent = t("bpm");
   const range = document.createElement("input");
   range.id = "tempo";
@@ -1467,7 +1468,23 @@ function renderLearn(pattern) {
     range.value = String(player.bpm);
     scheduleSync();
   });
-  tempoLabel.append(range, unit);
+  const tempoControls = document.createElement("div");
+  tempoControls.className = "tempo-controls";
+  for (const [delta, symbol, label] of [[-1, "−", "tempo.decrease"], [1, "+", "tempo.increase"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tempo-adjust";
+    button.textContent = symbol;
+    button.setAttribute("aria-label", t(label));
+    button.addEventListener("click", () => {
+      player.setTempo(player.bpm + delta);
+      range.value = String(player.bpm);
+      scheduleSync();
+    });
+    tempoControls.append(button);
+    if (delta < 0) tempoControls.append(range);
+  }
+  tempoLabel.append(unit, tempoControls);
 
   const loop = document.createElement("button");
   loop.type = "button";
@@ -1668,7 +1685,7 @@ function sheetNode(pattern, sheet) {
       loop.className = "part-loop";
       loop.dataset.from = String(section.first);
       loop.dataset.to = String(section.end);
-      loop.textContent = t("loop.part");
+      loop.append(controlIcon("M17 2l4 4-4 4 M3 11V9a3 3 0 0 1 3-3h15 M7 22l-4-4 4-4 M21 13v2a3 3 0 0 1-3 3H3"), document.createTextNode(t("loop.part")));
       loop.addEventListener("click", () => {
         if (loop.getAttribute("aria-pressed") === "true") clearRange();
         else loopBars(pattern, section.first, section.end);
