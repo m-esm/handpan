@@ -1774,7 +1774,9 @@ function scoreBounds() {
   const box = learn.getBoundingClientRect();
   const controls = document.querySelector(".transport-settings");
   const fixed = controls?.parentElement === document.body;
-  const top = Math.max(0, box.top, controls && !fixed ? controls.getBoundingClientRect().bottom : 0);
+  const pan = document.body.classList.contains("is-playing") && matchMedia("(max-width: 1000px) and (min-height: 521px)").matches
+    ? document.querySelector(".pan-stick") : null;
+  const top = Math.max(0, box.top, controls && !fixed ? controls.getBoundingClientRect().bottom : 0, pan?.getBoundingClientRect().bottom || 0);
   const bottom = Math.min(window.innerHeight, box.bottom, fixed ? controls.getBoundingClientRect().top : Infinity);
   return { top, bottom };
 }
@@ -1886,13 +1888,6 @@ function routeNow() {
 
 function paint(snap) {
   document.body.classList.toggle("is-playing", !!snap.playing && !practice);
-  const playingNotes = document.getElementById("playing-notes");
-  if (playingNotes) {
-    playingNotes.hidden = !snap.playing || !!practice;
-    const showNote = id => id === TAK ? t("practice.tak.name") : digits(numberOf(id));
-    playingNotes.querySelector(".playing-current").textContent = snap.notes.map(showNote).join(" · ");
-    playingNotes.querySelector(".playing-next").textContent = snap.nextNotes.map(showNote).join(" · ");
-  }
   if (practice && (!practice.phrases[practice.at].events.length || (practice.mode === "try" && practice.attempt.snapshot().complete))) {
     snap = { ...snap, index: -1, notes: [], nextIndex: -1, nextNotes: [] };
   }
@@ -1951,7 +1946,7 @@ function paint(snap) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) scrollStrip(slot.parentElement, slot);
-    if (slot && !practice && !matchMedia("(max-width: 600px)").matches) {
+    if (slot && !practice) {
       if (settled && !followPaused) keepInView(slot.closest(".bar"));
       settled = true;
     }

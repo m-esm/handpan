@@ -89,20 +89,25 @@ seekKey("Tab");
 assert.equal(prevented, 5, "unrelated keys retain native handling");
 
 let fixedTransport = true;
-const body = {};
+let playing = false;
+const body = { classList: { contains: () => playing } };
 const controlBox = { top: 650, bottom: 780 };
 const controls = { get parentElement() { return fixedTransport ? body : {}; }, getBoundingClientRect: () => controlBox };
 const boundsContext = {
   document: {
     body,
     getElementById: () => ({ getBoundingClientRect: () => ({ top: -200, bottom: 1100 }) }),
-    querySelector: () => controls,
+    querySelector: selector => selector === ".pan-stick" ? { getBoundingClientRect: () => ({ bottom: 210 }) } : controls,
   },
+  matchMedia: () => ({ matches: true }),
   window: { innerHeight: 800 },
 };
 vm.runInNewContext(between(main, "function scoreBounds()", "function pauseFollow("), boundsContext);
 assert.equal(boundsContext.scoreBounds().top, 0, "a static pan must not reduce the score viewport");
 assert.equal(boundsContext.scoreBounds().bottom, 650, "a floating player must not cover the current bar");
+playing = true;
+assert.equal(boundsContext.scoreBounds().top, 210, "the playing handpan reserves space above the score");
+playing = false;
 fixedTransport = false;
 controlBox.top = 0;
 controlBox.bottom = 130;
