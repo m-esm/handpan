@@ -1506,12 +1506,12 @@ function renderLearn(pattern) {
   transport.append(play);
   const settings = document.createElement("div");
   settings.className = "transport transport-settings";
-  settings.append(loop, ranged, tempoLabel);
 
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
   deck.className = "deck";
   deck.append(transport);
+  settings.append(deck, loop, ranged, tempoLabel);
 
   document.body.classList.toggle("is-practicing", !!practice);
   const notation = sheetNode(pattern, sheet);
@@ -1522,11 +1522,21 @@ function renderLearn(pattern) {
     dock.append(panel);
   } else {
     dock.append(settings, notation);
-    document.body.append(deck);
+    placeDeck();
   }
   focusSheet(pattern);
   updatePractice(player.snapshot());
 }
+
+function placeDeck() {
+  const deck = document.querySelector(".deck");
+  const settings = document.querySelector(".transport-settings");
+  if (!deck || !settings) return;
+  if (window.matchMedia("(min-width: 1001px) and (min-height: 521px)").matches) settings.prepend(deck);
+  else document.body.append(deck);
+}
+
+window.addEventListener("resize", placeDeck);
 
 function textButton(className, text) {
   const node = document.createElement("button");
