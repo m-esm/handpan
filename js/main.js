@@ -11,6 +11,7 @@ import {
   numberOf,
 } from "./score.js";
 import { ADDED } from "./added.js";
+import { initPrint } from "./print.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
@@ -22,6 +23,7 @@ import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPrac
 import { t, raw, has, plural, digits, pieceText, partName, lang, wireLanguageSwitch, applyDocument } from "./i18n.js";
 
 applyDocument();
+initPrint();
 
 const audio = createAudio();
 document.getElementById("pan").addEventListener("pointerup", (event) => {

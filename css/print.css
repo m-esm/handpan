@@ -1,0 +1,92 @@
+#print-book { display: none; }
+
+@page {
+  size: A4 portrait;
+  margin: 14mm;
+}
+
+@media print {
+  :root { color-scheme: light; }
+  html, body {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #172522 !important;
+  }
+  body > :not(#print-book), body::before, body::after { display: none !important; }
+  #print-book {
+    display: block;
+    font: 10pt/1.5 system-ui, sans-serif;
+    color: #172522;
+    text-align: start;
+  }
+  #print-book[dir="rtl"] { font-family: "Vazirmatn", Tahoma, sans-serif; }
+  #print-book h1, #print-book h2, #print-book h3, #print-book p { margin: 0; }
+  #print-book .print-cover {
+    height: 268mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    break-inside: avoid;
+    text-align: center;
+    padding: 5mm 0 8mm;
+  }
+  #print-book .print-brand { font: 22pt/1.2 Georgia, serif; }
+  #print-book .print-kicker { margin: 3mm 0; font-size: 10pt; }
+  #print-book h1 { font-size: 27pt; line-height: 1.4; font-weight: 600; }
+  #print-book .print-guide { margin: 0; }
+  #print-book .print-pan { display: block; width: 172mm; height: 172mm; margin: 0 auto; fill: #172522; }
+  #print-book figcaption { margin-top: 2mm; font-size: 9pt; }
+  #print-book .print-reading { border-top: 0.3mm solid #73847c; padding: 4mm 7mm 0; text-align: start; }
+  #print-book .print-reading h2 { font-size: 13pt; margin-bottom: 1mm; }
+  #print-book .print-song {
+    break-before: page;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border: 0;
+    font: inherit;
+    color: inherit;
+  }
+  #print-book thead { display: table-header-group; }
+  #print-book tbody { break-inside: auto; }
+  #print-book tr { break-inside: avoid; }
+  #print-book td { padding: 0; border: 0; vertical-align: top; }
+  #print-book thead td { padding: 0 0 5mm; }
+  #print-book .print-song-index { font-size: 9pt; color: #45574d; }
+  #print-book .print-song-title { font-size: 22pt; line-height: 1.4; margin: 1mm 0; }
+  #print-book .print-song-meta { font-size: 10pt; }
+  #print-book .print-score-legend { font-size: 8pt; margin-top: 2mm; }
+  #print-book .print-section { font-size: 12pt; padding: 3mm 0 1.5mm; }
+  #print-book .print-system {
+    direction: ltr;
+    display: grid;
+    grid-template-columns: repeat(var(--print-bars), minmax(0, 1fr));
+    gap: 4mm;
+    padding-bottom: 3mm;
+    break-inside: avoid;
+  }
+  #print-book .print-bar { min-width: 0; position: relative; padding-top: 4mm; }
+  #print-book .print-bar-number { position: absolute; top: 0; left: 0; font-size: 8pt; font-weight: 600; }
+  #print-book .print-slots {
+    display: grid;
+    grid-template-columns: repeat(var(--print-slots), minmax(0, 1fr));
+    border: 0.25mm solid #73847c;
+    min-height: 16mm;
+  }
+  #print-book .print-slot { min-width: 0; text-align: center; border-left: 0.15mm solid #c2c9c4; padding: 0.5mm 0; }
+  #print-book .print-slot:first-child { border-left: 0; }
+  #print-book .print-beat { border-left-color: #73847c; }
+  #print-book .print-count { display: block; font-size: 7pt; line-height: 1.4; color: #45574d; }
+  #print-book .print-notes { display: flex; justify-content: center; align-items: center; min-height: 10mm; }
+  #print-book .print-hit { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
+  #print-book .print-number { font-weight: 600; }
+  #print-book .print-hand { font-size: 6pt; line-height: 1.5; }
+  #print-book .print-plus { font-size: 7pt; }
+  #print-book .print-rest { font-size: 14pt; }
+}

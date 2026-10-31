@@ -8,6 +8,15 @@ export const LANGS = {
 };
 
 const EN = {
+  "print.action": "Print songbook",
+  "print.guide": "Your handpan, by number",
+  "print.instrument": "D Kurd · Note guide & complete songbook",
+  "print.orientation": "Top view · Standard orientation · Player sits below",
+  "print.reading": "Reading the scores",
+  "print.legend": "0 is the centre ding. 1–9 are tone fields. + joins notes struck together. × is a tak. Dots let the sound ring or rest. Smaller notes are softer. L = left hand; R = right hand. Read scores from left to right; count labels mark the beats.",
+  "print.scoreLegend": "+ together · dots: ring / rest · × tak · small = soft · L left / R right",
+  "print.beats": "{beats} beats per bar · {slots} slots per beat",
+  "print.sequence": "{at} / {total}",
   "brand": "Alamut",
   "app.title": "Alamut | Play and learn the D Kurd handpan",
   "site.title": "Alamut | Play and learn a 10-note D Kurd handpan in the browser",
@@ -298,6 +307,15 @@ const EN = {
 };
 
 const FA = {
+  "print.action": "چاپ دفتر نُت",
+  "print.guide": "هندپن شما، با شمارهٔ نُت‌ها",
+  "print.instrument": "رِ کُرد · راهنمای نُت‌ها و دفتر کامل قطعه‌ها",
+  "print.orientation": "نمای بالا · چیدمان استاندارد · نوازنده در پایین می‌نشیند",
+  "print.reading": "روش خواندن نُت‌ها",
+  "print.legend": "۰ دینگ مرکزی است. ۱ تا ۹ نُت‌های پیرامونی‌اند. + نُت‌های هم‌زمان را وصل می‌کند. × تَک است. نقطه یعنی ادامهٔ صدا یا سکوت. نُت کوچک‌تر آرام‌تر است. L دست چپ و R دست راست است. نُت‌ها را از چپ به راست بخوانید؛ شماره‌های شمارش ضرب‌ها را نشان می‌دهند.",
+  "print.scoreLegend": "+ هم‌زمان · نقطه: ادامهٔ صدا یا سکوت · × تَک · کوچک: آرام · L چپ / R راست",
+  "print.beats": "{beats} ضرب در میزان · {slots} بخش در ضرب",
+  "print.sequence": "{at} / {total}",
   "brand": "الموت",
   "app.title": "الموت | نواختن و یادگیری هندپن رِ کُرد",
   "site.title": "الموت | نواختن و یادگیری هندپن ده‌نُتی رِ کُرد در مرورگر",

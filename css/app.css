@@ -148,14 +148,14 @@ button, select, .open, .back, .brand { cursor: pointer; }
 
 .tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 6px; }
 .ico { flex: 0 0 auto; width: 18px; height: 18px; opacity: 0.85; }
-.top #listen, .top #explore-world, .top #tools-toggle { min-height: 40px; padding: 6px 14px 6px 11px; }
+.top #listen, .top #explore-world, .top #tools-toggle, .top #print-library { min-height: 40px; padding: 6px 14px 6px 11px; }
 .top .scene-pick { max-width: 260px; gap: 8px; padding-inline-start: 11px; }
 .top .scene-pick .ico { color: var(--mist); }
 .top .scene-pick select { min-height: 40px; padding-inline-start: 0; }
 .top .lang-switch { min-height: 40px; }
 .motion-controls { display: flex; align-items: center; gap: 8px; }
 
-#listen, #tools-toggle, #explore-world, #motion-toggle, #motion-center, #simple-view,
+#listen, #tools-toggle, #explore-world, #motion-toggle, #motion-center, #simple-view, #print-library,
 .open, .back, .stepper, .loop, .range, .chip, .step-btn, .part-loop,
 .mode-link, .practice-start, .practice-control, .play {
   display: inline-flex;
