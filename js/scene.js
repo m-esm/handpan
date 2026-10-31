@@ -1708,8 +1708,9 @@ function createWorld(prepared) {
   });
   resize();
   function environment(key) {
-      if (!VIEWS[key] || key === viewKey) return;
+      if (!VIEWS[key]) return;
       wantedKey = key;
+      if (key === viewKey) return;
       if (key !== "courtyard" && !landscape) {
         ensureLandscape();
         landscapeReady.then(() => { if (wantedKey === key) environment(key); });

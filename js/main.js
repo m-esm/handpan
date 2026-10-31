@@ -139,7 +139,10 @@ document.getElementById("simple-view").addEventListener("click", () => {
 
 const player = createPlayer(audio, paint);
 const listener = createListener(onHeard, onMicEnded);
-const game = createGame(localStorage);
+const game = createGame({
+  getItem: (key) => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+});
 const POP_MS = 1800;
 let popTimer = 0;
 const HEARD_MS = 450;
@@ -2048,6 +2051,7 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     if (event.target.closest("button, a, [role=button]")) return;
     event.preventDefault();
+    if (event.repeat) return;
     if (practice) {
       if (!event.repeat) pausePractice();
       return;
