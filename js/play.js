@@ -349,7 +349,7 @@ export function createPlayer(audio, emit) {
       return state.loop;
     },
     get canResume() {
-      return !!state.pattern && state.cursor > 0;
+      return !!state.pattern && state.cursor > 0 && !state.ended;
     },
     get range() {
       return state.range;
