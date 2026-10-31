@@ -569,7 +569,6 @@ body.has-3d .pan-svg { opacity: 0; pointer-events: none; filter: none; }
   50% { transform: translateX(4px); }
   75% { transform: translateX(-3px); }
 }
-}
 
 .field { cursor: pointer; }
 .field-face { stroke: #1a120e; stroke-width: 1; transition: stroke var(--ease), stroke-width var(--ease); }
