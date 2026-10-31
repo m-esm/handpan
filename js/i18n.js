@@ -8,6 +8,7 @@ export const LANGS = {
 };
 
 const EN = {
+  "progress.label": "Playback progress",
   "print.action": "Print songbook",
   "print.guide": "Your handpan, by number",
   "print.instrument": "D Kurd · Note guide & complete songbook",
@@ -307,6 +308,7 @@ const EN = {
 };
 
 const FA = {
+  "progress.label": "پیشرفت پخش",
   "print.action": "چاپ دفتر نُت",
   "print.guide": "هندپن شما، با شمارهٔ نُت‌ها",
   "print.instrument": "رِ کُرد · راهنمای نُت‌ها و دفتر کامل قطعه‌ها",
