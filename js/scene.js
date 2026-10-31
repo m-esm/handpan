@@ -1630,7 +1630,7 @@ function createWorld(prepared) {
   const cycle = {
     day: 0, year: 0, snow: 0, stars: 1, cover: 0.32, fog: 0.015, exposure: 1.1, hemi: 1.2, lamp: 0,
     zenith: courtyardSky.zenith, horizon: courtyardSky.horizon, ground: courtyardSky.ground, glow: courtyardSky.glow, cloud: courtyardSky.cloud, sky: 0x142c3c, light: 0xb9d7ed,
-    steppe: 0, rock: 0, ranges: 0, leaf: 0, plaster: 0, brick: 0, mud: 0, water: 0,
+    steppe: 0, rock: 0, leaf: 0, plaster: 0, brick: 0, mud: 0, water: 0,
     sunX: 0, sunY: -46, sunZ: -58, moonX: 0, moonY: 46, moonZ: -62, sunColor: 0xfff1c4, moonColor: 0xd7e4f6,
   };
   // Courtyard boots first so WebGL is on screen quickly. The valley is heavier
