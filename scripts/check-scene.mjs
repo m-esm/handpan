@@ -25,6 +25,7 @@ assert.match(main, /simple\.failed/, "stage-failure path must stay distinct");
 
 assert.match(scene, /async function ensureLandscape/, "valley must load through ensureLandscape");
 assert.match(scene, /function dropLandscape/, "valley failures must fall back inside WebGL");
+assert.match(scene, /landscape compile timeout/, "valley shader compile must time out instead of hanging");
 assert.ok(
   !/let landscape = null;\s*try \{\s*landscape = createLandscape/.test(scene),
   "createWorld must not build the valley synchronously",

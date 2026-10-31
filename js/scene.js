@@ -1730,7 +1730,12 @@ function createWorld(prepared) {
         batchArchitecture(built.group);
         built.group.visible = false;
         scene.add(built.group);
-        if (compiled) await renderer.compileAsync(scene, camera);
+        if (compiled) {
+          await Promise.race([
+            renderer.compileAsync(scene, camera),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("landscape compile timeout")), 20000)),
+          ]);
+        }
         const extent = 78;
         moonlight.shadow.camera.left = -extent;
         moonlight.shadow.camera.right = extent;
