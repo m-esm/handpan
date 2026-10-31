@@ -1639,6 +1639,7 @@ function createWorld(prepared) {
   // the whole stage down into simple view even though WebGL itself was fine.
   let landscape = null;
   let landscapeTask = null;
+  let courtyardSelected = false;
   let skyBase = 1.2;
   let shadowMark = null;
   const look = new THREE.Vector2();
@@ -1647,10 +1648,9 @@ function createWorld(prepared) {
   let energy = 0;
   let pendingFrames = 30;
   const drift = still ? 0 : 1;
-  function dropLandscape() {
-    if (landscape?.group) landscape.group.removeFromParent();
-    landscape = null;
+  function showCourtyard() {
     courtyard.visible = true;
+    if (landscape?.group) landscape.group.visible = false;
     const extent = 32;
     moonlight.shadow.camera.left = -extent;
     moonlight.shadow.camera.right = extent;
@@ -1659,6 +1659,11 @@ function createWorld(prepared) {
     moonlight.shadow.camera.far = 90;
     moonlight.shadow.camera.updateProjectionMatrix();
     moonlight.position.set(-12, 24, -5);
+    moon.position.set(46, 35, -64);
+    moonHalo.position.copy(moon.position);
+    moon.material.opacity = 1;
+    moonHalo.material.opacity = 1;
+    moon.material.color.setHex(0xffe8bf);
     fogBase = 0.015;
     skyBase = 1.2;
     moonBase = 2.5;
@@ -1667,10 +1672,35 @@ function createWorld(prepared) {
     shadowMark = null;
     renderer.shadowMap.needsUpdate = true;
   }
+  function dropLandscape() {
+    if (landscape?.group) landscape.group.removeFromParent();
+    landscape = null;
+    showCourtyard();
+  }
+  function selectCourtyard(selected) {
+    courtyardSelected = selected;
+    probeMark = -1;
+    if (selected || !landscape) showCourtyard();
+    else {
+      courtyard.visible = false;
+      landscape.group.visible = true;
+      const extent = 78;
+      moonlight.shadow.camera.left = -extent;
+      moonlight.shadow.camera.right = extent;
+      moonlight.shadow.camera.top = extent;
+      moonlight.shadow.camera.bottom = -extent;
+      moonlight.shadow.camera.far = 260;
+      moonlight.shadow.camera.updateProjectionMatrix();
+      shadowMark = null;
+      renderer.shadowMap.needsUpdate = true;
+    }
+    pendingFrames = 30;
+    if (compiled) draw(performance.now());
+  }
   function pose(time) {
     const seconds = time / 1000;
     ease.lerp(look, 0.035);
-    if (!landscape) {
+    if (!landscape || courtyardSelected) {
       camera.position.set(
         1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
         4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
@@ -1743,14 +1773,8 @@ function createWorld(prepared) {
         moonlight.shadow.camera.bottom = -extent;
         moonlight.shadow.camera.far = 260;
         moonlight.shadow.camera.updateProjectionMatrix();
-        built.group.visible = true;
-        courtyard.visible = false;
         landscape = built;
-        shadowMark = null;
-        renderer.shadowMap.needsUpdate = true;
-        pendingFrames = 30;
-        pose(performance.now());
-        if (compiled) draw(performance.now());
+        selectCourtyard(courtyardSelected);
         performance.mark("stage:landscape");
         return landscape;
       } catch {
@@ -1778,7 +1802,7 @@ function createWorld(prepared) {
     skyLight.intensity = skyBase + energy * 0.5 + magic * 0.7;
     moonlight.intensity = moonBase * (1 + magic * 0.35);
     scene.fog.density = fogBase * (1 - magic * 0.45);
-    renderer.toneMappingExposure = (landscape ? cycle.exposure : 1.1) + magic * 0.28;
+    renderer.toneMappingExposure = (landscape && !courtyardSelected ? cycle.exposure : 1.1) + magic * 0.28;
     sky.uniforms.uTime.value = seconds;
     sky.uniforms.uMagic.value = magic;
     scene.fog.color.copy(fogTone).lerp(charmTone, magic * 0.55);
@@ -1833,6 +1857,7 @@ function createWorld(prepared) {
   return {
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     ensureLandscape,
+    selectCourtyard,
     async compile() {
       await renderer.compileAsync(scene, camera);
       compiled = true;
@@ -1895,6 +1920,7 @@ export function createStage({ pan, onHit, textures }) {
   return {
     ready: (onEach = () => {}) => Promise.all([world.compile().then(onEach), drum.compile().then(onEach)]).then(() => performance.mark("stage:compiled")),
     ensureLandscape: world.ensureLandscape,
+    selectCourtyard: world.selectCourtyard,
     layout: drum.layout,
     set: drum.set,
     setTak: drum.setTak,
