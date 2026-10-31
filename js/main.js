@@ -45,6 +45,9 @@ let ratingFilter = "any";
 let sortOrder = "library";
 let lastScroll = -2;
 let settled = false;
+let followPaused = false;
+let followOrigin = 0;
+let followDeparted = false;
 let lastListed = "";
 let routed = null;
 let stage = null;
@@ -1365,6 +1368,8 @@ async function sharePiece(pattern) {
 function renderLearn(pattern) {
   lastScroll = -2;
   settled = false;
+  followPaused = false;
+  followDeparted = false;
   document.title = t("piece.title", { title: pieceText(pattern, "title") });
   const dock = document.getElementById("learn");
   dock.innerHTML = "";
@@ -1699,6 +1704,33 @@ function keepInView(node, toTop) {
   else window.scrollBy(0, shift);
 }
 
+function pauseFollow() {
+  if (!followPaused) {
+    const learn = document.getElementById("learn");
+    followOrigin = learn.scrollTop + window.scrollY;
+    followDeparted = false;
+    followPaused = true;
+  }
+}
+
+function resumeFollowNearCurrent() {
+  if (!followPaused) return;
+  const learn = document.getElementById("learn");
+  const position = learn.scrollTop + window.scrollY;
+  if (Math.abs(position - followOrigin) > 80) followDeparted = true;
+  if (!followDeparted) return;
+  const bar = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place")?.closest(".bar");
+  if (!bar) return;
+  const box = bar.getBoundingClientRect();
+  const top = Math.max(document.querySelector(".pan-stick")?.getBoundingClientRect().bottom || 0, document.querySelector(".deck")?.getBoundingClientRect().bottom || 0, learn.getBoundingClientRect().top);
+  const bottom = Math.min(window.innerHeight, learn.getBoundingClientRect().bottom);
+  if (box.top >= top && box.bottom <= bottom) followPaused = false;
+}
+
+document.addEventListener("touchmove", pauseFollow, { passive: true });
+document.addEventListener("wheel", pauseFollow, { passive: true });
+document.addEventListener("scroll", resumeFollowNearCurrent, true);
+
 function route() {
   routing = true;
   try {
@@ -1849,7 +1881,7 @@ function paint(snap) {
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) scrollStrip(slot.parentElement, slot);
     if (slot && !practice) {
-      if (settled) keepInView(slot.closest(".bar"));
+      if (settled && !followPaused) keepInView(slot.closest(".bar"));
       settled = true;
     }
   }
