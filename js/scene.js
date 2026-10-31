@@ -1633,25 +1633,12 @@ function createWorld(prepared) {
     steppe: 0, rock: 0, ranges: 0, leaf: 0, plaster: 0, brick: 0, mud: 0, water: 0,
     sunX: 0, sunY: -46, sunZ: -58, moonX: 0, moonY: 46, moonZ: -62, sunColor: 0xfff1c4, moonColor: 0xd7e4f6,
   };
+  // Courtyard boots first so WebGL is on screen quickly. The valley is heavier
+  // (MeshPhysical water, wide shadows, PMREM) and used to run inside createWorld;
+  // a failure there after the landscape try/catch (pose → pmrem.fromScene) tore
+  // the whole stage down into simple view even though WebGL itself was fine.
   let landscape = null;
-  try {
-    landscape = createLandscape(textures);
-    batchArchitecture(landscape.group);
-    landscape.group.visible = true;
-    scene.add(landscape.group);
-    courtyard.visible = false;
-    const extent = 78;
-    moonlight.shadow.camera.left = -extent;
-    moonlight.shadow.camera.right = extent;
-    moonlight.shadow.camera.top = extent;
-    moonlight.shadow.camera.bottom = -extent;
-    moonlight.shadow.camera.far = 260;
-    moonlight.shadow.camera.updateProjectionMatrix();
-  } catch {
-    if (landscape?.group) landscape.group.removeFromParent();
-    landscape = null;
-    courtyard.visible = true;
-  }
+  let landscapeTask = null;
   let skyBase = 1.2;
   let shadowMark = null;
   const look = new THREE.Vector2();
@@ -1660,10 +1647,40 @@ function createWorld(prepared) {
   let energy = 0;
   let pendingFrames = 30;
   const drift = still ? 0 : 1;
+  function dropLandscape() {
+    if (landscape?.group) landscape.group.removeFromParent();
+    landscape = null;
+    courtyard.visible = true;
+    const extent = 32;
+    moonlight.shadow.camera.left = -extent;
+    moonlight.shadow.camera.right = extent;
+    moonlight.shadow.camera.top = extent;
+    moonlight.shadow.camera.bottom = -extent;
+    moonlight.shadow.camera.far = 90;
+    moonlight.shadow.camera.updateProjectionMatrix();
+    moonlight.position.set(-12, 24, -5);
+    fogBase = 0.015;
+    skyBase = 1.2;
+    moonBase = 2.5;
+    moonlight.color.setHex(0xb9d7ed);
+    fogTone.setHex(0x142c3c);
+    shadowMark = null;
+    renderer.shadowMap.needsUpdate = true;
+  }
   function pose(time) {
     const seconds = time / 1000;
     ease.lerp(look, 0.035);
-    if (landscape) {
+    if (!landscape) {
+      camera.position.set(
+        1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+        4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+        15,
+      );
+      camera.lookAt(1, 5.5, -20);
+      paintSky(courtyardSky, moon.position);
+      return;
+    }
+    try {
       writeCycle(still ? REST_SECONDS : seconds, cycle);
       landscape.apply(cycle);
       const lift = Math.max(0, cycle.sunY) / 46;
@@ -1692,7 +1709,8 @@ function createWorld(prepared) {
       moon.material.color.setHex(cycle.moonColor);
       moon.position.set(cycle.moonX, cycle.moonY, cycle.moonZ);
       moonHalo.position.copy(moon.position);
-    } else {
+    } catch {
+      dropLandscape();
       camera.position.set(
         1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
         4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
@@ -1701,6 +1719,44 @@ function createWorld(prepared) {
       camera.lookAt(1, 5.5, -20);
       paintSky(courtyardSky, moon.position);
     }
+  }
+  async function ensureLandscape() {
+    if (landscape) return landscape;
+    if (landscapeTask) return landscapeTask;
+    landscapeTask = (async () => {
+      let built = null;
+      try {
+        built = createLandscape(textures);
+        batchArchitecture(built.group);
+        built.group.visible = false;
+        scene.add(built.group);
+        if (compiled) await renderer.compileAsync(scene, camera);
+        const extent = 78;
+        moonlight.shadow.camera.left = -extent;
+        moonlight.shadow.camera.right = extent;
+        moonlight.shadow.camera.top = extent;
+        moonlight.shadow.camera.bottom = -extent;
+        moonlight.shadow.camera.far = 260;
+        moonlight.shadow.camera.updateProjectionMatrix();
+        built.group.visible = true;
+        courtyard.visible = false;
+        landscape = built;
+        shadowMark = null;
+        renderer.shadowMap.needsUpdate = true;
+        pendingFrames = 30;
+        pose(performance.now());
+        if (compiled) draw(performance.now());
+        performance.mark("stage:landscape");
+        return landscape;
+      } catch {
+        if (built?.group) built.group.removeFromParent();
+        dropLandscape();
+        pose(performance.now());
+        if (compiled) draw(performance.now());
+        return null;
+      }
+    })();
+    return landscapeTask;
   }
   function draw(time) {
     if (!compiled) return;
@@ -1721,7 +1777,11 @@ function createWorld(prepared) {
     sky.uniforms.uTime.value = seconds;
     sky.uniforms.uMagic.value = magic;
     scene.fog.color.copy(fogTone).lerp(charmTone, magic * 0.55);
-    if (landscape?.group.visible) landscape.update(seconds);
+    try {
+      if (landscape?.group.visible) landscape.update(seconds);
+    } catch {
+      dropLandscape();
+    }
     moonHalo.scale.setScalar(20 + Math.sin(seconds * 0.4) * 1.2 * drift + energy * 2 + magic * 14);
     for (const points of [dust, fireflies, wisps, charm]) points.material.uniforms.uTime.value = seconds;
     dust.material.uniforms.uGlow.value = 0.8 + magic * 0.9;
@@ -1767,6 +1827,7 @@ function createWorld(prepared) {
   resize();
   return {
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
+    ensureLandscape,
     async compile() {
       await renderer.compileAsync(scene, camera);
       compiled = true;
@@ -1828,6 +1889,7 @@ export function createStage({ pan, onHit, textures }) {
 
   return {
     ready: (onEach = () => {}) => Promise.all([world.compile().then(onEach), drum.compile().then(onEach)]).then(() => performance.mark("stage:compiled")),
+    ensureLandscape: world.ensureLandscape,
     layout: drum.layout,
     set: drum.set,
     setTak: drum.setTak,

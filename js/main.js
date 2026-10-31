@@ -366,8 +366,10 @@ async function bootStage() {
     performance.mark("boot:scene-module");
     setLoading(0.15, "loader.textures");
     let baked = 0;
-    const worldTextures = [...COURTYARD, ...LANDSCAPE];
-    await textures.ready(worldTextures, () => setLoading(0.15 + (0.45 * ++baked) / worldTextures.length));
+    // Gate the first paint on courtyard textures only. Landscape materials bake
+    // in the background so a slow or failing valley cannot block 3D or trip
+    // simple view while WebGL is available.
+    await textures.ready(COURTYARD, () => setLoading(0.15 + (0.45 * ++baked) / COURTYARD.length));
     performance.mark("boot:textures");
     if (sceneLoadCancelled) return;
     setLoading(0.6, "loader.building");
@@ -389,7 +391,12 @@ async function bootStage() {
     document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());
     requestAnimationFrame(() => finishLoading());
+    void textures.ready(LANDSCAPE).then(() => {
+      if (sceneLoadCancelled || !stage) return;
+      return stage.ensureLandscape();
+    }).catch(() => {});
   } catch (err) {
+    console.error(err);
     for (const canvas of document.querySelectorAll(".world, .pan-3d")) canvas.remove();
     document.body.classList.remove("has-3d");
     finishLoading(t("simple.failed"));
