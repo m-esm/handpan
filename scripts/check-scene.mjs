@@ -19,6 +19,7 @@ assert.doesNotMatch(
   "boot must not wait on landscape textures before createStage",
 );
 assert.match(main, /ensureLandscape\(/, "boot must warm the valley after 3D is up");
+assert.match(main, /Promise\.race\(/, "valley warm-up must not hang forever on texture baking");
 assert.match(main, /simple\.no3d/, "WebGL-missing path must stay distinct");
 assert.match(main, /simple\.failed/, "stage-failure path must stay distinct");
 

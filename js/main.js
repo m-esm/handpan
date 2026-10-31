@@ -391,7 +391,10 @@ async function bootStage() {
     document.querySelector(".motion-controls").hidden = false;
     paint(player.snapshot());
     requestAnimationFrame(() => finishLoading());
-    void textures.ready(LANDSCAPE).then(() => {
+    void Promise.race([
+      textures.ready(LANDSCAPE),
+      new Promise((resolve) => setTimeout(resolve, 8000)),
+    ]).then(() => {
       if (sceneLoadCancelled || !stage) return;
       return stage.ensureLandscape();
     }).catch(() => {});
