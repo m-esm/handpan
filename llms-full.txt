@@ -1,6 +1,6 @@
 # Alamut
 
-> Alamut is a free browser app for playing and learning a Gear4music DISC 10-note D Kurd handpan. It has 3 patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.
+> Alamut is a free browser app for playing and learning a Gear4music DISC 10-note D Kurd handpan. It has 10 patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.
 
 The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz; C4, 261.6 Hz; D4, 293.7 Hz; E4, 329.6 Hz; F4, 349.2 Hz; G4, 392.0 Hz; A4, 440.0 Hz; C5, 523.3 Hz. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten; the pages say which notes were substituted.
 
@@ -15,14 +15,711 @@ The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz
 
 Riffs and melodies from well-known songs, moved onto the pan's ten notes.
 
+- [The Sound of Silence](https://handpan.moshes.io/p/the-sound-of-silence): Paul Simon's song in a spacious D-minor handpan adaptation, with five verse cycles and a quiet close. 88 BPM, 4/4, 92 bars.
+- [Let It Be](https://handpan.moshes.io/p/let-it-be): The Beatles' ballad moved from C to F, with verses, refrain, an original instrumental break and a resolved ending. 76 BPM, 4/4, 68 bars.
+- [Feeling Good](https://handpan.moshes.io/p/feeling-good): A D-minor handpan adaptation of the Newley/Bricusse standard, with open calls and a rolling triplet groove. 72 BPM, 6/8, 64 bars.
+- [Game of Thrones (Main Title)](https://handpan.moshes.io/p/game-of-thrones): Ramin Djawadi's main-title theme in D minor, with a circling opening, two theme statements and a spare ending. 112 BPM, 3/4, 68 bars.
+- [Day One (Interstellar)](https://handpan.moshes.io/p/interstellar-day-one): Hans Zimmer's Day One, identified from the Interstellar soundtrack, in a provisional A-minor handpan adaptation. 80 BPM, 4/4, 64 bars.
 - [In the End](https://handpan.moshes.io/p/in-the-end): Linkin Park's piano riff moved down to D minor, over D minor, C and B-flat. 105 BPM, 4/4, 39 bars.
+- [Soltane Ghalbha](https://handpan.moshes.io/p/soltan-e-ghalbha): Anoushirvan Rohani's waltz, associated with Aref, in D minor with both melodic sections and an original handpan accompaniment. 132 BPM, 3/4, 108 bars.
 - [Seven Nation Army](https://handpan.moshes.io/p/seven-nation-army): The White Stripes riff in D minor: 4 4 6 4 3 2 1, then the ding joins for the chorus. 124 BPM, 4/4, 16 bars.
 - [Nothing Else Matters (Intro)](https://handpan.moshes.io/p/nothing-else-matters): Metallica's intro as the picking part in A minor, for playing with a guitarist on capo 5. 48 BPM, 6/8, 28 bars.
+
+## Pieces
+
+Original pieces with named sections, written for this instrument.
+
+- [Lanterns Across the Water](https://handpan.moshes.io/p/lanterns-across-the-water): An original D-Kurd nocturne in 7/8: a low call, a bright answer, gathering ripples and a still final chord. 88 BPM, 7/8, 56 bars.
 
 ## Optional
 
 - [Full text of every pattern](https://handpan.moshes.io/llms-full.txt): notation and descriptions in one file
 - [Sitemap](https://handpan.moshes.io/sitemap.xml)
+
+---
+
+# The Sound of Silence
+
+URL: https://handpan.moshes.io/p/the-sound-of-silence
+Kind: Songs. Tempo: 88 BPM. Time signature: 4/4. Length: 92 bars. Notes used: D3, A3, B♭3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-31.
+
+Paul Simon's song in a spacious D-minor handpan adaptation, with five verse cycles and a quiet close.
+
+A self-contained instrumental arrangement of Paul Simon's The Sound of Silence for D Kurd. The tune is placed in D minor; it is not at the pitch of every Simon & Garfunkel recording. Intro establishes the open D and A, Verse states the melody, Second Verse adds quiet answering notes, and Lift brings the high register forward before the last plain verse. The five verse cycles reflect the song's strophic form. The accompaniment and connecting Turn are newly written for two hands. Count four quarter-note beats per bar; empty slots let the preceding note ring. Sing the accented line internally and keep unaccented replies soft. Vocal pickups, syllable rhythms and the climactic register are simplified to an eighth-note grid. This is a provisional melodic adaptation, not a verified note-for-note transcription; the complete tune and its phrasing still need comparison with an authoritative recording or score. No lyrics or course arrangement are included.
+
+## Notation
+
+### Intro
+
+  1 | 0 .  1 .  4 .  5 .
+  2 | 3 .  7 .  5 .  3 .
+  3 | 0 .  1 .  6 .  5 .
+  4 | 4 .  . .  . .  1 1
+
+### Verse
+
+  5 | 1 .  1 .  3 .  3 .
+  6 | 4 .  4 .  3 .  . .
+  7 | 6 .  6 6  5 .  6 .
+  8 | 5 .  4 .  . .  . .
+  9 | 4 .  4 .  6 .  6 .
+ 10 | 8 .  8 .  7 .  6 .
+ 11 | 6 .  6 .  5 .  6 .
+ 12 | 5 .  4 .  . .  . .
+ 13 | 6 .  6 .  8 .  8 .
+ 14 | 9 .  9 .  8 .  7 .
+ 15 | 8 .  . .  6 .  8 .
+ 16 | 7 .  . .  . .  6 .
+ 17 | 6 .  5 .  4 .  3 .
+ 18 | 4 .  5 .  6 .  . .
+ 19 | 5 .  4 .  3 .  1 .
+ 20 | 4 .  . .  . .  . .
+
+### Second Verse
+
+ 21 | [01] .  1 .  3 .  3 .
+ 22 | 4 .  4 .  3 .  7 .
+ 23 | [61] .  6 6  5 .  6 .
+ 24 | [05] .  4 .  . .  1 .
+ 25 | [04] .  4 .  6 .  6 .
+ 26 | 8 .  8 .  7 .  6 .
+ 27 | [63] .  6 .  5 .  6 .
+ 28 | [05] .  4 .  . .  3 .
+ 29 | 6 .  6 .  8 .  8 .
+ 30 | [09] .  9 .  8 .  7 .
+ 31 | 8 .  3 .  6 .  8 .
+ 32 | 7 .  2 .  . .  6 .
+ 33 | 6 .  5 .  4 .  3 .
+ 34 | [04] .  5 .  6 .  1 .
+ 35 | 5 .  4 .  3 .  1 .
+ 36 | [04] .  . .  . .  . .
+
+### Turn
+
+ 37 | [63] .  8 .  9 .  8 .
+ 38 | [27] .  4 .  5 .  3 .
+ 39 | [01] .  4 .  6 .  5 .
+ 40 | 4 .  . .  . .  1 1
+
+### Verse
+
+ 41 | 1 .  1 .  3 .  3 .
+ 42 | 4 .  4 .  3 .  . .
+ 43 | 6 .  6 6  5 .  6 .
+ 44 | 5 .  4 .  . .  . .
+ 45 | 4 .  4 .  6 .  6 .
+ 46 | 8 .  8 .  7 .  6 .
+ 47 | 6 .  6 .  5 .  6 .
+ 48 | 5 .  4 .  . .  . .
+ 49 | 6 .  6 .  8 .  8 .
+ 50 | 9 .  9 .  8 .  7 .
+ 51 | 8 .  . .  6 .  8 .
+ 52 | 7 .  . .  . .  6 .
+ 53 | 6 .  5 .  4 .  3 .
+ 54 | 4 .  5 .  6 .  . .
+ 55 | 5 .  4 .  3 .  1 .
+ 56 | 4 .  . .  . .  . .
+
+### Lift
+
+ 57 | [01] .  1 .  3 .  3 .
+ 58 | [04] .  4 .  3 .  5 .
+ 59 | [63] .  6 6  5 .  6 .
+ 60 | [05] .  4 .  1 .  3 .
+ 61 | [04] .  4 .  6 .  6 .
+ 62 | [81] .  8 .  7 .  6 .
+ 63 | [63] .  6 .  5 .  6 .
+ 64 | [05] .  4 .  1 .  5 .
+ 65 | [61] .  6 .  8 .  8 .
+ 66 | [09] .  9 .  8 .  7 .
+ 67 | [83] .  9 .  6 .  8 .
+ 68 | [27] .  4 .  . .  6 .
+ 69 | 6 .  5 .  4 .  3 .
+ 70 | [04] .  5 .  6 .  . .
+ 71 | 5 .  4 .  3 .  1 .
+ 72 | [04] .  . .  . .  . .
+
+### Verse
+
+ 73 | 1 .  1 .  3 .  3 .
+ 74 | 4 .  4 .  3 .  . .
+ 75 | 6 .  6 6  5 .  6 .
+ 76 | 5 .  4 .  . .  . .
+ 77 | 4 .  4 .  6 .  6 .
+ 78 | 8 .  8 .  7 .  6 .
+ 79 | 6 .  6 .  5 .  6 .
+ 80 | 5 .  4 .  . .  . .
+ 81 | 6 .  6 .  8 .  8 .
+ 82 | 9 .  9 .  8 .  7 .
+ 83 | 8 .  . .  6 .  8 .
+ 84 | 7 .  . .  . .  6 .
+ 85 | 6 .  5 .  4 .  3 .
+ 86 | 4 .  5 .  6 .  . .
+ 87 | 5 .  4 .  3 .  1 .
+ 88 | 4 .  . .  . .  . .
+
+### Outro
+
+ 89 | 0 .  1 .  4 .  5 .
+ 90 | 3 .  7 .  5 .  3 .
+ 91 | [01] .  4 .  1 .  . .
+ 92 | [04] .  . .  . .  . .
+
+## فارسی
+
+صدای سکوت
+
+برداشتی آرام در رِ مینور از ترانهٔ پل سایمون، با پنج دور بند و پایانی کم‌صدا.
+
+تنظیمی مستقل برای هندپن رِ کرد از The Sound of Silence اثر پل سایمون. ملودی در رِ مینور قرار گرفته و لزوماً هم‌کوک با ضبط‌های سایمون و گارفانکل نیست. مقدمه رِ و لا را معرفی می‌کند؛ بند ملودی را تنها می‌گوید، بند دوم پاسخ‌های نرم اضافه می‌کند و اوج‌گیری پیش از آخرین بند، صدا را بازتر می‌کند. پنج دور بند از ساختار بندمحور ترانه پیروی می‌کنند. همراهی و بخش چرخش برای دو دست تازه نوشته شده‌اند. هر میزان چهار ضرب سیاه دارد؛ جای خالی یعنی بگذارید نت قبلی طنین بیندازد. نت‌های تأکیددار را مثل آواز بنوازید و پاسخ‌ها را نرم نگه دارید. پیش‌ضرب‌ها، ریتم هجاها و محدودهٔ اوج ساده شده‌اند. این برداشت ملودیک موقت است؛ کل ملودی و جمله‌بندی هنوز نت‌به‌نت با منبع معتبر مقایسه نشده و ادعای آوانگاری دقیق ندارد. متن ترانه یا تنظیم دوره‌های آموزشی در آن نیست.
+
+---
+
+# Let It Be
+
+URL: https://handpan.moshes.io/p/let-it-be
+Kind: Songs. Tempo: 76 BPM. Time signature: 4/4. Length: 68 bars. Notes used: D3, A3, B♭3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-31.
+
+The Beatles' ballad moved from C to F, with verses, refrain, an original instrumental break and a resolved ending.
+
+Let It Be by Lennon and McCartney, arranged in F major by moving the C-major melody down a fifth. The opening verse shape fits C4, D4, A3, F4, G4 and A4. The accompaniment reduces the piano's F, C, D minor and B-flat harmony to single tones and two-note shells. Intro and Turn outline the descending gospel cadence. Verse is stated twice before Chorus; the later Lead is a newly written handpan break over the harmony, not George Harrison's guitar solo. The chorus peak is compressed to C5 because D5 is absent, and sixteenth-note pickups are rounded to eighths. Keep three-quarter beats of space after a long closing F; the instrument supplies the sustain. The public Sound Reason Studio working lead sheet was inspected for the verse contour and form, not copied as an accompaniment. This is a provisional melodic adaptation: the whole melody, especially the compressed chorus and its rhythm, has not been verified note-for-note against the Beatles recording.
+
+## Notation
+
+### Intro
+
+  1 | [61] .  3 .  [47] .  3 .
+  2 | [01] .  4 .  [23] .  4 .
+  3 | [61] .  3 .  [47] .  5 .
+  4 | 2 .  1 .  0 .  [63] .
+
+### Verse
+
+  5 | 3 .  3 4  1 .  3 3
+  6 | 6 7  8 .  8 .  7 .
+  7 | 7 .  6 .  6 .  . .
+  8 | 8 8  9 8  8 .  7 .
+  9 | 8 7  7 .  6 .  . .
+ 10 | 3 3  4 1  3 .  6 7
+ 11 | 8 .  8 .  7 .  6 .
+ 12 | 7 6  6 .  . .  3 .
+
+### Verse
+
+ 13 | 3 .  3 4  1 .  3 3
+ 14 | 6 7  8 .  8 .  7 .
+ 15 | 7 .  6 .  6 .  . .
+ 16 | 8 8  9 8  8 .  7 .
+ 17 | 8 7  7 .  6 .  . .
+ 18 | 3 3  4 1  3 .  6 7
+ 19 | 8 .  8 .  7 .  6 .
+ 20 | 7 6  6 .  . .  3 .
+
+### Chorus
+
+ 21 | [06] .  8 .  9 .  9 .
+ 22 | 9 .  8 .  8 .  . .
+ 23 | 8 7  6 .  4 .  3 .
+ 24 | [61] .  8 .  . .  . .
+ 25 | [63] .  8 9  8 .  8 .
+ 26 | 7 .  6 .  . .  8 7
+ 27 | 7 .  6 .  2 .  1 .
+ 28 | [63] .  . .  . .  . .
+
+### Turn
+
+ 29 | [23] .  1 .  0 .  [63] .
+ 30 | [47] .  5 .  3 .  . .
+ 31 | [23] .  1 .  0 .  [63] .
+ 32 | [47] .  . .  . .  3 3
+
+### Verse
+
+ 33 | 3 .  3 4  1 .  3 3
+ 34 | 6 7  8 .  8 .  7 .
+ 35 | 7 .  6 .  6 .  . .
+ 36 | 8 8  9 8  8 .  7 .
+ 37 | 8 7  7 .  6 .  . .
+ 38 | 3 3  4 1  3 .  6 7
+ 39 | 8 .  8 .  7 .  6 .
+ 40 | 7 6  6 .  . .  3 .
+
+### Chorus
+
+ 41 | [06] .  8 .  9 .  9 .
+ 42 | 9 .  8 .  8 .  . .
+ 43 | 8 7  6 .  4 .  3 .
+ 44 | [61] .  8 .  . .  . .
+ 45 | [63] .  8 9  8 .  8 .
+ 46 | 7 .  6 .  . .  8 7
+ 47 | 7 .  6 .  2 .  1 .
+ 48 | [63] .  . .  . .  . .
+
+### Lead
+
+ 49 | [61] .  8 7  6 .  3 .
+ 50 | [47] .  5 4  3 .  5 .
+ 51 | [01] .  4 5  6 .  8 .
+ 52 | [23] .  6 7  8 .  9 .
+ 53 | [61] .  9 8  7 .  6 .
+ 54 | [47] .  5 4  3 .  5 .
+ 55 | 2 .  1 .  0 .  3 .
+ 56 | 6 .  . .  . .  . .
+
+### Chorus
+
+ 57 | [06] .  8 .  9 .  9 .
+ 58 | 9 .  8 .  8 .  . .
+ 59 | 8 7  6 .  4 .  3 .
+ 60 | [61] .  8 .  . .  . .
+ 61 | [63] .  8 9  8 .  8 .
+ 62 | 7 .  6 .  . .  8 7
+ 63 | 7 .  6 .  2 .  1 .
+ 64 | [63] .  . .  . .  . .
+
+### Outro
+
+ 65 | [23] .  1 .  0 .  [63] .
+ 66 | [47] .  5 .  3 .  . .
+ 67 | [23] .  1 .  0 .  3 .
+ 68 | [61] .  . .  . .  . .
+
+## فارسی
+
+بگذار باشد (Let It Be)
+
+بالاد بیتلز، یک پنجم پایین‌تر از دو ماژور در فا ماژور، با بند، همخوان، میان‌نوازی تازه و فرود نهایی.
+
+Let It Be اثر لنون و مک‌کارتنی برای این هندپن در فا ماژور تنظیم شده است. ملودی از دو ماژور یک پنجم پایین آمده و شکل آغاز بند روی دو، رِ، لای بم، فا، سل و لای بالا می‌نشیند. همراهی آکوردهای فا، دو، رِ مینور و سی‌بمل را به تک‌نت‌ها و فاصله‌های دونتی کاهش می‌دهد. مقدمه و چرخش فرود گاسپل را یادآوری می‌کنند؛ بخش تک‌نوازی تازه برای هندپن نوشته شده و سولو گیتار جورج هریسون نیست. رِ پنجِ اوج همخوان به دو پنج تبدیل شده و پیش‌ضرب‌های دولاچنگ به چنگ ساده شده‌اند. چهار ضرب در میزان بشمارید و پس از فای پایان فضا بدهید. برگهٔ ملودی عمومی Sound Reason Studio برای مسیر بند و ساختار بررسی شد، اما همراهی آن کپی نشده است. کل ملودی، به‌ویژه اوج فشرده‌شدهٔ همخوان و ریتمش، هنوز نت‌به‌نت با ضبط بیتلز تأیید نشده است.
+
+---
+
+# Lanterns Across the Water
+
+URL: https://handpan.moshes.io/p/lanterns-across-the-water
+Kind: Pieces. Tempo: 88 BPM. Time signature: 7/8. Length: 56 bars. Notes used: D3, A3, B♭3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-31.
+
+An original D-Kurd nocturne in 7/8: a low call, a bright answer, gathering ripples and a still final chord.
+
+An original solo handpan composition written for these ten fields. Count seven eighths as ONE two THREE four FIVE six seven. Opening leaves the last three slots spacious. Theme grows from D, A and F; Reply turns toward B-flat and C, with the high C as a point of light. Climb fills the same seven-slot bar without changing tempo, and Crest gives the melody its widest reach before a four-bar Break. Return keeps the opening contour but delays its answers, then Outro thins to an open D and A. Play the accented notes as the tune and let quiet inner notes stay underneath. The form is complete as written, with repeated themes, a contrasting middle, a varied return and a final release. There is no borrowed melody, transposition or missing chromatic pitch. At the ending, let the last chord decay instead of immediately starting again.
+
+## Notation
+
+### Opening
+
+  1 | 0 .  1 .  4 .  .
+  2 | 6 .  3 .  5 .  .
+  3 | 2 .  7 .  4 .  .
+  4 | [01] .  . .  . .  .
+
+### Theme
+
+  5 | 0 1  6 5  4 .  3
+  6 | 4 1  6 7  8 .  .
+  7 | 6 3  4 5  6 .  1
+  8 | [01] .  4 .  3 .  .
+  9 | 0 1  6 5  4 .  3
+ 10 | 4 5  6 7  9 .  8
+ 11 | 7 6  5 4  3 .  1
+ 12 | [01] .  4 .  . .  .
+
+### Reply
+
+ 13 | 2 3  7 4  6 .  5
+ 14 | [23] .  4 5  7 .  .
+ 15 | 6 7  9 8  7 .  5
+ 16 | [63] .  8 .  7 .  .
+ 17 | 2 3  7 4  6 .  5
+ 18 | [23] .  4 5  6 .  8
+ 19 | 9 8  7 6  5 .  3
+ 20 | [04] .  1 .  . .  .
+
+### Theme
+
+ 21 | 0 1  6 5  4 .  3
+ 22 | 4 1  6 7  8 .  .
+ 23 | 6 3  4 5  6 .  1
+ 24 | [01] .  4 .  3 .  .
+ 25 | 0 1  6 5  4 .  3
+ 26 | 4 5  6 7  9 .  8
+ 27 | 7 6  5 4  3 .  1
+ 28 | [01] .  4 .  . .  .
+
+### Climb
+
+ 29 | 0 1  4 3  6 5  4
+ 30 | 2 3  4 5  6 7  8
+ 31 | 6 5  8 7  9 8  7
+ 32 | 4 5  6 7  8 .  9
+
+### Crest
+
+ 33 | [09] .  8 7  6 5  4
+ 34 | [27] .  8 9  8 7  5
+ 35 | [63] .  6 7  8 .  9
+ 36 | [08] .  7 6  5 .  3
+ 37 | [09] .  8 7  6 5  4
+ 38 | [27] .  8 9  8 7  5
+ 39 | 6 5  4 3  2 .  1
+ 40 | [04] .  . .  . .  .
+
+### Break
+
+ 41 | 0 .  . .  1 .  .
+ 42 | 6 .  . .  3 .  .
+ 43 | 2 .  . .  7 .  .
+ 44 | 4 .  . .  . .  .
+
+### Return
+
+ 45 | 0 .  6 .  4 .  3
+ 46 | 4 .  6 7  8 .  .
+ 47 | 6 .  4 5  6 .  1
+ 48 | [01] .  4 .  3 .  .
+ 49 | 0 1  6 .  4 .  3
+ 50 | 4 5  6 .  9 .  8
+ 51 | 7 .  5 .  3 .  1
+ 52 | [04] .  . .  . .  .
+
+### Outro
+
+ 53 | 6 .  5 .  4 .  .
+ 54 | 3 .  2 .  1 .  .
+ 55 | 0 .  4 .  1 .  .
+ 56 | [01] .  . .  . .  .
+
+## فارسی
+
+فانوس‌ها آن سوی آب
+
+قطعه‌ای تازه برای رِ کرد در هفت‌هشتم؛ ندایی بم، پاسخی روشن، موج‌هایی رو به اوج و یک آکورد آرام در پایان.
+
+قطعه‌ای اصیل که برای همین ده نت نوشته شده است. هفت چنگ را دو، دو، سه گروه‌بندی کنید: یک دو، یک دو، یک دو سه. آغاز در سه خانهٔ آخر فضا می‌گذارد. تم از رِ، لا و فا ساخته می‌شود؛ پاسخ به سی‌بمل و دو متمایل می‌شود و دوی بالا نقطهٔ روشن آن است. بالا رفتن همان میزان هفت‌خانه‌ای را بدون تغییر سرعت پر می‌کند؛ تاج موج گسترده‌ترین حرکت ملودی است، سپس وقفه‌ای چهامیزانی می‌آید. بازگشت با پاسخ‌های دیرتر به شکل آغاز اشاره می‌کند و پایان به رِ و لای باز می‌رسد. نت‌های تأکیددار ملودی‌اند و نت‌های درونی باید نرم بمانند. فرم شامل تکرار تم، بخش میانی متضاد، بازگشت تغییریافته و پایان مستقل است. ملودی قرض‌گرفته‌شده، انتقال گام یا نت کروماتیک حذف‌شده‌ای وجود ندارد. پس از آخرین آکورد بگذارید صدا کامل محو شود.
+
+---
+
+# Feeling Good
+
+URL: https://handpan.moshes.io/p/feeling-good
+Kind: Songs. Tempo: 72 BPM. Time signature: 6/8. Length: 64 bars. Notes used: D3, A3, B♭3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-31.
+
+A D-minor handpan adaptation of the Newley/Bricusse standard, with open calls and a rolling triplet groove.
+
+Feeling Good by Anthony Newley and Leslie Bricusse, drawing on the contrast between Nina Simone's exposed opening and the band entrance. This instrumental adaptation is in D minor rather than the G-minor key of the published Simone edition. Each pair of 6/8 bars makes a four-beat triplet phrase; count ONE two three FOUR five six in each bar. Opening leaves the calls exposed, Refrain gathers them into a cadence, Groove introduces the descending D, C, B-flat and A bass, and Verse adds soft responses. Bridge is a newly written contrast before the final return. The flexible opening is metered, blues inflections and chromatic passing tones are omitted, and the orchestral brass figures and improvised vocal ending are reduced to handpan gestures. Keep the triplets loose without accelerating. The full vocal melody and the bridge's relation to the recording remain unverified; this is a provisional adaptation, not a claim of a faithful complete Nina Simone transcription.
+
+## Notation
+
+### Opening
+
+  1 | 8 . .  7 . 6
+  2 | 4 . .  . . .
+  3 | 7 . .  6 . 4
+  4 | 3 . .  . . .
+  5 | 6 . .  4 . 3
+  6 | 1 . .  . . .
+  7 | 3 . 4  6 . 5
+  8 | 4 . .  . . .
+
+### Refrain
+
+  9 | 4 . 6  8 . .
+ 10 | 7 . 6  4 . .
+ 11 | 4 . 6  8 . .
+ 12 | 9 . 8  7 . .
+ 13 | 6 . 4  3 . 4
+ 14 | 5 . .  6 . 5
+ 15 | [04] . .  3 . 1
+ 16 | [04] . .  . . .
+
+### Groove
+
+ 17 | 0 1 4  6 . 5
+ 18 | 3 5 7  9 . 8
+ 19 | 2 4 6  8 . 7
+ 20 | 1 3 5  7 . 5
+
+### Verse
+
+ 21 | [08] . .  7 . 6
+ 22 | 4 . 1  4 . 3
+ 23 | [27] . .  6 . 4
+ 24 | 3 . 5  3 . 1
+ 25 | [61] . .  4 . 3
+ 26 | 1 . 5  1 . 3
+ 27 | 4 . 6  8 . 7
+ 28 | [06] . 5  4 . .
+
+### Refrain
+
+ 29 | 4 . 6  8 . .
+ 30 | 7 . 6  4 . .
+ 31 | 4 . 6  8 . .
+ 32 | 9 . 8  7 . .
+ 33 | 6 . 4  3 . 4
+ 34 | 5 . .  6 . 5
+ 35 | [04] . .  3 . 1
+ 36 | [04] . .  . . .
+
+### Bridge
+
+ 37 | [27] . 8  9 . 8
+ 38 | 7 . 6  4 . 3
+ 39 | [63] . 8  9 . 8
+ 40 | 6 . 5  3 . 1
+ 41 | [04] . 6  8 . 6
+ 42 | 4 . 3  1 . 3
+ 43 | 5 . 6  7 . 5
+ 44 | 1 . .  . . .
+
+### Verse
+
+ 45 | [08] . .  7 . 6
+ 46 | 4 . 1  4 . 3
+ 47 | [27] . .  6 . 4
+ 48 | 3 . 5  3 . 1
+ 49 | [61] . .  4 . 3
+ 50 | 1 . 5  1 . 3
+ 51 | 4 . 6  8 . 7
+ 52 | [06] . 5  4 . .
+
+### Refrain
+
+ 53 | 4 . 6  8 . .
+ 54 | 7 . 6  4 . .
+ 55 | 4 . 6  8 . .
+ 56 | 9 . 8  7 . .
+ 57 | 6 . 4  3 . 4
+ 58 | 5 . .  6 . 5
+ 59 | [04] . .  3 . 1
+ 60 | [04] . .  . . .
+
+### Outro
+
+ 61 | 0 1 4  6 . 5
+ 62 | 3 . 2  . 1 .
+ 63 | [04] . .  1 . .
+ 64 | [01] . .  . . .
+
+## فارسی
+
+حس خوب (Feeling Good)
+
+برداشتی در رِ مینور از ترانهٔ نیولی و بریکس، با نداهای آزاد و حرکت سه‌تایی همراهی.
+
+Feeling Good اثر آنتونی نیولی و لسلی بریکس، با الهام از تضاد آغاز بی‌همراهی و ورود گروه در اجرای نینا سیمون. این تنظیم در رِ مینور است، درحالی‌که نسخهٔ منتشرشدهٔ اجرای سیمون در سل مینور قرار دارد. هر دو میزان شش‌هشتم یک عبارت چهار ضربی با تقسیمات سه‌تایی می‌سازند؛ در هر میزان یک دو سه، چهار پنج شش بشمارید. آغاز نداها را تنها می‌گذارد، برگردان به فرود می‌رسد و ریتم، باس نزولی رِ، دو، سی‌بمل، لا را معرفی می‌کند. بخش پل تضادی تازه برای این تنظیم است. آزادی ریتم آغاز، ظرافت‌های بلوز، نت‌های کروماتیک، سازهای بادی و بداههٔ پایان ساده یا حذف شده‌اند. ملودی کامل آواز و نسبت پل با ضبط اصلی هنوز تأیید نشده است؛ این برداشت موقت است و آوانگاری کامل و دقیق اجرای سیمون محسوب نمی‌شود.
+
+---
+
+# Game of Thrones (Main Title)
+
+URL: https://handpan.moshes.io/p/game-of-thrones
+Kind: Songs. Tempo: 112 BPM. Time signature: 3/4. Length: 68 bars. Notes used: D3, A3, B♭3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-31.
+
+Ramin Djawadi's main-title theme in D minor, with a circling opening, two theme statements and a spare ending.
+
+A solo handpan adaptation of Ramin Djawadi's Game of Thrones main title, transposed from C minor to D minor. Count three quarter-note beats per bar, not two dotted-quarter beats. The opening ostinato is A, D, F, G, with the last pair as eighths. Theme gives the long cello melody space; Return adds a bass tone only where two hands can reach it. The original opening alternates minor and major, as Djawadi explains in Song Exploder: this pan has no F-sharp, so that major change is deliberately omitted. Low G and upper D are folded into the available register, the orchestral layers are reduced, and Climb is a freely developed handpan link rather than a transcription of the film's B section. The public EasyPiano first-page preview was inspected for the ostinato, 3/4 meter and opening melody. The remaining development and full-film fidelity have not been verified. Play a broad three-beat pulse and let the final A hang above the ding.
+
+## Notation
+
+### Opening
+
+  1 | 8 .  4 .  6 7
+  2 | 8 .  4 .  6 7
+  3 | 8 .  4 .  6 7
+  4 | 8 .  4 .  6 7
+  5 | [08] .  4 .  6 7
+  6 | 8 .  4 .  6 7
+  7 | [08] .  4 .  6 7
+  8 | 8 .  4 .  6 7
+
+### Theme
+
+  9 | 8 .  . .  . .
+ 10 | 4 .  . .  . .
+ 11 | 6 7  8 .  . .
+ 12 | 4 .  . .  6 7
+ 13 | 5 .  1 .  3 4
+ 14 | 5 .  1 .  3 4
+ 15 | 5 .  1 .  3 4
+ 16 | 5 .  1 .  3 .
+ 17 | 7 .  . .  . .
+ 18 | 3 .  . .  . .
+ 19 | 6 5  4 .  . .
+ 20 | 1 .  . .  . .
+ 21 | 6 .  5 .  4 3
+ 22 | 4 .  1 .  3 4
+ 23 | 4 .  1 .  3 4
+ 24 | 4 .  1 .  3 .
+
+### Reply
+
+ 25 | [08] .  . 1  . .
+ 26 | 4 .  . 1  . .
+ 27 | 6 7  8 .  3 .
+ 28 | 4 .  . .  6 7
+ 29 | [05] .  1 .  3 4
+ 30 | 5 .  1 .  3 4
+ 31 | [05] .  1 .  3 4
+ 32 | 5 .  1 .  3 .
+ 33 | [27] .  . 4  . .
+ 34 | 3 .  . 2  . .
+ 35 | 6 5  4 .  1 .
+ 36 | 1 .  . .  . .
+ 37 | [63] .  5 .  4 3
+ 38 | 4 .  1 .  3 4
+ 39 | [04] .  1 .  3 4
+ 40 | 4 .  1 .  3 .
+
+### Climb
+
+ 41 | 2 .  4 .  6 7
+ 42 | 8 .  7 .  6 5
+ 43 | 3 .  5 .  7 8
+ 44 | 9 .  8 .  7 6
+ 45 | 4 .  6 .  8 9
+ 46 | 8 .  7 .  6 5
+ 47 | 4 .  3 .  2 1
+ 48 | 0 .  . .  6 7
+
+### Return
+
+ 49 | [08] .  . 1  . .
+ 50 | [04] .  . 1  . .
+ 51 | 6 7  8 .  3 .
+ 52 | 4 .  . .  6 7
+ 53 | [05] .  1 .  3 4
+ 54 | 5 .  1 .  3 4
+ 55 | [05] .  1 .  3 4
+ 56 | 5 .  1 .  3 .
+ 57 | [27] .  . 4  . .
+ 58 | [23] .  . 4  . .
+ 59 | 6 5  4 .  1 .
+ 60 | [01] .  . .  . .
+ 61 | [63] .  5 .  4 3
+ 62 | 4 .  1 .  3 4
+ 63 | [04] .  1 .  3 4
+ 64 | 4 .  1 .  3 .
+
+### Outro
+
+ 65 | 8 .  4 .  6 7
+ 66 | 8 .  4 .  6 7
+ 67 | 8 .  4 .  6 .
+ 68 | [01] .  . .  . .
+
+## فارسی
+
+بازی تاج‌وتخت (تم آغازین)
+
+تم آغازین رامین جوادی در رِ مینور، با مقدمهٔ چرخشی، بیان و پاسخ تم، اوج و پایانی خلوت.
+
+تم آغازین Game of Thrones اثر رامین جوادی از دو مینور به رِ مینور منتقل شده است. هر میزان سه ضرب سیاه دارد، نه دو ضرب سیاه نقطه‌دار. شکل آغاز لا، رِ، فا، سل است و دو نت آخر چنگ‌اند. تم به ملودی کشیدهٔ ویولنسل فضا می‌دهد و بازگشت فقط در جاهای مناسب دو دست، باس اضافه می‌کند. جوادی در Song Exploder تغییر مینور به ماژور آغاز را توضیح می‌دهد؛ فا‌دیز روی این ساز نیست و این تغییر عمداً حذف شده است. سل بم و رِ بالا به محدودهٔ ساز منتقل شده‌اند. بخش بالا رفتن یک پیوند تازهٔ هندپن است، نه آوانگاری بخش دوم موسیقی فیلم. پیش‌نمایش صفحهٔ نخست EasyPiano برای میزان سه‌چهارم، شکل تکراری و آغاز ملودی بررسی شد؛ ادامه و وفاداری کامل به فیلم هنوز تأیید نشده‌اند. سه ضرب را باز و آرام حس کنید و در پایان بگذارید لا بالای دینگ معلق بماند.
+
+---
+
+# Day One (Interstellar)
+
+URL: https://handpan.moshes.io/p/interstellar-day-one
+Kind: Songs. Tempo: 80 BPM. Time signature: 4/4. Length: 64 bars. Notes used: A3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-31.
+
+Hans Zimmer's Day One, identified from the Interstellar soundtrack, in a provisional A-minor handpan adaptation.
+
+The selected Interstellar cue is Day One by Hans Zimmer, identified by WaterTower Music as Day One (Interstellar Theme). This is an A-minor handpan adaptation, with a repeating E above F, G and A, a rising middle, a fuller return and a quiet open-fifth ending. Opening sets the pulse; Theme separates long melody tones from soft inner responses; Climb and Crest are newly written developments of that material. The score is a complete standalone performance form, not the complete film orchestration. Low F and G basses move into the middle register, B natural is avoided in favor of C or an open interval, and the organ's sustained layers become discrete strikes. The source identifies the cue but does not verify these pitches: the melodic reconstruction and its relationship to the recording remain unverified. Treat this as a provisional arrangement pending a musician's comparison with Day One, not as interchangeable with Cornfield Chase, S.T.A.Y. or No Time for Caution. Keep the E pulse soft so the changing harmony can speak.
+
+## Notation
+
+### Opening
+
+  1 | 6 .  5 .  5 .  5 .
+  2 | 5 .  5 .  5 .  5 .
+  3 | 7 .  5 .  5 .  5 .
+  4 | 5 .  5 .  5 .  5 .
+  5 | 1 .  5 .  5 .  5 .
+  6 | 5 .  5 .  5 .  5 .
+  7 | 7 .  5 .  5 .  5 .
+  8 | 5 .  5 .  5 .  . .
+
+### Theme
+
+  9 | [65] .  . 3  5 .  5 .
+ 10 | 5 .  4 .  5 .  . .
+ 11 | 7 .  5 .  5 .  5 .
+ 12 | 4 .  3 .  4 .  . .
+ 13 | [81] .  . 5  8 .  8 .
+ 14 | 7 .  6 .  5 .  . .
+ 15 | 7 .  5 .  4 .  3 .
+ 16 | 5 .  . .  . .  . .
+ 17 | [65] .  . 3  5 .  6 .
+ 18 | 8 .  7 .  6 .  5 .
+ 19 | 7 .  5 .  4 .  5 .
+ 20 | 7 .  6 .  5 .  4 .
+ 21 | [81] .  . 5  8 .  9 .
+ 22 | 8 .  7 .  6 .  5 .
+ 23 | 7 .  5 .  4 .  3 .
+ 24 | [81] .  . .  . .  . .
+
+### Reply
+
+ 25 | [63] .  5 .  8 .  5 .
+ 26 | 9 .  8 .  7 .  6 .
+ 27 | [47] .  5 .  7 .  5 .
+ 28 | 8 .  7 .  6 .  5 .
+ 29 | [81] .  5 .  9 .  5 .
+ 30 | 8 .  7 .  6 .  5 .
+ 31 | [47] .  5 .  4 .  3 .
+ 32 | 1 .  . .  . .  . .
+
+### Climb
+
+ 33 | 6 5  8 5  9 5  8 5
+ 34 | 7 5  8 5  9 5  8 5
+ 35 | 1 5  8 5  9 5  8 5
+ 36 | 7 5  6 5  4 3  4 5
+
+### Crest
+
+ 37 | [63] .  8 .  9 .  8 .
+ 38 | 8 .  7 .  6 .  5 .
+ 39 | [47] .  8 .  9 .  8 .
+ 40 | 7 .  6 .  5 .  4 .
+ 41 | [81] .  9 .  8 .  7 .
+ 42 | 6 .  5 .  4 .  3 .
+ 43 | [47] .  5 .  4 .  3 .
+ 44 | [81] .  . .  . .  . .
+
+### Theme
+
+ 45 | [65] .  . 3  5 .  5 .
+ 46 | 5 .  4 .  5 .  . .
+ 47 | 7 .  5 .  5 .  5 .
+ 48 | 4 .  3 .  4 .  . .
+ 49 | [81] .  . 5  8 .  8 .
+ 50 | 7 .  6 .  5 .  . .
+ 51 | 7 .  5 .  4 .  3 .
+ 52 | 5 .  . .  . .  . .
+ 53 | [65] .  . 3  5 .  6 .
+ 54 | 8 .  7 .  6 .  5 .
+ 55 | 7 .  5 .  4 .  5 .
+ 56 | 7 .  6 .  5 .  4 .
+ 57 | [81] .  . 5  8 .  9 .
+ 58 | 8 .  7 .  6 .  5 .
+ 59 | 7 .  5 .  4 .  3 .
+ 60 | [81] .  . .  . .  . .
+
+### Outro
+
+ 61 | 6 .  5 .  5 .  5 .
+ 62 | 7 .  5 .  5 .  . .
+ 63 | 1 .  5 .  8 .  . .
+ 64 | [81] .  . .  . .  . .
+
+## فارسی
+
+روز اول (میان‌ستاره‌ای)
+
+Day One اثر هانس زیمر از موسیقی میان‌ستاره‌ای، در برداشتی موقت برای هندپن در لا مینور.
+
+قطعهٔ انتخاب‌شده از Interstellar دقیقاً Day One اثر هانس زیمر است؛ WaterTower Music آن را Day One (Interstellar Theme) معرفی می‌کند. این برداشت در لا مینور، می تکرارشونده را بالای فا، سل و لا می‌گذارد و بخش میانی رو به اوج، بازگشت پرتر و پایان آرام دارد. آغاز نبض را می‌سازد؛ تم، نت‌های بلند را از پاسخ‌های نرم جدا می‌کند. بالا رفتن و تاج موج گسترش‌های تازهٔ همین موادند. فرم برای یک اجرای مستقل کامل است، اما ارکستراسیون کامل فیلم نیست. باس‌های فا و سل به محدودهٔ میانی منتقل شده‌اند، سی‌بکار با دو یا فاصلهٔ باز جایگزین شده و کشش ارگ به ضربه‌های جدا تبدیل شده است. منبع، هویت قطعه را تأیید می‌کند نه این نت‌ها را؛ بازسازی ملودی هنوز با ضبط مقایسه نشده است. این نسخه به بررسی نوازنده نیاز دارد و نباید با Cornfield Chase، S.T.A.Y. یا No Time for Caution یکی گرفته شود.
 
 ---
 
@@ -101,6 +798,162 @@ In the End
 ریف پیانوی Linkin Park، یک نیم‌پرده پایین‌تر در رِ مینور، روی رِ مینور، دو ماژور و سی‌بمل.
 
 In the End از Linkin Park؛ ریف پیانویی که ترانه را شروع می‌کند و زیر همهٔ بندها می‌آید، در رِ مینور با ۱۰۵ ضرب در دقیقه. اجرای اصلی در می‌بمل مینور است. یک نیم‌پرده پایین‌تر، کل ریف و چهار آکوردش بی هیچ تغییری روی این ساز می‌نشیند. بشمارید: یک و دو و سه و چهار و، با تأکید روی یک و سه. ریف دو میزان سیاه ساده است: رِ روی ۴، دو بار لای بالا روی ۸ و فا روی ۶؛ بعد چهار بار می روی ۵، با یک فای تند روی ۶ در آخرین «و» که به رِ برمی‌گردد. باس هر میزان عوض می‌شود: رِ مینور زیر میزان اول ریف و دو ماژور زیر میزان دوم، بعد سی‌بمل و دو ماژور. برای رِ مینور دینگ را با ۴ بزنید و برای سی‌بمل دینگ را با ۲. برای دو ماژور، روی ضرب اول به‌جای اولین می، ۳ را بزنید و بعد ردیف می‌ها را روی ۵ ادامه دهید. «مقدمه» فقط خود ریف است، چهار بار. «بند» باس را زیرش می‌گذارد. «همخوان» ریف را کنار می‌گذارد و آکوردها را نگه می‌دارد، دو ضربه در هر میزان، تا بتوانید بخوانید یا گیتاریست ملودی را بزند. میزان آخر هر جفت آکورد با ۵ ۶ ۸ بالا می‌رود و به ریف برمی‌گردد. اول ریف را با یک دست یاد بگیرید؛ آکورد روی ضرب اول بعداً می‌آید.
+
+---
+
+# Soltane Ghalbha
+
+URL: https://handpan.moshes.io/p/soltan-e-ghalbha
+Kind: Songs. Tempo: 132 BPM. Time signature: 3/4. Length: 108 bars. Notes used: D3, A3, B♭3, C4, D4, E4, F4, G4, A4, C5. Added: 2026-10-30.
+
+Anoushirvan Rohani's waltz, associated with Aref, in D minor with both melodic sections and an original handpan accompaniment.
+
+Soltane Ghalbha by Anoushirvan Rohani, associated with Aref, arranged as a complete standalone waltz in D minor. Count ONE and two and three and at a deliberately slower 132 quarter-note BPM. Mohsen Karbassi's publicly posted F-minor score confirms the 3/4 meter, the rocking upper theme and the contrasting descending lower theme; its piano accompaniment is not reproduced here. The melody is moved down a minor third from that reference. Chorus rocks between A4 and C5: C5 replaces the unavailable B-flat4, so this semitone sigh becomes a minor third. The lower Verse and Reply raise unavailable F3 and G3 to F4 and G4; this changes the contour. Cadences use C natural in place of C-sharp, and mordents are omitted. Intro and Turn are newly written links, and the final chorus resolves to the ding. The two melodic sections are present, rather than repeating the former chorus-only entry. This remains a range-adapted interpretation: exact phrasing, ornaments and recognizability after the octave changes need musician review against Aref's recording.
+
+## Notation
+
+### Intro
+
+  1 | 0 .  1 .  4 .
+  2 | 2 .  4 .  6 .
+  3 | 1 .  3 .  5 .
+  4 | 4 .  5 .  6 .
+
+### Verse
+
+  5 | 3 .  . 2  1 .
+  6 | 2 .  . 1  7 .
+  7 | 2 .  . 1  7 .
+  8 | 2 .  . .  3 .
+  9 | 2 .  . 1  7 .
+ 10 | 1 .  . 7  6 .
+ 11 | 1 .  . 7  6 .
+ 12 | 7 .  . .  1 .
+ 13 | 1 .  . 7  6 .
+ 14 | 7 .  . 6  5 .
+ 15 | 1 .  . 7  6 .
+ 16 | 7 .  . .  7 .
+ 17 | 1 .  3 .  2 .
+ 18 | 1 .  . .  . .
+ 19 | 5 .  . .  . .
+ 20 | [04] .  . .  4 .
+
+### Reply
+
+ 21 | 4 .  . 3  2 .
+ 22 | 3 .  . 2  1 .
+ 23 | 3 .  . 2  1 .
+ 24 | 3 .  . .  4 .
+ 25 | 3 .  . 2  1 .
+ 26 | 2 .  . 1  7 .
+ 27 | 2 .  . 1  7 .
+ 28 | 2 .  . .  3 .
+ 29 | 2 .  . 1  7 .
+ 30 | 1 .  . 7  6 .
+ 31 | 2 .  . 1  7 .
+ 32 | 1 .  . .  1 .
+ 33 | 1 .  6 .  5 .
+ 34 | [04] .  . .  . .
+ 35 | 1 .  3 .  5 .
+ 36 | 4 .  5 .  6 .
+
+### Chorus
+
+ 37 | [08] .  . .  9 .
+ 38 | 8 .  . .  9 .
+ 39 | 8 .  . .  9 .
+ 40 | 8 .  9 .  8 .
+ 41 | [27] .  . .  8 .
+ 42 | 7 .  . .  8 .
+ 43 | 7 .  . .  8 .
+ 44 | 7 .  8 .  7 .
+ 45 | [61] .  . .  7 .
+ 46 | 6 .  . .  7 .
+ 47 | 6 .  . .  5 .
+ 48 | 4 .  . 3  4 .
+ 49 | 5 .  . .  . .
+ 50 | 1 .  3 .  5 .
+ 51 | [04] .  . .  . .
+ 52 | 4 .  5 .  6 .
+
+### Turn
+
+ 53 | [08] .  7 .  6 .
+ 54 | [27] .  6 .  5 .
+ 55 | 4 .  3 .  2 .
+ 56 | 1 .  . .  4 .
+
+### Verse
+
+ 57 | 3 .  . 2  1 .
+ 58 | 2 .  . 1  7 .
+ 59 | 2 .  . 1  7 .
+ 60 | 2 .  . .  3 .
+ 61 | 2 .  . 1  7 .
+ 62 | 1 .  . 7  6 .
+ 63 | 1 .  . 7  6 .
+ 64 | 7 .  . .  1 .
+ 65 | 1 .  . 7  6 .
+ 66 | 7 .  . 6  5 .
+ 67 | 1 .  . 7  6 .
+ 68 | 7 .  . .  7 .
+ 69 | 1 .  3 .  2 .
+ 70 | 1 .  . .  . .
+ 71 | 5 .  . .  . .
+ 72 | [04] .  . .  4 .
+
+### Reply
+
+ 73 | 4 .  . 3  2 .
+ 74 | 3 .  . 2  1 .
+ 75 | 3 .  . 2  1 .
+ 76 | 3 .  . .  4 .
+ 77 | 3 .  . 2  1 .
+ 78 | 2 .  . 1  7 .
+ 79 | 2 .  . 1  7 .
+ 80 | 2 .  . .  3 .
+ 81 | 2 .  . 1  7 .
+ 82 | 1 .  . 7  6 .
+ 83 | 2 .  . 1  7 .
+ 84 | 1 .  . .  1 .
+ 85 | 1 .  6 .  5 .
+ 86 | [04] .  . .  . .
+ 87 | 1 .  3 .  5 .
+ 88 | 4 .  5 .  6 .
+
+### Chorus
+
+ 89 | [08] .  . .  9 .
+ 90 | 8 .  . .  9 .
+ 91 | 8 .  . .  9 .
+ 92 | 8 .  9 .  8 .
+ 93 | [27] .  . .  8 .
+ 94 | 7 .  . .  8 .
+ 95 | 7 .  . .  8 .
+ 96 | 7 .  8 .  7 .
+ 97 | [61] .  . .  7 .
+ 98 | 6 .  . .  7 .
+ 99 | 6 .  . .  5 .
+100 | 4 .  . 3  4 .
+101 | 5 .  . .  . .
+102 | 1 .  3 .  5 .
+103 | [04] .  . .  . .
+104 | 4 .  5 .  6 .
+
+### Outro
+
+105 | 8 .  . .  9 .
+106 | 8 .  7 .  6 .
+107 | 5 .  3 .  4 .
+108 | [01] .  . .  . .
+
+## فارسی
+
+سلطان قلب‌ها
+
+والس انوشیروان روحانی با صدای عارف، در رِ مینور با هر دو بخش ملودی و همراهی تازه برای هندپن.
+
+سلطان قلب‌ها اثر انوشیروان روحانی، شناخته‌شده با صدای عارف، به شکل یک اجرای مستقل در رِ مینور. یک و دو و سه و بشمارید؛ سرعت تمرینی ۱۳۲ ضرب سیاه در دقیقه عمداً آرام‌تر است. نت عمومی محسن کرباسی در فا مینور، میزان سه‌چهارم، تم بالاییِ تاب‌خورنده و تم پایینیِ نزولی را تأیید می‌کند؛ همراهی پیانوی آن اینجا بازتولید نشده است. ملودی نسبت به آن مرجع یک سوم کوچک پایین آمده. در همخوان، دوی پنج جای سی‌بمل چهار را می‌گیرد و آه نیم‌پرده‌ای به سوم کوچک تبدیل می‌شود. در بند و پاسخ، فا و سلِ بم که روی ساز نیستند یک اکتاو بالا رفته‌اند؛ این جابه‌جایی مسیر ملودی را تغییر می‌دهد. دودیز فرود به دو بکار تبدیل شده و تزیین‌ها حذف شده‌اند. مقدمه و چرخش پیوندهای تازه‌اند و آخرین همخوان به دینگ فرود می‌آید. برخلاف نسخهٔ پیشینِ فقط همخوان، هر دو بخش ملودیک حاضرند. این برداشت با محدودهٔ ساز سازگار شده است؛ دقت جمله‌بندی و قابل‌شناسایی‌بودن ملودی پس از جابه‌جایی‌ها هنوز به بررسی نوازنده در برابر ضبط عارف نیاز دارد.
 
 ---
 

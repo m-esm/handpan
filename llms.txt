@@ -1,6 +1,6 @@
 # Alamut
 
-> Alamut is a free browser app for playing and learning a Gear4music DISC 10-note D Kurd handpan. It has 3 patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.
+> Alamut is a free browser app for playing and learning a Gear4music DISC 10-note D Kurd handpan. It has 10 patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.
 
 The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz; C4, 261.6 Hz; D4, 293.7 Hz; E4, 329.6 Hz; F4, 349.2 Hz; G4, 392.0 Hz; A4, 440.0 Hz; C5, 523.3 Hz. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten; the pages say which notes were substituted.
 
@@ -15,9 +15,21 @@ The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz
 
 Riffs and melodies from well-known songs, moved onto the pan's ten notes.
 
+- [The Sound of Silence](https://handpan.moshes.io/p/the-sound-of-silence): Paul Simon's song in a spacious D-minor handpan adaptation, with five verse cycles and a quiet close. 88 BPM, 4/4, 92 bars.
+- [Let It Be](https://handpan.moshes.io/p/let-it-be): The Beatles' ballad moved from C to F, with verses, refrain, an original instrumental break and a resolved ending. 76 BPM, 4/4, 68 bars.
+- [Feeling Good](https://handpan.moshes.io/p/feeling-good): A D-minor handpan adaptation of the Newley/Bricusse standard, with open calls and a rolling triplet groove. 72 BPM, 6/8, 64 bars.
+- [Game of Thrones (Main Title)](https://handpan.moshes.io/p/game-of-thrones): Ramin Djawadi's main-title theme in D minor, with a circling opening, two theme statements and a spare ending. 112 BPM, 3/4, 68 bars.
+- [Day One (Interstellar)](https://handpan.moshes.io/p/interstellar-day-one): Hans Zimmer's Day One, identified from the Interstellar soundtrack, in a provisional A-minor handpan adaptation. 80 BPM, 4/4, 64 bars.
 - [In the End](https://handpan.moshes.io/p/in-the-end): Linkin Park's piano riff moved down to D minor, over D minor, C and B-flat. 105 BPM, 4/4, 39 bars.
+- [Soltane Ghalbha](https://handpan.moshes.io/p/soltan-e-ghalbha): Anoushirvan Rohani's waltz, associated with Aref, in D minor with both melodic sections and an original handpan accompaniment. 132 BPM, 3/4, 108 bars.
 - [Seven Nation Army](https://handpan.moshes.io/p/seven-nation-army): The White Stripes riff in D minor: 4 4 6 4 3 2 1, then the ding joins for the chorus. 124 BPM, 4/4, 16 bars.
 - [Nothing Else Matters (Intro)](https://handpan.moshes.io/p/nothing-else-matters): Metallica's intro as the picking part in A minor, for playing with a guitarist on capo 5. 48 BPM, 6/8, 28 bars.
+
+## Pieces
+
+Original pieces with named sections, written for this instrument.
+
+- [Lanterns Across the Water](https://handpan.moshes.io/p/lanterns-across-the-water): An original D-Kurd nocturne in 7/8: a low call, a bright answer, gathering ripples and a still final chord. 88 BPM, 7/8, 56 bars.
 
 ## Optional
 
