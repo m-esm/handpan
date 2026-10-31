@@ -1183,6 +1183,14 @@ input[type="range"]::-moz-range-thumb {
   .top .scene-pick { max-width: 200px; }
 }
 
+@media (min-width: 1001px) and (min-height: 521px) {
+  .deck { right: auto; inset-inline-end: calc(50% + 28px); }
+}
+
+@media (min-width: 1001px) and (max-width: 1180px) and (min-height: 521px) {
+  .deck { inset-inline-end: calc(45% + 28px); }
+}
+
 @media (min-width: 1001px) {
   @container (max-width: 560px) {
     .learn-head { grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; }
