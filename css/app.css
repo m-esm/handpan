@@ -1247,7 +1247,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 1000px), (max-height: 520px) {
   :root { --pad: 14px; --pan-h: clamp(200px, 34vh, 300px); }
-  body.is-learn { --pan-h: clamp(155px, 22vh, 200px); }
+  body.is-learn { --pan-h: min(80vw, 34vh, 300px); }
   body { height: auto; min-height: 100vh; min-height: 100dvh; overflow: auto; }
   .wrap { display: block; }
   .top { min-height: 56px; }
