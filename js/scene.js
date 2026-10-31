@@ -471,28 +471,36 @@ function fieldNoise(x, z) {
   );
 }
 
-// A tileable map of overlapping hammer dents. Red/green hold the normal; blue holds roughness.
 function hammerMaps() {
-  const size = 512;
+  const size = 1024;
+  const resolution = size / 512;
   const height = new Float32Array(size * size);
-  let seed = 7;
-  const random = () => {
-    seed = (seed * 16807) % 2147483647;
-    return seed / 2147483647;
-  };
-  for (let n = 0; n < 520; n += 1) {
+  const random = seededRandom(7);
+  for (let n = 0; n < 1920; n += 1) {
     const cx = random() * size;
     const cy = random() * size;
-    const r = 14 + random() * 26;
-    const depth = 0.5 + random() * 0.5;
+    const fine = n >= 520;
+    const r = (fine ? 2.5 + random() * 5.5 : 14 + random() * 26) * resolution;
+    const depth = fine ? 0.035 + random() * 0.055 : 0.5 + random() * 0.5;
     for (let y = Math.floor(cy - r); y <= cy + r; y += 1) {
       for (let x = Math.floor(cx - r); x <= cx + r; x += 1) {
         const d = Math.hypot(x - cx, y - cy) / r;
         if (d >= 1) continue;
         const i = ((y + size) % size) * size + ((x + size) % size);
         const dent = depth * (1 - d * d) ** 2;
-        height[i] = Math.min(height[i], -dent) * 0.6 + height[i] * 0.4 - dent * 0.15;
+        height[i] = fine ? height[i] - dent : Math.min(height[i], -dent) * 0.6 + height[i] * 0.4 - dent * 0.15;
       }
+    }
+  }
+  const grain = new Float32Array(size * size);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const i = y * size + x;
+      const u = x / size * Math.PI * 2;
+      const v = y / size * Math.PI * 2;
+      const brushed = Math.sin(v * 83 + Math.sin(u * 3) * 2);
+      grain[i] = (random() - 0.5) * 2;
+      height[i] += brushed * 0.004 + grain[i] * 0.006;
     }
   }
   const make = (fill) => {
@@ -511,8 +519,8 @@ function hammerMaps() {
   };
   const at = (x, y) => height[((y + size) % size) * size + ((x + size) % size)];
   const normal = make((data, i, x, y) => {
-    const nx = -(at(x + 1, y) - at(x - 1, y)) * 2.2;
-    const ny = -(at(x, y + 1) - at(x, y - 1)) * 2.2;
+    const nx = -(at(x + 1, y) - at(x - 1, y)) * 2.2 * resolution;
+    const ny = -(at(x, y + 1) - at(x, y - 1)) * 2.2 * resolution;
     const len = Math.hypot(nx, ny, 1);
     data[i] = (nx / len * 0.5 + 0.5) * 255;
     data[i + 1] = (ny / len * 0.5 + 0.5) * 255;
@@ -520,8 +528,8 @@ function hammerMaps() {
     data[i + 3] = 255;
   });
   const rough = make((data, i, x, y) => {
-    const slope = Math.hypot(at(x + 1, y) - at(x - 1, y), at(x, y + 1) - at(x, y - 1));
-    const value = Math.min(255, 96 + slope * 200 + (at(x, y) + 0.5) * 24);
+    const slope = Math.hypot(at(x + 1, y) - at(x - 1, y), at(x, y + 1) - at(x, y - 1)) * resolution;
+    const value = Math.max(78, Math.min(156, 102 + slope * 170 - at(x, y) * 22 + grain[y * size + x] * 7));
     data[i] = data[i + 1] = data[i + 2] = value;
     data[i + 3] = 255;
   });
@@ -684,11 +692,11 @@ function createDrum(host, onHit, onStrike, prepared) {
     roughnessMap: hammer.rough,
     envMapIntensity: 1.25,
     normalMap: hammer.normal,
-    normalScale: new THREE.Vector2(0.3, 0.3),
+    normalScale: new THREE.Vector2(0.45, 0.45),
     iridescence: 0.1,
     iridescenceIOR: 1.6,
     iridescenceThicknessRange: [180, 420],
-    clearcoat: 0.18,
+    clearcoat: 0.1,
     clearcoatRoughness: 0.5,
   });
   const bellyNormal = hammer.normal.clone();
@@ -1708,8 +1716,9 @@ function createWorld(prepared) {
   });
   resize();
   function environment(key) {
-      if (!VIEWS[key] || key === viewKey) return;
+      if (!VIEWS[key]) return;
       wantedKey = key;
+      if (key === viewKey) return;
       if (key !== "courtyard" && !landscape) {
         ensureLandscape();
         landscapeReady.then(() => { if (wantedKey === key) environment(key); });

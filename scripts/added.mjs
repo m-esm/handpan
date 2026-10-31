@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PATTERNS } from "../js/score.js";
+import { ADDED } from "../js/added.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "js", "added.js");
@@ -32,7 +33,7 @@ function addedDay(id) {
     const parent = rest[0];
     if (presentIn(commit, id) && !(parent && presentIn(parent, id))) return new Date(day).toISOString();
   }
-  return now();
+  return ADDED[id] || now();
 }
 
 function render(added) {

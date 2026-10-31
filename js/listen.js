@@ -143,6 +143,15 @@ export function createListener(onHeard, onEnded) {
     const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
     if (deviceId) audio.deviceId = { exact: deviceId };
     stream = await navigator.mediaDevices.getUserMedia({ audio });
+    try {
+      startDetection();
+    } catch (error) {
+      stop();
+      throw error;
+    }
+  }
+
+  function startDetection() {
     const live = stream;
     stream.getAudioTracks()[0].addEventListener("ended", () => {
       if (stream === live && onEnded) onEnded();

@@ -31,7 +31,7 @@ for (const pattern of PATTERNS) {
   });
   assert.equal(JSON.stringify(stepsOf(pattern)), legacy);
 }
-assert.ok(meters.has(4) && meters.has(2) && meters.has(3.5), "4/4, 6/8 and 7/8 catalog coverage");
+assert.ok(meters.has(4) && meters.has(2) && meters.has(3.5) && meters.has(3), "4/4, 6/8, 7/8 and 3/4 catalog coverage");
 const odd = {
   id: "odd-fixture", kind: "Hands", bpm: 60, beatsPerBar: 3.5, slotsPerBeat: 2,
   loopBeats: 7, steps: [{ beat: 0.5, note: "D3", hand: "left" }, { beat: 3.5, note: "A3", hand: "right" }],
@@ -40,8 +40,10 @@ assert.deepEqual(phrasesOf(odd).map(({ from, to }) => [from, to]), [[0, 3.5], [3
 assert.equal(phrasesOf(odd)[0].slots[0], null);
 assert.equal(phrasesOf(odd)[0].slots.at(-1), null);
 const beginner = beginnerPattern(PATTERNS);
-assert.equal(beginner.kind, "Hands");
-assert.ok(eventsOf(beginner).every((event) => new Set(event.notes).size === 1));
+assert.ok(PATTERNS.includes(beginner));
+assert.equal(beginnerPattern([...PATTERNS, odd]), odd);
+assert.equal(beginnerPattern([]), null);
+assert.ok(eventsOf(odd).every((event) => new Set(event.notes).size === 1));
 
 const noteEvents = [
   { index: 0, notes: ["D3", "A3", "D3"] },
@@ -175,4 +177,4 @@ try {
 } finally {
   Object.assign(globalThis, real);
 }
-console.log(`Practice checks passed: ${PATTERNS.length} patterns, ${count} phrases, note matching, storage, cancelled audio, rest timing and 4/4, 6/8, 7/8 loops.`);
+console.log(`Practice checks passed: ${PATTERNS.length} patterns, ${count} phrases, note matching, storage, cancelled audio, rest timing and 4/4, 6/8, 7/8, 3/4 loops.`);

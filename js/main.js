@@ -11,6 +11,7 @@ import {
   numberOf,
 } from "./score.js";
 import { ADDED } from "./added.js";
+import { initPrint } from "./print.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
@@ -22,6 +23,7 @@ import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPrac
 import { t, raw, has, plural, digits, pieceText, partName, lang, wireLanguageSwitch, applyDocument } from "./i18n.js";
 
 applyDocument();
+initPrint();
 
 const audio = createAudio();
 document.getElementById("pan").addEventListener("pointerup", (event) => {
@@ -45,6 +47,9 @@ let ratingFilter = "any";
 let sortOrder = "library";
 let lastScroll = -2;
 let settled = false;
+let followPaused = false;
+let followOrigin = 0;
+let followDeparted = false;
 let lastListed = "";
 let routed = null;
 let stage = null;
@@ -136,7 +141,10 @@ document.getElementById("simple-view").addEventListener("click", () => {
 
 const player = createPlayer(audio, paint);
 const listener = createListener(onHeard, onMicEnded);
-const game = createGame(localStorage);
+const game = createGame({
+  getItem: (key) => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+});
 const POP_MS = 1800;
 let popTimer = 0;
 const HEARD_MS = 450;
@@ -1362,9 +1370,27 @@ async function sharePiece(pattern) {
   }
 }
 
+function controlIcon(path) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  shape.setAttribute("d", path);
+  svg.append(shape);
+  return svg;
+}
+
 function renderLearn(pattern) {
+  document.querySelector(".deck")?.remove();
   lastScroll = -2;
   settled = false;
+  followPaused = false;
+  followDeparted = false;
   document.title = t("piece.title", { title: pieceText(pattern, "title") });
   const dock = document.getElementById("learn");
   dock.innerHTML = "";
@@ -1392,11 +1418,14 @@ function renderLearn(pattern) {
   const link = document.createElement("a");
   link.className = "mode-link";
   link.href = `#/p/${pattern.id}/${other}`;
-  link.textContent = other === "learn" ? t("learn") : t("play");
+  link.setAttribute("aria-label", t(other));
+  link.title = t(other);
+  link.append(controlIcon(other === "learn" ? "M4 5.5C7 4 10 4.5 12 6v13c-2-1.5-5-2-8-.5z M20 5.5C17 4 14 4.5 12 6v13c2-1.5 5-2 8-.5z" : "M8 5l11 7-11 7z"));
   const share = document.createElement("button");
   share.type = "button";
   share.className = "mode-link share-link";
-  share.textContent = t("share");
+  share.setAttribute("aria-label", t("share"));
+  share.append(controlIcon("M12 16V3 M7 8l5-5 5 5 M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"));
   share.title = t("share.hint");
   share.addEventListener("click", () => sharePiece(pattern));
   modes.append(link, share);
@@ -1431,29 +1460,14 @@ function renderLearn(pattern) {
     player.play(pattern, 0, { keepTempo: true });
   });
 
-  const previous = document.createElement("button");
-  previous.type = "button";
-  previous.className = "stepper is-prev";
-  previous.setAttribute("aria-label", t("note.previous"));
-  previous.title = t("note.previous");
-  previous.addEventListener("click", () => { if (!learnMode()) player.step(-1, listener.on); });
-
-  const next = document.createElement("button");
-  next.type = "button";
-  next.className = "stepper is-next";
-  next.setAttribute("aria-label", t("note.next"));
-  next.title = t("note.next");
-  next.addEventListener("click", () => { if (!learnMode()) player.step(1, listener.on); });
-
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
-  tempoLabel.append(t("tempo"));
   const bpm = document.createElement("span");
   bpm.id = "bpm";
   bpm.textContent = digits(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
   const unit = document.createElement("span");
   unit.className = "tempo-unit";
-  unit.textContent = t("bpm");
+  unit.textContent = "BPM";
   const range = document.createElement("input");
   range.id = "tempo";
   range.type = "range";
@@ -1475,7 +1489,7 @@ function renderLearn(pattern) {
   loop.type = "button";
   loop.id = "loop";
   loop.className = "loop";
-  loop.textContent = t("loop");
+  loop.append(controlIcon("M17 2l4 4-4 4 M3 11V9a3 3 0 0 1 3-3h15 M7 22l-4-4 4-4 M21 13v2a3 3 0 0 1-3 3H3"));
   loop.addEventListener("click", () => {
     if (learnMode()) return;
     if (player.range) clearRange();
@@ -1489,7 +1503,10 @@ function renderLearn(pattern) {
   ranged.hidden = true;
   ranged.addEventListener("click", clearRange);
 
-  transport.append(play, previous, next, loop, ranged, tempoLabel);
+  transport.append(play);
+  const settings = document.createElement("div");
+  settings.className = "transport transport-settings";
+  settings.append(loop, ranged, tempoLabel);
 
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
@@ -1503,7 +1520,10 @@ function renderLearn(pattern) {
     const panel = practicePanel();
     panel.querySelector("#practice-next").after(notation);
     dock.append(panel);
-  } else dock.append(deck, notation);
+  } else {
+    dock.append(settings, notation);
+    document.body.append(deck);
+  }
   focusSheet(pattern);
   updatePractice(player.snapshot());
 }
@@ -1685,19 +1705,44 @@ function pickBar(pattern, bar) {
 function keepInView(node, toTop) {
   const learn = document.getElementById("learn");
   const inner = learn.scrollHeight > learn.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(learn).overflowY);
-  const deck = document.querySelector(".deck");
   const stick = document.querySelector(".pan-stick");
   const box = node.getBoundingClientRect();
-  const deckBottom = deck ? deck.getBoundingClientRect().bottom : 0;
   const top = inner
-    ? Math.max(learn.getBoundingClientRect().top, deckBottom)
-    : Math.max(stick.getBoundingClientRect().bottom, deckBottom);
+    ? learn.getBoundingClientRect().top
+    : stick.getBoundingClientRect().bottom;
   const bottom = inner ? learn.getBoundingClientRect().bottom : window.innerHeight;
   if (!toTop && box.top >= top + 4 && box.bottom <= bottom - 4) return;
   const shift = box.top - top - 10;
   if (inner) learn.scrollTop += shift;
   else window.scrollBy(0, shift);
 }
+
+function pauseFollow() {
+  if (!followPaused) {
+    const learn = document.getElementById("learn");
+    followOrigin = learn.scrollTop + window.scrollY;
+    followDeparted = false;
+    followPaused = true;
+  }
+}
+
+function resumeFollowNearCurrent() {
+  if (!followPaused) return;
+  const learn = document.getElementById("learn");
+  const position = learn.scrollTop + window.scrollY;
+  if (Math.abs(position - followOrigin) > 80) followDeparted = true;
+  if (!followDeparted) return;
+  const bar = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place")?.closest(".bar");
+  if (!bar) return;
+  const box = bar.getBoundingClientRect();
+  const top = Math.max(document.querySelector(".pan-stick")?.getBoundingClientRect().bottom || 0, learn.getBoundingClientRect().top);
+  const bottom = Math.min(window.innerHeight, learn.getBoundingClientRect().bottom);
+  if (box.top >= top && box.bottom <= bottom) followPaused = false;
+}
+
+document.addEventListener("touchmove", pauseFollow, { passive: true });
+document.addEventListener("wheel", pauseFollow, { passive: true });
+document.addEventListener("scroll", resumeFollowNearCurrent, true);
 
 function route() {
   routing = true;
@@ -1733,6 +1778,7 @@ function routeNow() {
   updateResume();
   const learn = document.getElementById("learn");
   if (!pattern) {
+    document.querySelector(".deck")?.remove();
     document.title = t("app.title");
     learn.replaceChildren();
     paint(player.snapshot());
@@ -1849,7 +1895,7 @@ function paint(snap) {
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) scrollStrip(slot.parentElement, slot);
     if (slot && !practice) {
-      if (settled) keepInView(slot.closest(".bar"));
+      if (settled && !followPaused) keepInView(slot.closest(".bar"));
       settled = true;
     }
   }
@@ -1880,7 +1926,7 @@ function paint(snap) {
   const play = document.getElementById("play");
   if (play) {
     play.dataset.state = snap.playing ? "playing" : "paused";
-    const label = snap.playing ? t("pause") : t("play");
+    const label = snap.playing ? t("pause") : player.canResume ? t("resume") : t("play");
     const mark = play.querySelector(".mark");
     if (mark.textContent !== label) mark.textContent = label;
     play.setAttribute("aria-label", label);
@@ -1895,7 +1941,9 @@ function paint(snap) {
   const loop = document.getElementById("loop");
   if (loop) {
     loop.setAttribute("aria-pressed", snap.loop ? "true" : "false");
-    loop.textContent = snap.range ? t("loop.bars") : t("loop");
+    const label = snap.range ? t("loop.bars") : t("loop");
+    loop.setAttribute("aria-label", label);
+    loop.title = label;
   }
   const warn = document.querySelector(".mirror-note");
   if (warn) warn.hidden = !mirrored;
@@ -2005,6 +2053,7 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     if (event.target.closest("button, a, [role=button]")) return;
     event.preventDefault();
+    if (event.repeat) return;
     if (practice) {
       if (!event.repeat) pausePractice();
       return;

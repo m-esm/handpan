@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-const source = await readFile(new URL('../js/motion.js', import.meta.url), 'utf8');
-const { initMotion, projectOrientation } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { languages: ['en'] } });
+const { initMotion, projectOrientation } = await import('../js/motion.js');
 const neutral = { alpha: 359, beta: 30, gamma: 0 };
 assert.deepEqual(projectOrientation(neutral, neutral), { x: 0, y: 0, z: 0 });
 const wrapped = projectOrientation({ alpha: 1, beta: 40, gamma: 0 }, neutral);

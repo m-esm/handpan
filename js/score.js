@@ -61,6 +61,7 @@ export function numberOf(id) {
 
 const METERS = {
   eighths: { slotsPerBeat: 2, beatsPerBar: 4 },
+  "three-four": { slotsPerBeat: 2, beatsPerBar: 3 },
   sixteenths: { slotsPerBeat: 4, beatsPerBar: 4 },
   "six-eight": { slotsPerBeat: 3, beatsPerBar: 2, count: "slots" },
   "seven-eight": { slotsPerBeat: 2, beatsPerBar: 3.5, count: "slots" },
@@ -442,7 +443,7 @@ export const PATTERNS = [
     ],
   },
   ...PIECES.map(compile),
-];
+].filter((pattern) => PIECES.some((piece) => piece.id === pattern.id && piece.library));
 
 export function pretty(id) {
   if (id === TAK) return TAK;
