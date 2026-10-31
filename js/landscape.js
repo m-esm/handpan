@@ -231,7 +231,8 @@ export function createLandscape(textures) {
     if (Math.abs(dz) < 5) colour.setHex(0xb6b9b4);
     snowColours.set([colour.r, colour.g, colour.b], i * 3);
   }
-  terrain.setAttribute("color", new THREE.Float32BufferAttribute(seasonColours, 3));
+  const terrainLive = new Float32Array(seasonColours);
+  terrain.setAttribute("color", new THREE.Float32BufferAttribute(terrainLive, 3));
   terrain.computeVertexNormals();
   const land = mesh(terrain, steppe);
   land.castShadow = false;
@@ -284,7 +285,8 @@ export function createLandscape(textures) {
     tintA.lerp(tintB.setHex(0xe9eef2), Math.max(summit, ledgeSnow * 0.8) * 0.9);
     rockSnow.set([tintA.r, tintA.g, tintA.b], i * 3);
   }
-  rock.setAttribute("color", new THREE.Float32BufferAttribute(rockSeason, 3));
+  const rockLive = new Float32Array(rockSeason);
+  rock.setAttribute("color", new THREE.Float32BufferAttribute(rockLive, 3));
   rock.computeVertexNormals();
   const crag = mesh(rock, rockMaterial);
   crag.castShadow = true;
@@ -292,6 +294,8 @@ export function createLandscape(textures) {
   const ranges = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, ...textures("strata"), normalScale: new THREE.Vector2(0.8, 0.8) });
   const rangeSeason = [];
   const rangeSnow = [];
+  const rangeLive = [];
+  const rangeMeshes = [];
   const crest = (x, z) => 1 - Math.abs(2 * fbm(x, z, 4) - 1);
   for (let layer = 0; layer < 5; layer += 1) {
     const geometry = new THREE.PlaneGeometry(760, 120, 190, 32);
@@ -322,13 +326,19 @@ export function createLandscape(textures) {
       season.push(...colour.copy(tintA).lerp(tintB, cap).toArray());
       snow.push(...colour.copy(tintA).lerp(tintB, Math.max(cap, smooth(height, 6, 16))).toArray());
     }
-    geometry.setAttribute("color", new THREE.Float32BufferAttribute(season, 3));
+    const warm = new Float32Array(season);
+    const cold = new Float32Array(snow);
+    const live = new Float32Array(warm);
+    geometry.setAttribute("color", new THREE.Float32BufferAttribute(live, 3));
     geometry.computeVertexNormals();
-    rangeSeason.push(new Float32Array(season));
-    rangeSnow.push(new Float32Array(snow));
+    rangeSeason.push(warm);
+    rangeSnow.push(cold);
+    rangeLive.push(live);
     const range = mesh(geometry, ranges, [0, 0, centreZ]);
     range.userData.layer = layer;
+    range.userData.keepSeparate = true;
     range.castShadow = false;
+    rangeMeshes.push(range);
   }
 
   const riverSteps = 150;
@@ -706,7 +716,7 @@ export function createLandscape(textures) {
     group.add(plume);
     return plume;
   });
-  const lamp = new THREE.MeshBasicMaterial({ color: 0xffb765 });
+  const lamp = new THREE.MeshBasicMaterial({ color: 0xffb765, transparent: true, depthWrite: false, opacity: 0 });
   const windows = new THREE.Group();
   for (const [x, dz, lift] of [[-15, 1.95, 1.1], [-15, 1.95, 1.6], [-21.5, -3.1, 0.9], [-21.5, 2.9, 0.6], [-27.5, 2.6, 0.7], [-11.2, 2.9, 1.5], [0.6, -3.1, 0.9], [2.6, 2.6, 0.7], [-33, -0.95, 1.4], [5.0, -3.9, 1.6]]) {
     const z = spineZ(x) + dz;
@@ -714,18 +724,28 @@ export function createLandscape(textures) {
     glow.position.set(x, topAt(x, z) + lift * H, z);
     windows.add(glow);
   }
-  windows.visible = false;
   group.add(vine, sheep, eagles, windows);
-  const sun = mesh(new THREE.SphereGeometry(2, 48, 32), new THREE.MeshBasicMaterial({ color: 0xffd29a, fog: false }), [70, 38, -60]);
+  const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xfff1c4, fog: false, transparent: true, depthWrite: false });
+  const sun = mesh(new THREE.SphereGeometry(2, 48, 32), sunMaterial, [70, 38, -60]);
   sun.castShadow = false;
-  const swapColours = (snowy) => {
-    terrain.setAttribute("color", new THREE.Float32BufferAttribute(snowy ? snowColours : seasonColours, 3));
-    rock.setAttribute("color", new THREE.Float32BufferAttribute(snowy ? rockSnow : rockSeason, 3));
-    group.traverse((item) => {
-      if (item.userData.layer !== undefined) item.geometry.setAttribute("color", new THREE.Float32BufferAttribute((snowy ? rangeSnow : rangeSeason)[item.userData.layer], 3));
-    });
-    for (let i = 0; i < placed; i += 1) poplars.setColorAt(i, snowy ? colour.setHex(0x9b8f80) : poplarSeason[i]);
-    poplars.instanceColor.needsUpdate = true;
+  const poplarTint = new THREE.Color();
+  const poplarWinter = new THREE.Color(0x9b8f80);
+  let paintedSnow = -1;
+  const blend = (live, warm, cold, weight) => {
+    const keep = 1 - weight;
+    for (let i = 0; i < live.length; i += 1) live[i] = warm[i] * keep + cold[i] * weight;
+  };
+  const paintSnow = (weight) => {
+    blend(terrainLive, seasonColours, snowColours, weight);
+    terrain.attributes.color.needsUpdate = true;
+    blend(rockLive, rockSeason, rockSnow, weight);
+    rock.attributes.color.needsUpdate = true;
+    for (let layer = 0; layer < rangeLive.length; layer += 1) {
+      blend(rangeLive[layer], rangeSeason[layer], rangeSnow[layer], weight);
+      rangeMeshes[layer].geometry.attributes.color.needsUpdate = true;
+    }
+    for (let i = 0; i < placed; i += 1) poplars.setColorAt(i, poplarTint.copy(poplarSeason[i]).lerp(poplarWinter, weight));
+    if (poplars.instanceColor) poplars.instanceColor.needsUpdate = true;
   };
   return {
     group,
@@ -754,24 +774,25 @@ export function createLandscape(textures) {
         plume.rotation.x = Math.sin(seconds * 0.3 + i * 2) * 0.06;
       });
     },
-    set(key) {
-      const cold = key === "winter";
-      swapColours(cold);
-      steppe.color.setHex(cold ? 0xf2f4f6 : key === "valley" ? 0xf6f3e6 : key === "dawn" ? 0xf6dcc0 : key === "storm" ? 0xcfd3d0 : 0xd8dde6);
-      rockMaterial.color.setHex(cold ? 0xe8e9ec : key === "dawn" ? 0xecd5c3 : key === "storm" ? 0xc8c8c8 : key === "lake" ? 0xc9d4e6 : 0xece8e2);
-      ranges.color.setHex(cold ? 0xffffff : key === "dawn" ? 0xffd2b8 : key === "lake" ? 0xb8c4dc : 0xf2eee8);
+    apply(look) {
+      if (paintedSnow < 0 || Math.abs(look.snow - paintedSnow) >= 0.008) {
+        paintedSnow = look.snow;
+        paintSnow(paintedSnow);
+      }
+      steppe.color.setHex(look.steppe);
+      rockMaterial.color.setHex(look.rock);
+      ranges.color.setHex(look.ranges);
       scree.color.copy(rockMaterial.color).multiplyScalar(0.62);
-      leaf.color.setHex(cold ? 0x8a8378 : key === "dawn" ? 0x6a7a3a : key === "storm" ? 0x3f5a38 : key === "lake" ? 0x3d5a4a : 0x4d6e3c);
-      plaster.color.setHex(cold ? 0xeeebe4 : key === "dawn" ? 0xf6d8b8 : key === "lake" ? 0xc9ccd4 : 0xe9ddc6);
-      brick.color.setHex(cold ? 0xc0988a : key === "dawn" ? 0xc9815c : 0xb07a5c);
-      mud.color.setHex(cold ? 0xd9cfbf : 0xb8926a);
-      water.color.setHex(key === "lake" ? 0x12263a : cold ? 0x4a5d66 : key === "storm" ? 0x3f4d52 : 0x3f6b74);
-      sun.visible = key !== "storm" && key !== "winter";
-      windows.visible = key === "lake";
-      eagles.visible = key !== "lake";
-      smokeMaterial.opacity = key === "lake" ? 0.1 : cold ? 0.3 : 0.22;
-      sun.material.color.setHex(key === "lake" || cold ? 0xe1edfa : 0xffd29a);
-      sun.position.x = key === "lake" ? -40 : 70;
+      leaf.color.setHex(look.leaf);
+      plaster.color.setHex(look.plaster);
+      brick.color.setHex(look.brick);
+      mud.color.setHex(look.mud);
+      water.color.setHex(look.water);
+      sun.position.set(look.sunX, look.sunY, look.sunZ);
+      sun.material.color.setHex(look.sunColor);
+      sun.material.opacity = smooth(look.sunY, -4, 14);
+      lamp.opacity = look.lamp;
+      smokeMaterial.opacity = 0.16 + look.snow * 0.12 + look.lamp * 0.06;
     },
   };
 }

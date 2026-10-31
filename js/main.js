@@ -16,8 +16,6 @@ import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
 import { createGame, wordFor, TIERS } from "./game.js";
-import { VIEWS, viewFor } from "./environments.js";
-import { initExplore } from "./explore.js";
 import { initMotion } from "./motion.js";
 import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPractice, savePractice } from "./practice.js";
 import { t, raw, has, plural, digits, pieceText, partName, lang, wireLanguageSwitch, applyDocument } from "./i18n.js";
@@ -54,36 +52,20 @@ let lastListed = "";
 let routed = null;
 let stage = null;
 let sceneLoadCancelled = false;
-let sceneChoice = "auto";
-let lastEnvironment = "";
 let practice = null;
 let practiceSaved = null;
-let explore = null;
 try {
   practiceSaved = readPractice(localStorage, PATTERNS);
 } catch {
   practiceSaved = null;
 }
 
-const sceneSelect = document.getElementById("environment");
-for (const [key, view] of Object.entries(VIEWS)) {
-  const option = document.createElement("option");
-  option.value = key;
-  option.textContent = t(`env.${key}`);
-  sceneSelect.append(option);
-}
 function syncPickTitle(select) {
   select.title = select.selectedOptions[0]?.textContent ?? "";
 }
 for (const select of document.querySelectorAll(".pick select")) {
   select.addEventListener("change", () => syncPickTitle(select));
 }
-syncPickTitle(sceneSelect);
-sceneSelect.addEventListener("change", () => {
-  sceneChoice = sceneSelect.value;
-  paint(player.snapshot());
-  syncUrl();
-});
 
 wireLanguageSwitch(document.getElementById("language"));
 
@@ -98,7 +80,6 @@ toolsToggle.addEventListener("click", () => setTools(!document.body.classList.co
 document.addEventListener("pointerdown", (event) => {
   if (!event.target.closest("#tools, #tools-toggle")) setTools(false);
 });
-document.getElementById("explore-world").addEventListener("click", () => setTools(false));
 
 const loader = document.getElementById("scene-loader");
 const loaderBar = document.getElementById("loading-bar");
@@ -379,13 +360,14 @@ async function bootStage() {
   }, 8000);
   try {
     setLoading(0.02, "loader.modules");
-    const { prepareTextures, COURTYARD } = await import("./textures.js");
+    const { prepareTextures, COURTYARD, LANDSCAPE } = await import("./textures.js");
     const textures = prepareTextures();
     const { createStage } = await import("./scene.js");
     performance.mark("boot:scene-module");
     setLoading(0.15, "loader.textures");
     let baked = 0;
-    await textures.ready(COURTYARD, () => setLoading(0.15 + (0.45 * ++baked) / COURTYARD.length));
+    const worldTextures = [...COURTYARD, ...LANDSCAPE];
+    await textures.ready(worldTextures, () => setLoading(0.15 + (0.45 * ++baked) / worldTextures.length));
     performance.mark("boot:textures");
     if (sceneLoadCancelled) return;
     setLoading(0.6, "loader.building");
@@ -506,10 +488,6 @@ function applyListParams(params) {
   const nextQuery = params.get("q") || "";
   const kinds = ["All", ...kindList()];
   const nextKind = kinds.find((kind) => kind.toLowerCase() === (params.get("kind") || "").toLowerCase()) || "All";
-  const nextScene = params.get("scene");
-  sceneChoice = nextScene && Object.hasOwn(VIEWS, nextScene) ? nextScene : "auto";
-  sceneSelect.value = sceneChoice;
-  syncPickTitle(sceneSelect);
   const nextRating = optionId(RATING_FILTERS, params.get("rating"));
   const nextSort = optionId(SORT_ORDERS, params.get("sort"));
   if (nextQuery === query && nextKind === kindFilter && nextRating === ratingFilter && nextSort === sortOrder) return;
@@ -526,9 +504,6 @@ function stateHash() {
   if (kindFilter !== "All") params.set("kind", kindFilter.toLowerCase());
   if (ratingFilter !== RATING_FILTERS[0].id) params.set("rating", ratingFilter);
   if (sortOrder !== SORT_ORDERS[0].id) params.set("sort", sortOrder);
-  if (sceneChoice !== "auto") params.set("scene", sceneChoice);
-  const view = explore?.view();
-  if (view) params.set("explore", view);
   let path = "#/";
   const pattern = patternFromHash();
   if (pattern && practice) {
@@ -1386,6 +1361,7 @@ function controlIcon(path) {
 }
 
 function renderLearn(pattern) {
+  transportObserver.disconnect();
   document.querySelector(".transport-settings")?.remove();
   lastScroll = -2;
   settled = false;
@@ -1454,26 +1430,26 @@ function renderLearn(pattern) {
       return;
     }
     if (player.canResume && player.pattern && player.pattern.id === pattern.id) {
-      player.resume();
+      player.resume().catch(audioError);
       return;
     }
-    player.play(pattern, 0, { keepTempo: true });
+    player.play(pattern, 0, { keepTempo: true }).catch(audioError);
   });
 
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
   const unit = document.createElement("span");
   unit.className = "tempo-unit";
-  unit.textContent = "BPM";
+  unit.textContent = t("bpm");
   const range = document.createElement("input");
   range.id = "tempo";
   range.type = "number";
   range.min = "48";
   range.max = "140";
   range.step = "1";
+  range.inputMode = "numeric";
   range.value = String(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
   range.setAttribute("aria-label", t("tempo.label"));
-  range.setAttribute("aria-valuetext", `${range.value} bpm`);
   range.addEventListener("change", () => {
     const value = Number(range.value);
     if (!range.value || !Number.isFinite(value)) { range.value = String(player.bpm); return; }
@@ -1504,12 +1480,15 @@ function renderLearn(pattern) {
   transport.append(play);
   const settings = document.createElement("div");
   settings.className = "transport transport-settings";
+  settings.setAttribute("role", "region");
+  settings.setAttribute("aria-label", t("player.controls"));
+  const timeline = document.createElement("div");
+  timeline.className = "timeline";
+  const scrubber = document.createElement("div");
+  scrubber.className = "scrubber";
   const waveform = document.createElement("div");
   waveform.className = "waveform";
-  waveform.setAttribute("role", "progressbar");
-  waveform.setAttribute("aria-label", t("progress.label"));
-  waveform.setAttribute("aria-valuemin", "0");
-  waveform.setAttribute("aria-valuemax", "100");
+  waveform.setAttribute("aria-hidden", "true");
   const events = eventsOf(pattern);
   for (let n = 0; n < 64; n += 1) {
     const start = n * pattern.loopBeats / 64;
@@ -1519,12 +1498,45 @@ function renderLearn(pattern) {
     bar.style.height = `${Math.min(100, 14 + count * 24)}%`;
     waveform.append(bar);
   }
+  const seek = document.createElement("input");
+  seek.id = "seek";
+  seek.type = "range";
+  seek.min = "0";
+  seek.max = String(pattern.loopBeats);
+  seek.step = "0.001";
+  seek.value = "0";
+  seek.disabled = !events.length;
+  seek.setAttribute("aria-label", t("player.seek"));
+  function seekTo(event) {
+    if (!event) return;
+    followPaused = false;
+    player.seek(event.index, player.playing, true);
+    const bar = document.querySelector(`#sheet [data-event="${event.index}"]`)?.closest(".bar");
+    if (bar) keepInView(bar);
+  }
+  seek.addEventListener("input", () => {
+    const beat = Number(seek.value);
+    const event = events.reduce((nearest, candidate) => Math.abs(candidate.beat - beat) < Math.abs(nearest.beat - beat) ? candidate : nearest, events[0]);
+    seekTo(event);
+  });
+  seek.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const direction = ["ArrowLeft", "ArrowDown"].includes(event.key) ? -1 : 1;
+    seekTo(events[Math.max(0, Math.min(events.length - 1, player.index + direction))]);
+  });
+  const time = document.createElement("span");
+  time.id = "playback-time";
+  time.className = "playback-time";
+  time.setAttribute("aria-hidden", "true");
+  scrubber.append(waveform, seek);
+  timeline.append(scrubber, time);
 
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
   deck.className = "deck";
   deck.append(transport);
-  settings.append(deck, waveform, loop, ranged, tempoLabel);
+  settings.append(timeline, deck, loop, tempoLabel, ranged);
 
   document.body.classList.toggle("is-practicing", !!practice);
   const notation = sheetNode(pattern, sheet);
@@ -1536,17 +1548,28 @@ function renderLearn(pattern) {
   } else {
     dock.append(settings, notation);
     placeDeck();
+    transportObserver.observe(settings);
   }
   focusSheet(pattern);
   updatePractice(player.snapshot());
 }
 
+const transportObserver = new ResizeObserver(() => {
+  const settings = document.querySelector(".transport-settings");
+  document.body.style.setProperty("--transport-h", `${settings?.offsetHeight || 0}px`);
+});
+
 function placeDeck() {
   const settings = document.querySelector(".transport-settings");
   const notation = document.querySelector("#sheet");
   if (!settings || !notation) return;
-  if (window.matchMedia("(min-width: 1001px) and (min-height: 521px)").matches) notation.before(settings);
-  else document.body.append(settings);
+  const desktop = window.matchMedia("(min-width: 1001px) and (min-height: 521px)").matches;
+  const parent = desktop ? notation.parentElement : document.body;
+  if (settings.parentElement === parent) return;
+  const focus = settings.contains(document.activeElement) ? document.activeElement : null;
+  if (desktop) notation.before(settings);
+  else parent.append(settings);
+  focus?.focus({ preventScroll: true });
 }
 
 window.addEventListener("resize", placeDeck);
@@ -1728,19 +1751,26 @@ function pickBar(pattern, bar) {
 function keepInView(node, toTop) {
   const learn = document.getElementById("learn");
   const inner = learn.scrollHeight > learn.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(learn).overflowY);
-  const stick = document.querySelector(".pan-stick");
   const box = node.getBoundingClientRect();
-  const top = inner
-    ? learn.getBoundingClientRect().top
-    : stick.getBoundingClientRect().bottom;
-  const bottom = inner ? learn.getBoundingClientRect().bottom : window.innerHeight;
+  const { top, bottom } = scoreBounds();
   if (!toTop && box.top >= top + 4 && box.bottom <= bottom - 4) return;
   const shift = box.top - top - 10;
   if (inner) learn.scrollTop += shift;
   else window.scrollBy(0, shift);
 }
 
-function pauseFollow() {
+function scoreBounds() {
+  const learn = document.getElementById("learn");
+  const box = learn.getBoundingClientRect();
+  const controls = document.querySelector(".transport-settings");
+  const fixed = controls?.parentElement === document.body;
+  const top = Math.max(0, box.top, controls && !fixed ? controls.getBoundingClientRect().bottom : 0);
+  const bottom = Math.min(window.innerHeight, box.bottom, fixed ? controls.getBoundingClientRect().top : Infinity);
+  return { top, bottom };
+}
+
+function pauseFollow(event) {
+  if (event?.target.closest(".transport-settings")) return;
   if (!followPaused) {
     const learn = document.getElementById("learn");
     followOrigin = learn.scrollTop + window.scrollY;
@@ -1758,8 +1788,7 @@ function resumeFollowNearCurrent() {
   const bar = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place")?.closest(".bar");
   if (!bar) return;
   const box = bar.getBoundingClientRect();
-  const top = Math.max(document.querySelector(".pan-stick")?.getBoundingClientRect().bottom || 0, learn.getBoundingClientRect().top);
-  const bottom = Math.min(window.innerHeight, learn.getBoundingClientRect().bottom);
+  const { top, bottom } = scoreBounds();
   if (box.top >= top && box.bottom <= bottom) followPaused = false;
 }
 
@@ -1790,7 +1819,6 @@ function routeNow() {
     return;
   }
   if (routed === null || [...params.keys()].length) applyListParams(params);
-  routeExplore(params.get("explore"));
   if (practice && (changed || !learning)) leavePractice();
   if (changed || modeChanged) {
     player.pause();
@@ -1802,6 +1830,7 @@ function routeNow() {
   const learn = document.getElementById("learn");
   if (!pattern) {
     document.querySelector(".transport-settings")?.remove();
+    transportObserver.disconnect();
     document.title = t("app.title");
     learn.replaceChildren();
     paint(player.snapshot());
@@ -1845,24 +1874,19 @@ function routeNow() {
   paint(player.snapshot());
 }
 
-function routeExplore(view) {
-  if (!explore) return;
-  if (view && Object.hasOwn(VIEWS, view)) explore.open(view);
-  else explore.close();
-}
-
 function paint(snap) {
+  document.body.classList.toggle("is-playing", !!snap.playing && !practice);
+  const playingNotes = document.getElementById("playing-notes");
+  if (playingNotes) {
+    playingNotes.hidden = !snap.playing || !!practice;
+    const showNote = id => id === TAK ? t("practice.tak.name") : digits(numberOf(id));
+    playingNotes.querySelector(".playing-current").textContent = snap.notes.map(showNote).join(" · ");
+    playingNotes.querySelector(".playing-next").textContent = snap.nextNotes.map(showNote).join(" · ");
+  }
   if (practice && (!practice.phrases[practice.at].events.length || (practice.mode === "try" && practice.attempt.snapshot().complete))) {
     snap = { ...snap, index: -1, notes: [], nextIndex: -1, nextNotes: [] };
   }
   updatePractice(snap);
-  const environment = sceneChoice === "auto" ? viewFor(snap.patternId) : sceneChoice;
-  if (stage && environment !== lastEnvironment) {
-    stage.environment(environment);
-    lastEnvironment = environment;
-    sceneSelect.options[0].textContent = t("scene.autoNamed", { name: t(`env.${environment}`) });
-    syncPickTitle(sceneSelect);
-  }
   const onNotes = new Set(snap.notes);
   const nextNotes = new Set(snap.nextNotes);
   document.querySelectorAll(".field").forEach((field) => {
@@ -1917,7 +1941,7 @@ function paint(snap) {
     lastScroll = snap.index;
     const slot = document.querySelector("#sheet .slot.is-on, #sheet .slot.is-place");
     if (slot) scrollStrip(slot.parentElement, slot);
-    if (slot && !practice) {
+    if (slot && !practice && !matchMedia("(max-width: 600px)").matches) {
       if (settled && !followPaused) keepInView(slot.closest(".bar"));
       settled = true;
     }
@@ -1953,17 +1977,26 @@ function paint(snap) {
     const mark = play.querySelector(".mark");
     if (mark.textContent !== label) mark.textContent = label;
     play.setAttribute("aria-label", label);
+    play.title = label;
   }
   const tempo = document.getElementById("tempo");
   if (tempo && document.activeElement !== tempo && tempo.value !== String(snap.bpm)) {
     tempo.value = String(snap.bpm);
-    tempo.setAttribute("aria-valuetext", `${snap.bpm} bpm`);
   }
   const waveform = document.querySelector(".waveform");
   if (waveform) {
-    const progress = Math.round((snap.progress || 0) * 100);
-    waveform.setAttribute("aria-valuenow", String(progress));
     [...waveform.children].forEach((bar, index) => bar.classList.toggle("played", index / waveform.children.length < snap.progress));
+  }
+  const seek = document.getElementById("seek");
+  if (seek && player.pattern) {
+    seek.value = String(snap.progress * player.pattern.loopBeats);
+    const total = player.pattern.loopBeats * 60 / snap.bpm;
+    const elapsed = total * snap.progress;
+    const time = document.getElementById("playback-time");
+    const label = t("player.position", { elapsed: playbackTime(elapsed), total: playbackTime(total) });
+    if (seek.getAttribute("aria-valuetext") !== label) seek.setAttribute("aria-valuetext", label);
+    const text = `${playbackTime(elapsed)} / ${playbackTime(total)}`;
+    if (time.textContent !== text) time.textContent = text;
   }
   const loop = document.getElementById("loop");
   if (loop) {
@@ -1974,6 +2007,11 @@ function paint(snap) {
   }
   const warn = document.querySelector(".mirror-note");
   if (warn) warn.hidden = !mirrored;
+}
+
+function playbackTime(seconds) {
+  const whole = Math.max(0, Math.floor(seconds));
+  return digits(`${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`);
 }
 
 function paintRange(snap) {
@@ -2051,7 +2089,7 @@ document.getElementById("listen").addEventListener("click", toggleListen);
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
-  if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
+  if (event.defaultPrevented) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("input, textarea, select") || event.target.isContentEditable) return;
   if (/^(Digit[0-9]|Numpad[0-9]|KeyT)$/.test(event.code)) {
@@ -2271,15 +2309,6 @@ if (navigator.mediaDevices) {
   });
 }
 
-document.addEventListener("alamut-explore", () => syncUrl());
-explore = initExplore({ onOpen: () => {
-  if (practice) {
-    practice.pending = false;
-    practice.run += 1;
-  }
-  player.pause();
-  stopListening("");
-} });
 drawPan();
 route();
 bootStage();

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { createLandscape } from "./landscape.js";
-import { VIEWS } from "./environments.js";
+import { REST_SECONDS, writeCycle } from "./environments.js";
 import { boxProject, createSky, materialKit, worldScale } from "./materials.js";
 
 const BRASS = 0xe6b15a;
@@ -1521,6 +1521,10 @@ function createWorld(prepared) {
   moonHalo.position.copy(moon.position);
   moonHalo.scale.set(20, 20, 1);
   scene.add(moonHalo);
+  moon.material.transparent = true;
+  moon.material.depthWrite = false;
+  moon.userData.keepSeparate = true;
+  moonHalo.userData.keepSeparate = true;
   scene.traverse((object) => {
     if (object.isMesh && object.material.isMeshStandardMaterial) {
       object.castShadow = !object.isInstancedMesh && object.material.emissiveIntensity <= 1;
@@ -1532,9 +1536,11 @@ function createWorld(prepared) {
   batchArchitecture(scene);
   const courtyard = new THREE.Group();
   for (const child of [...scene.children]) {
+    if (child.userData.keepSeparate) continue;
     if (!child.isLight || child.isPointLight) courtyard.add(child);
   }
   scene.add(courtyard);
+  courtyard.add(amber);
   const pixelRatio = renderer.getPixelRatio();
   const dust = motes({
     count: 420,
@@ -1609,55 +1615,98 @@ function createWorld(prepared) {
   skyRoom.add(new THREE.Mesh(sky.mesh.geometry, sky.mesh.material));
   const pmrem = new THREE.PMREMGenerator(renderer);
   let skyProbe = null;
-  const sunDirection = new THREE.Vector3();
+  const sunAim = new THREE.Vector3();
+  let probeMark = -1;
   function paintSky(palette, sun) {
-    sky.set(palette, sunDirection.copy(sun).sub(new THREE.Vector3(...palette.eye)));
+    sky.set(palette, sunAim.copy(sun));
+    const mark = Math.round((palette.day || 0) * 32) + Math.round((palette.snow || 0) * 8) * 40;
+    if (mark === probeMark && skyProbe) return;
+    probeMark = mark;
     skyProbe?.dispose();
     skyProbe = pmrem.fromScene(skyRoom, 0.02);
     scene.environment = skyProbe.texture;
   }
+  const courtyardSky = { zenith: 0x040a18, horizon: 0x1c3a52, ground: 0x0b1318, glow: 0x6d86b0, cloud: 0x2a3d52, cover: 0.32, stars: 1, day: 0, snow: 0 };
+  const cycle = {
+    day: 0, year: 0, snow: 0, stars: 1, cover: 0.32, fog: 0.015, exposure: 1.1, hemi: 1.2, lamp: 0,
+    zenith: courtyardSky.zenith, horizon: courtyardSky.horizon, ground: courtyardSky.ground, glow: courtyardSky.glow, cloud: courtyardSky.cloud, sky: 0x142c3c, light: 0xb9d7ed,
+    steppe: 0, rock: 0, ranges: 0, leaf: 0, plaster: 0, brick: 0, mud: 0, water: 0,
+    sunX: 0, sunY: -46, sunZ: -58, moonX: 0, moonY: 46, moonZ: -62, sunColor: 0xfff1c4, moonColor: 0xd7e4f6,
+  };
   let landscape = null;
-  let landscapeReady = null;
-  let wantedKey = "courtyard";
-  function ensureLandscape() {
-    if (landscape) return landscape;
+  try {
     landscape = createLandscape(textures);
     batchArchitecture(landscape.group);
-    landscape.group.visible = false;
+    landscape.group.visible = true;
     scene.add(landscape.group);
-    landscapeReady = renderer.compileAsync(scene, camera).catch(() => {}).then(() => { landscapeReady = null; });
-    return landscape;
+    courtyard.visible = false;
+    const extent = 78;
+    moonlight.shadow.camera.left = -extent;
+    moonlight.shadow.camera.right = extent;
+    moonlight.shadow.camera.top = extent;
+    moonlight.shadow.camera.bottom = -extent;
+    moonlight.shadow.camera.far = 260;
+    moonlight.shadow.camera.updateProjectionMatrix();
+  } catch {
+    if (landscape?.group) landscape.group.removeFromParent();
+    landscape = null;
+    courtyard.visible = true;
   }
-  let view = VIEWS.courtyard;
-  let viewKey = "courtyard";
   let skyBase = 1.2;
-  paintSky(view, moon.position);
-  let exploring = false;
-  let savedView = "courtyard";
-  let orbit = 0;
-  let dragging = null;
+  let shadowMark = null;
   const look = new THREE.Vector2();
   const ease = new THREE.Vector2();
   let last = 0;
   let energy = 0;
   let pendingFrames = 30;
-  function draw(time) {
-    if (!compiled) return;
-    renderer.info.reset();
-    ease.lerp(look, 0.035);
+  const drift = still ? 0 : 1;
+  function pose(time) {
     const seconds = time / 1000;
-    const drift = still ? 0 : 1;
-    if (exploring) {
-      camera.position.set(Math.sin(orbit) * 54, 25, Math.cos(orbit) * 54 - 10);
-      camera.lookAt(-6, 15, -26);
+    ease.lerp(look, 0.035);
+    if (landscape) {
+      writeCycle(still ? REST_SECONDS : seconds, cycle);
+      landscape.apply(cycle);
+      const lift = Math.max(0, cycle.sunY) / 46;
+      camera.position.set(
+        20 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+        13.2 + lift * 1.6 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+        39,
+      );
+      camera.lookAt(-6, 15.2, -30);
+      sunAim.set(cycle.sunX - camera.position.x, cycle.sunY - camera.position.y, cycle.sunZ - camera.position.z);
+      paintSky(cycle, sunAim);
+      fogTone.setHex(cycle.sky);
+      fogBase = cycle.fog;
+      skyBase = cycle.hemi;
+      moonBase = cycle.hemi;
+      moonlight.color.setHex(cycle.light);
+      moonlight.position.set(cycle.sunX * 0.35 + 36, Math.max(cycle.sunY, 22), -40).normalize().multiplyScalar(130);
+      const nextShadow = Math.round(cycle.sunX);
+      if (nextShadow !== shadowMark) {
+        shadowMark = nextShadow;
+        renderer.shadowMap.needsUpdate = true;
+      }
+      const moonFade = smooth(-4, 14, cycle.moonY);
+      moon.material.opacity = moonFade;
+      moonHalo.material.opacity = moonFade;
+      moon.material.color.setHex(cycle.moonColor);
+      moon.position.set(cycle.moonX, cycle.moonY, cycle.moonZ);
+      moonHalo.position.copy(moon.position);
     } else {
       camera.position.set(
-        view.eye[0] + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
-        view.eye[1] - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
-        view.eye[2],
+        1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+        4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+        15,
       );
-      camera.lookAt(...view.target);
+      camera.lookAt(1, 5.5, -20);
+      paintSky(courtyardSky, moon.position);
     }
+  }
+  function draw(time) {
+    if (!compiled) return;
+    const seconds = time / 1000;
+    renderer.info.reset();
+    pose(time);
     magic += (magicGoal - magic) * 0.035;
     if (Math.abs(magicGoal - magic) > 0.002) pendingFrames = Math.max(pendingFrames, 2);
     lamps.forEach(({ light, base, glass }, i) => {
@@ -1668,7 +1717,7 @@ function createWorld(prepared) {
     skyLight.intensity = skyBase + energy * 0.5 + magic * 0.7;
     moonlight.intensity = moonBase * (1 + magic * 0.35);
     scene.fog.density = fogBase * (1 - magic * 0.45);
-    renderer.toneMappingExposure = 1.1 + magic * 0.28;
+    renderer.toneMappingExposure = (landscape ? cycle.exposure : 1.1) + magic * 0.28;
     sky.uniforms.uTime.value = seconds;
     sky.uniforms.uMagic.value = magic;
     scene.fog.color.copy(fogTone).lerp(charmTone, magic * 0.55);
@@ -1714,77 +1763,9 @@ function createWorld(prepared) {
     look.set(event.clientX / innerWidth - 0.5, event.clientY / innerHeight - 0.5);
     pendingFrames = 30;
   });
+  pose(performance.now());
   resize();
-  function environment(key) {
-      if (!VIEWS[key]) return;
-      wantedKey = key;
-      if (key === viewKey) return;
-      if (key !== "courtyard" && !landscape) {
-        ensureLandscape();
-        landscapeReady.then(() => { if (wantedKey === key) environment(key); });
-        return;
-      }
-      viewKey = key;
-      view = VIEWS[key];
-      if (exploring) orbit = Math.atan2(view.eye[0], view.eye[2] + 25) * 0.7;
-      courtyard.visible = key === "courtyard";
-      if (key === "courtyard") {
-        if (landscape) landscape.group.visible = false;
-        paintSky(view, moon.position);
-      } else {
-        const land = ensureLandscape();
-        land.group.visible = true;
-        land.set(key);
-        paintSky(view, land.sun.position);
-      }
-      fogTone.setHex(view.sky);
-      scene.fog.color.copy(fogTone);
-      fogBase = key === "courtyard" ? 0.015 : key === "storm" ? 0.0052 : 0.0034;
-      scene.fog.density = fogBase;
-      moonlight.color.setHex(key === "dawn" ? 0xffc28b : key === "valley" ? 0xffeed2 : 0xb9d7ed);
-      moonBase = key === "lake" ? 1.2 : 2.5;
-      moonlight.intensity = moonBase;
-      const wide = key !== "courtyard";
-      if (wide) moonlight.position.copy(landscape.sun.position).setY(Math.max(landscape.sun.position.y, 60)).normalize().multiplyScalar(130);
-      else moonlight.position.set(-12, 24, -5);
-      const extent = wide ? 78 : 32;
-      moonlight.shadow.camera.left = -extent;
-      moonlight.shadow.camera.right = extent;
-      moonlight.shadow.camera.top = extent;
-      moonlight.shadow.camera.bottom = -extent;
-      moonlight.shadow.camera.far = wide ? 260 : 90;
-      moonlight.shadow.camera.updateProjectionMatrix();
-      skyBase = key === "courtyard" ? 1.2 : key === "lake" ? 0.9 : 1.4;
-      renderer.shadowMap.needsUpdate = true;
-      pendingFrames = 30;
-      draw(performance.now());
-  }
-  document.addEventListener("alamut-explore", (event) => {
-    if (event.detail.open && !exploring) savedView = viewKey;
-    exploring = event.detail.open;
-    if (exploring) {
-      environment(event.detail.view || "dawn");
-    } else {
-      environment(savedView);
-    }
-    pendingFrames = 30;
-    draw(performance.now());
-  });
-  canvas.addEventListener("pointerdown", (event) => {
-    if (!exploring) return;
-    dragging = { x: event.clientX };
-    canvas.setPointerCapture(event.pointerId);
-  });
-  canvas.addEventListener("pointermove", (event) => {
-    if (!dragging || !exploring) return;
-    orbit = THREE.MathUtils.clamp(orbit - (event.clientX - dragging.x) * 0.005, -0.8, 0.8);
-    dragging.x = event.clientX;
-    pendingFrames = 30;
-    if (still) draw(performance.now());
-  });
-  for (const type of ["pointerup", "pointercancel"]) canvas.addEventListener(type, () => { dragging = null; });
   return {
-    environment,
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     async compile() {
       await renderer.compileAsync(scene, camera);
@@ -1850,7 +1831,6 @@ export function createStage({ pan, onHit, textures }) {
     layout: drum.layout,
     set: drum.set,
     setTak: drum.setTak,
-    environment: world.environment,
     motion: drum.motion,
     magic(level) {
       world.magic(level);

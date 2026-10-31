@@ -1,10 +1,71 @@
+import assert from "node:assert/strict";
 import { cpSync, mkdtempSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { DAY_SECONDS, YEAR_SECONDS, REST_SECONDS, writeCycle } from "../js/environments.js";
 
 const REPO_JS = resolve(dirname(fileURLToPath(import.meta.url)), "..", "js");
 const MIN_SAME_HAND_MS = 210;
+const CYCLE_HEX = ["zenith", "horizon", "ground", "glow", "cloud", "sky", "light", "steppe", "rock", "ranges", "leaf", "plaster", "brick", "mud", "water", "sunColor"];
+const DAY_FIELDS = ["day", "zenith", "horizon", "ground", "glow", "cloud", "stars", "sky", "fog", "exposure", "hemi", "lamp", "light", "sunX", "sunY", "sunZ", "moonX", "moonY", "moonZ", "sunColor", "moonColor"];
+
+function channelGap(a, b) {
+  return Math.max(
+    Math.abs(((a >> 16) & 255) - ((b >> 16) & 255)),
+    Math.abs(((a >> 8) & 255) - ((b >> 8) & 255)),
+    Math.abs((a & 255) - (b & 255)),
+  );
+}
+
+function assertCycle() {
+  const left = {};
+  const right = {};
+  assert.equal(writeCycle(0, left), left);
+  assert.equal(left.snow, 0.22);
+  assert.equal(left.zenith, 0x030919);
+  assert.equal(left.sunY, -46);
+  assert.equal(left.moonY, 46);
+  assert.equal(left.stars, 1);
+  assert.equal(left.sunColor, 0xfff1c4);
+  assert.equal(left.moonColor, 0xd7e4f6);
+  writeCycle(DAY_SECONDS * 0.5, right);
+  assert.ok(right.sunY > 40);
+  assert.equal(right.stars, 0);
+  writeCycle(0.42 * YEAR_SECONDS, right);
+  assert.ok(right.snow < 0.02);
+  writeCycle(0.82 * YEAR_SECONDS, right);
+  assert.ok(right.snow > 0.97);
+  assert.ok(Number.isFinite(REST_SECONDS));
+  writeCycle(REST_SECONDS, right);
+  assert.ok(right.sunY > 30);
+  writeCycle(-3, left);
+  writeCycle(YEAR_SECONDS - 3, right);
+  assert.deepEqual(left, right);
+  writeCycle(0, left);
+  writeCycle(YEAR_SECONDS, right);
+  assert.deepEqual(left, right);
+  writeCycle(DAY_SECONDS, right);
+  for (const key of DAY_FIELDS) assert.equal(left[key], right[key], key);
+  let prev = left;
+  let next = right;
+  writeCycle(0, prev);
+  for (let t = 0.5; t <= YEAR_SECONDS + DAY_SECONDS; t += 0.5) {
+    writeCycle(t, next);
+    for (const key of CYCLE_HEX) {
+      const gap = channelGap(prev[key], next[key]);
+      assert.ok(gap < 24, `${key} at ${t} moved ${gap}`);
+    }
+    assert.ok(Math.abs(prev.sunY - next.sunY) < 2, `sunY at ${t}`);
+    for (const value of Object.values(next)) {
+      if (typeof value === "number") assert.ok(Number.isFinite(value), `non-finite at ${t}`);
+    }
+    assert.equal(next.moonColor, 0xd7e4f6);
+    const swap = prev;
+    prev = next;
+    next = swap;
+  }
+}
 
 function scoreDir(candidate) {
   if (!candidate) return REPO_JS;
@@ -124,6 +185,7 @@ function summary(pattern, score) {
 }
 
 async function main() {
+  assertCycle();
   const score = await loadScore(process.argv[2]).catch((error) => {
     console.log(`COMPILE ${error.message}`);
     process.exit(1);
