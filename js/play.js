@@ -57,6 +57,8 @@ export function createPlayer(audio, emit) {
 
   function snapshot() {
     const event = state.index >= 0 ? state.all[state.index] : null;
+    const elapsed = state.playing && audio.ready() ? Math.max(0, (heardNow() - state.origin) * state.bpm / 60) : 0;
+    const beat = state.ended ? state.from + state.span : state.playing && state.span ? state.from + elapsed % state.span : event?.beat ?? 0;
     const following = posOf(state.index) + 1;
     const canShowNext = state.events.length > 0 && (state.loop || following < state.events.length);
     const next = canShowNext ? state.events[following % state.events.length] : null;
@@ -73,6 +75,7 @@ export function createPlayer(audio, emit) {
       bpm: state.bpm,
       loop: state.loop,
       range: state.range,
+      progress: state.pattern ? Math.max(0, Math.min(1, beat / state.pattern.loopBeats)) : 0,
     };
   }
 

@@ -1386,7 +1386,7 @@ function controlIcon(path) {
 }
 
 function renderLearn(pattern) {
-  document.querySelector(".deck")?.remove();
+  document.querySelector(".transport-settings")?.remove();
   lastScroll = -2;
   settled = false;
   followPaused = false;
@@ -1462,28 +1462,26 @@ function renderLearn(pattern) {
 
   const tempoLabel = document.createElement("label");
   tempoLabel.className = "tempo";
-  const bpm = document.createElement("span");
-  bpm.id = "bpm";
-  bpm.textContent = digits(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
   const unit = document.createElement("span");
   unit.className = "tempo-unit";
   unit.textContent = "BPM";
   const range = document.createElement("input");
   range.id = "tempo";
-  range.type = "range";
+  range.type = "number";
   range.min = "48";
   range.max = "140";
   range.step = "1";
   range.value = String(player.pattern && player.pattern.id === pattern.id ? player.bpm : pattern.bpm);
   range.setAttribute("aria-label", t("tempo.label"));
   range.setAttribute("aria-valuetext", `${range.value} bpm`);
-  range.addEventListener("input", () => {
-    bpm.textContent = digits(range.value);
-    range.setAttribute("aria-valuetext", `${range.value} bpm`);
-    player.setTempo(Number(range.value));
+  range.addEventListener("change", () => {
+    const value = Number(range.value);
+    if (!range.value || !Number.isFinite(value)) { range.value = String(player.bpm); return; }
+    player.setTempo(value);
+    range.value = String(player.bpm);
     scheduleSync();
   });
-  tempoLabel.append(bpm, unit, range);
+  tempoLabel.append(range, unit);
 
   const loop = document.createElement("button");
   loop.type = "button";
@@ -1506,12 +1504,27 @@ function renderLearn(pattern) {
   transport.append(play);
   const settings = document.createElement("div");
   settings.className = "transport transport-settings";
+  const waveform = document.createElement("div");
+  waveform.className = "waveform";
+  waveform.setAttribute("role", "progressbar");
+  waveform.setAttribute("aria-label", t("progress.label"));
+  waveform.setAttribute("aria-valuemin", "0");
+  waveform.setAttribute("aria-valuemax", "100");
+  const events = eventsOf(pattern);
+  for (let n = 0; n < 64; n += 1) {
+    const start = n * pattern.loopBeats / 64;
+    const end = (n + 1) * pattern.loopBeats / 64;
+    const count = events.filter(event => event.beat >= start && event.beat < end).length;
+    const bar = document.createElement("span");
+    bar.style.height = `${Math.min(100, 14 + count * 24)}%`;
+    waveform.append(bar);
+  }
 
   const sheet = sheetOf(pattern);
   const deck = document.createElement("div");
   deck.className = "deck";
   deck.append(transport);
-  settings.append(deck, loop, ranged, tempoLabel);
+  settings.append(deck, waveform, loop, ranged, tempoLabel);
 
   document.body.classList.toggle("is-practicing", !!practice);
   const notation = sheetNode(pattern, sheet);
@@ -1529,11 +1542,11 @@ function renderLearn(pattern) {
 }
 
 function placeDeck() {
-  const deck = document.querySelector(".deck");
   const settings = document.querySelector(".transport-settings");
-  if (!deck || !settings) return;
-  if (window.matchMedia("(min-width: 1001px) and (min-height: 521px)").matches) settings.prepend(deck);
-  else document.body.append(deck);
+  const notation = document.querySelector("#sheet");
+  if (!settings || !notation) return;
+  if (window.matchMedia("(min-width: 1001px) and (min-height: 521px)").matches) notation.before(settings);
+  else document.body.append(settings);
 }
 
 window.addEventListener("resize", placeDeck);
@@ -1788,7 +1801,7 @@ function routeNow() {
   updateResume();
   const learn = document.getElementById("learn");
   if (!pattern) {
-    document.querySelector(".deck")?.remove();
+    document.querySelector(".transport-settings")?.remove();
     document.title = t("app.title");
     learn.replaceChildren();
     paint(player.snapshot());
@@ -1941,12 +1954,16 @@ function paint(snap) {
     if (mark.textContent !== label) mark.textContent = label;
     play.setAttribute("aria-label", label);
   }
-  const bpm = document.getElementById("bpm");
   const tempo = document.getElementById("tempo");
-  if (bpm) bpm.textContent = digits(snap.bpm);
   if (tempo && document.activeElement !== tempo && tempo.value !== String(snap.bpm)) {
     tempo.value = String(snap.bpm);
     tempo.setAttribute("aria-valuetext", `${snap.bpm} bpm`);
+  }
+  const waveform = document.querySelector(".waveform");
+  if (waveform) {
+    const progress = Math.round((snap.progress || 0) * 100);
+    waveform.setAttribute("aria-valuenow", String(progress));
+    [...waveform.children].forEach((bar, index) => bar.classList.toggle("played", index / waveform.children.length < snap.progress));
   }
   const loop = document.getElementById("loop");
   if (loop) {

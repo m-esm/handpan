@@ -915,6 +915,12 @@ body.is-learn #learn {
 .deck .play[data-state="playing"]::before { width: 12px; height: 16px; border: 0; border-left: 4px solid currentColor; border-right: 4px solid currentColor; margin: 0; }
 .transport-settings { margin-bottom: 14px; padding: 6px; gap: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(11, 26, 33, 0.45); }
 .transport-settings .loop { width: 44px; min-width: 44px; padding: 0; border-radius: 10px; }
+.transport-settings .deck { position: static; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.transport-settings .deck .play { width: 44px; height: 44px; min-width: 44px; }
+.waveform { direction: ltr; flex: 1 1 150px; min-width: 80px; height: 34px; display: flex; align-items: center; gap: 2px; overflow: hidden; }
+.waveform span { flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--soft); }
+.waveform span.played { background: var(--brass); }
+.tempo #tempo { width: 62px; min-width: 0; height: 40px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--night); color: var(--mist); text-align: center; }
 .stepper { width: 44px; padding: 0; }
 
 .stepper::before {
@@ -1187,6 +1193,11 @@ input[type="range"]::-moz-range-thumb {
   .transport-settings { position: sticky; top: 0; z-index: 20; background: var(--solid); }
   .deck { position: static; padding: 0; border: 0; background: transparent; box-shadow: none; }
   .deck .play { width: 44px; height: 44px; min-width: 44px; }
+}
+
+@media (max-width: 1000px), (max-height: 520px) {
+  body > .transport-settings { position: fixed; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 20; margin: 0; padding: 8px; flex-wrap: nowrap; background: var(--solid); box-shadow: 0 8px 28px rgba(0, 0, 0, .45); }
+  body > .transport-settings .tempo { flex: 0 0 auto; margin: 0; }
 }
 
 @media (min-width: 1001px) {
