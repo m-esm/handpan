@@ -70,11 +70,7 @@ function ground(x, z) {
   const south = Math.max(0, dz);
   y += Math.pow(south / 28, 1.7) * 9;
   y += (fbm(x * 0.022 + 5, z * 0.022) - 0.5) * 5 * smooth(Math.abs(dz), 6, 30);
-  const back = Math.max(0, -(z + 42));
-  y += Math.pow(back / 40, 1.6) * 9 + (fbm(x * 0.05, z * 0.05 + 9) - 0.5) * 5 * smooth(back, 0, 14) + (1 - Math.abs(2 * fbm(x * 0.02, z * 0.02 + 4, 3) - 1)) * 6 * smooth(back, 10, 30);
   y += Math.pow(Math.max(0, Math.abs(x + 9) - 120) / 60, 1.6) * 14 + Math.pow(Math.max(0, z - 60) / 50, 1.6) * 16;
-  const hill = Math.hypot((x + 15) / 11, (z + 53) / 8.5);
-  y += 9.5 * Math.max(0, 1 - hill * hill) ** 1.3;
   const ravine = Math.exp(-(((x - 23.5) / 4.2) ** 2)) * smooth(26 - Math.abs(z + 31), 0, 14);
   y -= 4.5 * ravine;
   const far = Math.max(0, x - 30);
@@ -85,7 +81,7 @@ function ground(x, z) {
   y += 4.5 * (1 - smooth(beyond, 2, 18)) * smooth(x, -48, -40) * (1 - smooth(x, 20, 27));
   const terraceMask = smooth(x, -64, -58) * (1 - smooth(x, -24, -18)) * smooth(-dz, 8, 13) * (1 - smooth(-dz, 36, 44));
   if (terraceMask > 0) y = lerp(y, Math.floor(y / 0.55) * 0.55 + 0.12, terraceMask);
-  return y;
+  return lerp(y, -1.5, smooth(-z, 48, 82));
 }
 function terraceIndex(x, z) {
   const dz = z - riverZ(x);
