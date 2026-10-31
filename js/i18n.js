@@ -9,6 +9,9 @@ export const LANGS = {
 
 const EN = {
   "progress.label": "Playback progress",
+  "player.controls": "Playback controls",
+  "player.seek": "Seek to note",
+  "player.position": "{elapsed} of {total}",
   "print.action": "Print songbook",
   "print.guide": "Your handpan, by number",
   "print.instrument": "D Kurd · Note guide & complete songbook",
@@ -309,6 +312,9 @@ const EN = {
 
 const FA = {
   "progress.label": "پیشرفت پخش",
+  "player.controls": "کنترل‌های پخش",
+  "player.seek": "رفتن به نُت",
+  "player.position": "{elapsed} از {total}",
   "print.action": "چاپ دفتر نُت",
   "print.guide": "هندپن شما، با شمارهٔ نُت‌ها",
   "print.instrument": "رِ کُرد · راهنمای نُت‌ها و دفتر کامل قطعه‌ها",

@@ -69,4 +69,66 @@ for (const cancel of [false, true]) {
   await ready;
   assert.deepEqual(applied, cancel ? [] : ["dawn"], "a deferred landscape must respect the latest selection");
 }
-console.log("Interaction checks passed: blocked storage, held Space, native controls, practice pause and deferred landscape cancellation.");
+const seekHandlers = {};
+const seekInput = {
+  setAttribute() {},
+  addEventListener(type, handler) { seekHandlers[type] = handler; },
+};
+const seeks = [];
+const seekContext = {
+  document: { createElement: () => seekInput, querySelector: () => null },
+  pattern: { loopBeats: 8 },
+  events: [{ index: 0, beat: 0 }, { index: 1, beat: 2 }, { index: 2, beat: 7.5 }],
+  t: key => key,
+  followPaused: true,
+  player: {
+    playing: false,
+    index: 0,
+    seek(index, playing, silent) { seeks.push({ index, playing, silent }); this.index = index; },
+  },
+};
+vm.runInNewContext(between(main, '  const seek = document.createElement("input");', '  const time = document.createElement("span");'), seekContext);
+seekInput.value = "5.5";
+seekHandlers.input();
+assert.deepEqual(seeks.at(-1), { index: 2, playing: false, silent: true }, "scrubbing uses score time and stays silent while paused");
+assert.equal(seekContext.followPaused, false, "seeking resumes score following");
+seekContext.player.playing = true;
+seekInput.value = "0";
+seekHandlers.input();
+assert.deepEqual(seeks.at(-1), { index: 0, playing: true, silent: true }, "seeking preserves playback");
+let prevented = 0;
+const seekKey = key => seekHandlers.keydown({ key, preventDefault() { prevented++; } });
+seekKey("ArrowLeft");
+assert.equal(seeks.at(-1).index, 0, "seek arrows must not wrap at the start");
+seekKey("ArrowRight");
+assert.equal(seeks.at(-1).index, 1);
+seekKey("ArrowUp");
+seekKey("ArrowRight");
+assert.equal(seeks.at(-1).index, 2, "seek arrows must not wrap at the end");
+seekKey("ArrowDown");
+assert.equal(seeks.at(-1).index, 1);
+seekKey("Tab");
+assert.equal(prevented, 5, "unrelated keys retain native handling");
+
+let fixedTransport = true;
+const body = {};
+const controlBox = { top: 650, bottom: 780 };
+const controls = { get parentElement() { return fixedTransport ? body : {}; }, getBoundingClientRect: () => controlBox };
+const boundsContext = {
+  document: {
+    body,
+    getElementById: () => ({ getBoundingClientRect: () => ({ top: -200, bottom: 1100 }) }),
+    querySelector: () => controls,
+  },
+  window: { innerHeight: 800 },
+};
+vm.runInNewContext(between(main, "function scoreBounds()", "function pauseFollow("), boundsContext);
+assert.equal(boundsContext.scoreBounds().top, 0, "a static pan must not reduce the score viewport");
+assert.equal(boundsContext.scoreBounds().bottom, 650, "a floating player must not cover the current bar");
+fixedTransport = false;
+controlBox.top = 0;
+controlBox.bottom = 130;
+assert.equal(boundsContext.scoreBounds().top, 130, "a sticky desktop player reserves its full height");
+assert.equal(boundsContext.scoreBounds().bottom, 800);
+
+console.log("Interaction checks passed: blocked storage, held Space, native controls, practice pause, deferred landscape cancellation, silent/playing seek, seek keyboard boundaries and score visibility.");
