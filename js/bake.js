@@ -1,4 +1,4 @@
-const blank = () => (typeof document === "undefined" ? new OffscreenCanvas(1, 1) : blank());
+const blank = () => (typeof document === "undefined" ? new OffscreenCanvas(1, 1) : document.createElement("canvas"));
 
 const SRGB = "srgb";
 const LINEAR = "";
