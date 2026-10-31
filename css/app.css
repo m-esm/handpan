@@ -328,13 +328,10 @@ body.is-learn #learn { grid-column: 1; grid-row: 1; }
   gap: 8px;
 }
 
-.playing-notes { display: none; }
-
-@media (max-width: 600px) {
+@media (max-width: 1000px) and (min-height: 521px) {
   body.is-playing .pan-stick { position: fixed; top: 0; left: 0; right: 0; z-index: 19; margin: 0; padding: max(6px, env(safe-area-inset-top)) 14px 10px; background: linear-gradient(var(--solid) 65%, transparent); }
-  body.is-playing #learn { display: none; }
-  body.is-playing .playing-notes:not([hidden]) { display: flex; align-items: baseline; gap: 20px; min-height: 36px; color: var(--brass-2); font-size: 28px; line-height: 1; }
-  .playing-next { color: var(--soft); opacity: .65; font-size: 20px; }
+  body.is-learn.is-playing #learn { padding-top: calc(var(--pan-h) + 20px + env(safe-area-inset-top)); }
+  body.is-playing .learn-head { padding-top: 0; }
 }
 
 #learn {
@@ -1214,7 +1211,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 1000px), (max-height: 520px) {
-  body > .transport-settings { position: fixed; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 20; width: auto; max-width: 680px; margin: 0 auto; box-shadow: 0 8px 28px rgba(0, 0, 0, .45); }
+  body > .transport-settings { position: fixed; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 20; width: auto; max-width: 680px; margin: 0 auto; direction: ltr; grid-template-columns: auto auto minmax(0, 1fr); gap: 6px 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, .45); }
   body > .transport-settings .tempo { flex: 0 0 auto; margin: 0; }
   body.is-learn:not(.is-practicing) { padding-bottom: calc(var(--transport-h, 130px) + 28px + env(safe-area-inset-bottom)); }
 }
@@ -1227,7 +1224,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (min-width: 600px) and (max-height: 520px) {
-  .transport-settings { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; }
+  body > .transport-settings { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; }
   .transport-settings .timeline { grid-column: 2; grid-row: 1; gap: 6px; }
   .transport-settings .deck { grid-column: 1; grid-row: 1; }
   .transport-settings .loop { grid-column: 3; grid-row: 1; }
