@@ -114,4 +114,34 @@ controlBox.bottom = 130;
 assert.equal(boundsContext.scoreBounds().top, 130, "a sticky desktop player reserves its full height");
 assert.equal(boundsContext.scoreBounds().bottom, 800);
 
-console.log("Interaction checks passed: blocked storage, held Space, native controls, practice pause, seeking and score visibility.");
+for (const active of ["play", "learn"]) {
+  const node = tag => ({
+    tag,
+    children: [],
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    append(...children) { this.children.push(...children); },
+    addEventListener() {},
+  });
+  const head = node("div");
+  vm.runInNewContext(between(main, '  const modes = document.createElement("nav");', '  const warn = document.createElement("p");'), {
+    document: { createElement: node },
+    head,
+    practice: active === "learn" ? {} : null,
+    pattern: { id: "sample-piece" },
+    t: key => key,
+    controlIcon: () => node("svg"),
+  });
+  const modes = head.children[0];
+  assert.equal(modes.attributes["aria-label"], "piece.mode");
+  assert.equal(modes.children.length, 3, "Play, Learn and Share remain available");
+  for (const [index, mode] of ["play", "learn"].entries()) {
+    const link = modes.children[index];
+    assert.equal(link.tag, "a");
+    assert.equal(link.textContent, mode, "both modes have visible translated labels");
+    assert.equal(link.href, `#/p/sample-piece/${mode}`, "switching modes preserves the piece");
+    assert.equal(link.attributes["aria-current"], mode === active ? "page" : undefined);
+  }
+}
+
+console.log("Interaction checks passed: blocked storage, held Space, native controls, practice pause, seeking, score visibility and labeled mode navigation.");

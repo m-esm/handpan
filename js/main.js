@@ -682,8 +682,11 @@ function setChipLabel(chip) {
 function renderList() {
   const dock = document.getElementById("dock");
   dock.innerHTML = "";
-  const heading = document.createElement("h2");
+  const heading = document.createElement("h1");
   heading.textContent = t("library");
+  const intro = document.createElement("p");
+  intro.className = "library-intro";
+  intro.textContent = t("library.intro");
   const find = document.createElement("input");
   find.id = "find";
   find.className = "find";
@@ -758,7 +761,7 @@ function renderList() {
   resultCount.className = "result-count";
   resultCount.setAttribute("role", "status");
   listTools.append(resultCount);
-  libraryHead.append(titleRow, find, chips, listTools, options);
+  libraryHead.append(titleRow, intro, find, chips, listTools, options);
   const beginner = textButton("practice-start", t("start.learning"));
   beginner.id = "practice-beginner";
   beginner.addEventListener("click", () => requestPractice(beginnerPattern(PATTERNS)));
@@ -772,7 +775,7 @@ function renderList() {
   const welcome = document.createElement("div");
   welcome.className = "library-welcome";
   welcome.append(continuePractice, beginner);
-  titleRow.after(welcome);
+  intro.after(welcome);
   dock.append(libraryHead, rows);
   syncListOptions();
   updateResume();
@@ -1401,13 +1404,14 @@ function renderLearn(pattern) {
   const modes = document.createElement("nav");
   modes.className = "piece-modes";
   modes.setAttribute("aria-label", t("piece.mode"));
-  const other = practice ? "play" : "learn";
-  const link = document.createElement("a");
-  link.className = "mode-link";
-  link.href = `#/p/${pattern.id}/${other}`;
-  link.setAttribute("aria-label", t(other));
-  link.title = t(other);
-  link.append(controlIcon(other === "learn" ? "M4 5.5C7 4 10 4.5 12 6v13c-2-1.5-5-2-8-.5z M20 5.5C17 4 14 4.5 12 6v13c2-1.5 5-2 8-.5z" : "M8 5l11 7-11 7z"));
+  for (const mode of ["play", "learn"]) {
+    const link = document.createElement("a");
+    link.className = "mode-link";
+    link.href = `#/p/${pattern.id}/${mode}`;
+    link.textContent = t(mode);
+    if (mode === (practice ? "learn" : "play")) link.setAttribute("aria-current", "page");
+    modes.append(link);
+  }
   const share = document.createElement("button");
   share.type = "button";
   share.className = "mode-link share-link";
@@ -1415,7 +1419,7 @@ function renderLearn(pattern) {
   share.append(controlIcon("M12 16V3 M7 8l5-5 5 5 M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"));
   share.title = t("share.hint");
   share.addEventListener("click", () => sharePiece(pattern));
-  modes.append(link, share);
+  modes.append(share);
   head.append(modes);
 
   const warn = document.createElement("p");
