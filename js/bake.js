@@ -364,25 +364,86 @@ function kilim(seed) {
   const rows = 512;
   const fuzz = fbm(512, seed, { period: 32, octaves: 4 });
   const abrash = fbm(512, seed + 1, { period: 2, octaves: 3, stretch: 0.25 });
-  const madder = [146, 38, 34];
-  const indigo = [34, 46, 92];
-  const ivory = [226, 210, 178];
-  const ochre = [196, 142, 58];
-  const teal = [42, 104, 100];
+  const madder = [132, 32, 42];
+  const indigo = [27, 39, 65];
+  const ivory = [224, 207, 168];
+  const ochre = [178, 133, 73];
+  const teal = [67, 112, 108];
+  const rose = [188, 100, 88];
+  const flower = (x, y, radius, petals = 8) => {
+    const distance = Math.hypot(x, y) / radius;
+    if (distance > 1) return null;
+    const rim = 0.82 + 0.18 * Math.cos(Math.atan2(y, x) * petals);
+    if (distance > rim) return null;
+    if (distance < 0.19) return ochre;
+    if (distance < 0.38) return madder;
+    return distance > rim - 0.2 ? ivory : rose;
+  };
+  const leaf = (x, y, angle, length) => {
+    const along = x * Math.cos(angle) + y * Math.sin(angle);
+    const across = y * Math.cos(angle) - x * Math.sin(angle);
+    return (along / length) ** 2 + (across / (length * 0.34)) ** 2 < 1;
+  };
   const pick = (x, y) => {
-    const fromEdge = Math.min(x, width - 1 - x);
-    if (fromEdge < 10) return indigo;
-    if (fromEdge < 16) return ivory;
-    if (fromEdge < 40) {
-      const zig = Math.abs(((y + fromEdge * 2) % 32) - 16);
-      return zig < 6 ? ochre : fromEdge < 22 || fromEdge > 34 ? madder : indigo;
+    const cx = Math.abs(x + 0.5 - width / 2);
+    const cy = Math.abs(y + 0.5 - rows / 2);
+    const edgeX = width / 2 - cx;
+    const edgeY = rows / 2 - cy;
+    const fromEdge = Math.min(edgeX, edgeY);
+    const along = edgeX < edgeY ? cy : cx;
+    if (fromEdge < 3) return indigo;
+    if (fromEdge < 5 || (fromEdge >= 35 && fromEdge < 37)) return ochre;
+    if (fromEdge < 11 || (fromEdge >= 29 && fromEdge < 35)) {
+      const across = fromEdge < 11 ? fromEdge - 8 : fromEdge - 32;
+      const rhythm = along * Math.PI / 8;
+      if (Math.abs(across - Math.sin(rhythm) * 1.5) < 0.8) return indigo;
+      return Math.hypot(across, (along + 4) % 8 - 4) < 1.4 ? madder : ivory;
     }
-    if (fromEdge < 46) return ivory;
-    const cy = ((y % 128) + 128) % 128 - 64;
-    const cx = x - width / 2;
-    const d = Math.floor((Math.abs(cx) * 1.1 + Math.abs(cy)) / 10);
-    if (d > 8) return (Math.floor(y / 8) + Math.floor(x / 8)) % 7 === 0 ? ochre : madder;
-    return [indigo, ivory, madder, ochre, teal, ivory, indigo, madder, ivory][d];
+    if (fromEdge < 29) {
+      const across = fromEdge - 20;
+      const repeat = (along + 16) % 32 - 16;
+      const blossom = flower(across, repeat, 7);
+      if (blossom) return blossom;
+      if (leaf(across - 3, Math.abs(repeat) - 11, -0.7, 4.5)) return teal;
+      return Math.abs(across - 3 * Math.sin(along * Math.PI / 16)) < 0.8 ? ochre : indigo;
+    }
+    if (fromEdge < 40) return indigo;
+    if (fromEdge < 42) return ivory;
+    const angle = Math.atan2(cy / 100, cx / 58);
+    const radius = Math.hypot(cx / 58, cy / 100);
+    const scallop = 1 + 0.075 * Math.cos(angle * 12);
+    if (radius < scallop) {
+      if (radius > scallop - 0.045) return ochre;
+      if (radius > scallop - 0.105) return ivory;
+      if (radius > scallop - 0.15) return madder;
+      const heart = flower(cx, cy / 1.35, 26, 12);
+      if (heart) return heart;
+      const petalAngle = Math.round(angle / (Math.PI / 4)) * Math.PI / 4;
+      const wreath = flower(cx - 35 * Math.cos(petalAngle), (cy - 62 * Math.sin(petalAngle)) / 1.2, 7);
+      if (wreath) return wreath;
+      if (Math.abs(Math.hypot(cx / 38, cy / 65) - 1) < 0.018) return ochre;
+      if (leaf(cx - 17, cy - 38, -0.7, 9)) return teal;
+      return indigo;
+    }
+    const pendant = flower(cx, (cy - 123) / 1.5, 12);
+    if (pendant) return pendant;
+    if (cx < 1.1 && cy < 123) return ochre;
+    const corner = Math.hypot((86 - cx) / 44, (214 - cy) / 62);
+    if (corner < 1) {
+      if (corner > 0.94) return ivory;
+      if (corner > 0.87) return ochre;
+      return flower(86 - cx, (214 - cy) / 1.25, 24, 12) || indigo;
+    }
+    const vineY = (cy + 24) % 72 - 36;
+    const vineX = 66 + 9 * Math.cos(vineY * Math.PI / 36);
+    const blossom = flower(cx - 65, vineY, 8);
+    if (blossom) return blossom;
+    if (leaf(cx - 69, Math.abs(vineY) - 17, -0.8, 7)) return teal;
+    if (Math.abs(cx - vineX) < 0.8) return ochre;
+    const scroll = Math.hypot((cx - 43) / 12, (Math.abs(vineY) - 24) / 10);
+    if (scroll > 0.88 && scroll < 1 && cx < 50) return rose;
+    const palmette = flower(cx, (cy - 175) / 1.3, 16, 6);
+    return palmette || madder;
   };
   const height = new Float32Array(width * rows);
   for (let y = 0; y < rows; y += 1) {
