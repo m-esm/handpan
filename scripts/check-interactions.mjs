@@ -11,6 +11,13 @@ function between(source, start, end) {
 }
 
 const main = await readFile(new URL("../js/main.js", import.meta.url), "utf8");
+const playingClasses = between(main, '  document.body.classList.toggle("is-playing"', '\n  if (practice &&');
+for (const [playing, practice, fixedPan, audioPlaying] of [[true, null, true, true], [true, {}, false, true], [false, {}, false, false]]) {
+  const classes = {};
+  vm.runInNewContext(playingClasses, { snap: { playing }, practice, document: { body: { classList: { toggle(name, value) { classes[name] = value; } } } } });
+  assert.equal(classes["is-playing"], fixedPan);
+  assert.equal(classes["has-playing-audio"], audioPlaying);
+}
 const blockedStorage = { createGame, assert };
 Object.defineProperty(blockedStorage, "localStorage", { get() { throw new Error("Storage access denied"); } });
 vm.runInNewContext(`${between(main, "const game = ", "\nconst POP_MS")}

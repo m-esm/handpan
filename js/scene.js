@@ -66,7 +66,7 @@ function labelTexture(text, color, lit) {
   const pen = canvas.getContext("2d");
   const persian = document.documentElement.lang === "fa";
   const styles = getComputedStyle(document.documentElement);
-  const family = persian ? `"Vazirmatn", ${styles.getPropertyValue("--sans")}` : styles.getPropertyValue("--serif");
+  const family = persian ? `"Vazirmatn", ${styles.getPropertyValue("--sans")}` : styles.getPropertyValue("--sans");
   pen.font = `700 ${persian ? 210 : 200}px ${family}`;
   pen.textAlign = "center";
   pen.textBaseline = "middle";
@@ -934,7 +934,7 @@ function createDrum(host, onHit, onStrike, prepared) {
     const plain = engraved(labelTexture(spec.label, tint, false));
     const bright = engraved(labelTexture(spec.label, LIT_LABEL, true));
     const label = new THREE.Mesh(labelGeometry, plain);
-    const size = spec.ding ? 0.38 : 0.32;
+    const size = spec.ding ? 0.48 : 0.42;
     label.scale.set(size, size, 1);
     label.position.z = 0.012;
     const toward = new THREE.Vector3(0, 0, -1).addScaledVector(frame.normal, frame.normal.z).normalize();
