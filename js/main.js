@@ -17,6 +17,7 @@ import { createPlayer } from "./play.js";
 import { createListener, accepts } from "./listen.js";
 import { createGame, wordFor, TIERS } from "./game.js";
 import { initMotion } from "./motion.js";
+import { initExplore } from "./explore.js";
 import { phrasesOf, beginnerPattern, practiceTempo, createNotePractice, readPractice, savePractice } from "./practice.js";
 import { t, raw, has, plural, digits, pieceText, partName, lang, wireLanguageSwitch, applyDocument } from "./i18n.js";
 
@@ -52,6 +53,7 @@ let lastListed = "";
 let routed = null;
 let stage = null;
 let sceneLoadCancelled = false;
+let explore = null;
 let practice = null;
 let practiceSaved = null;
 try {
@@ -386,6 +388,8 @@ async function bootStage() {
       return;
     }
     document.body.classList.add("has-3d");
+    const exploreEntry = document.getElementById("explore-world");
+    if (exploreEntry) exploreEntry.hidden = false;
     document.fonts.load(lang === "fa" ? "700 200px \"Vazirmatn\"" : "700 200px Georgia", digits("0123456789") + "\u00d7").then(() => stage && stage.layout(panLayout())).catch(() => {});
     initMotion({ button: document.getElementById("motion-toggle"), recenter: document.getElementById("motion-center"), status: document.getElementById("motion-status"), onChange: stage.motion });
     document.querySelector(".motion-controls").hidden = false;
@@ -403,6 +407,8 @@ async function bootStage() {
     console.error(err);
     for (const canvas of document.querySelectorAll(".world, .pan-3d")) canvas.remove();
     document.body.classList.remove("has-3d");
+    const exploreEntry = document.getElementById("explore-world");
+    if (exploreEntry) exploreEntry.hidden = true;
     finishLoading(t("simple.failed"));
   } finally {
     clearTimeout(slow);
@@ -2113,7 +2119,7 @@ document.getElementById("listen").addEventListener("click", toggleListen);
 
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", (event) => {
-  if (event.defaultPrevented) return;
+  if (event.defaultPrevented || document.body.classList.contains("is-exploring")) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target.closest("input, textarea, select") || event.target.isContentEditable) return;
   if (/^(Digit[0-9]|Numpad[0-9]|KeyT)$/.test(event.code)) {
@@ -2333,6 +2339,20 @@ if (navigator.mediaDevices) {
   });
 }
 
+explore = initExplore({
+  world: () => stage,
+  onOpen: () => {
+    setTools(false);
+    if (practice && ["hear", "repeat"].includes(practice.mode) && (player.playing || practice.pending)) {
+      pausePractice();
+    } else if (practice) {
+      practice.pending = false;
+      practice.run += 1;
+    }
+    player.pause();
+    stopListening("");
+  },
+});
 drawPan();
 route();
 bootStage();
