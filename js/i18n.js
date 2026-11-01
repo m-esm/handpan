@@ -8,6 +8,10 @@ export const LANGS = {
 };
 
 const EN = {
+  "stage.instrument": "Ten notes. Endless possibilities.",
+  "stage.title": "A little space to play.",
+  "stage.hint": "Tap the handpan or use keys 0–9 · T for tak",
+  "library.intro": "Find a melody. Follow a rhythm. Make it your own, one phrase at a time.",
   "progress.label": "Playback progress",
   "player.controls": "Playback controls",
   "player.seek": "Seek to note",
@@ -306,6 +310,10 @@ const EN = {
 };
 
 const FA = {
+  "stage.instrument": "ده نت، بی‌نهایت امکان",
+  "stage.title": "جایی برای نواختن",
+  "stage.hint": "روی هنگ‌درام بزنید یا از کلیدهای ۰ تا ۹ استفاده کنید · T برای تک",
+  "library.intro": "یک ملودی پیدا کنید، یک ریتم را دنبال کنید و عبارت به عبارت آن را از آنِ خود کنید.",
   "progress.label": "پیشرفت پخش",
   "player.controls": "کنترل‌های پخش",
   "player.seek": "رفتن به نُت",
