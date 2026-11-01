@@ -14,6 +14,7 @@ import { ADDED } from "./added.js";
 import { initPrint } from "./print.js";
 import { createAudio } from "./sound.js";
 import { createPlayer } from "./play.js";
+import { createMediaSession, silentWavBytes } from "./media-session.js";
 import { createListener, accepts } from "./listen.js";
 import { createGame, wordFor, TIERS } from "./game.js";
 import { initMotion } from "./motion.js";
@@ -123,6 +124,40 @@ document.getElementById("simple-view").addEventListener("click", () => {
 });
 
 const player = createPlayer(audio, paint);
+function mediaCarrier() {
+  const element = document.createElement("audio");
+  const source = URL.createObjectURL(new Blob([silentWavBytes()], { type: "audio/wav" }));
+  element.loop = true;
+  return {
+    attach() {
+      if (element.getAttribute("src") !== source) element.src = source;
+    },
+    play: () => element.play(),
+    pause: () => element.pause(),
+    release() {
+      element.removeAttribute("src");
+      element.load();
+    },
+  };
+}
+
+const mediaSession = createMediaSession({
+  navigator: globalThis.navigator,
+  MediaMetadata: globalThis.MediaMetadata,
+  base: document.baseURI,
+  artist: "Alamut",
+  carrier: "mediaSession" in navigator ? mediaCarrier() : null,
+  onPlay: () => {
+    if (player.playing || practice?.pending) return;
+    if (practice) pausePractice();
+    else document.getElementById("play")?.click();
+  },
+  onPause: () => {
+    if (!player.playing && !practice?.pending) return;
+    if (practice) pausePractice();
+    else player.pause();
+  },
+});
 const listener = createListener(onHeard, onMicEnded);
 const game = createGame({
   getItem: (key) => localStorage.getItem(key),
@@ -1852,6 +1887,13 @@ function routeNow() {
 }
 
 function paint(snap) {
+  const shownPiece = patternFromHash();
+  mediaSession.update({
+    title: shownPiece ? pieceText(shownPiece, "title") : null,
+    playing: !!snap.playing || !!practice?.pending,
+    duration: shownPiece ? (shownPiece.loopBeats * 60) / snap.bpm : 0,
+    progress: snap.progress,
+  });
   document.body.classList.toggle("is-playing", !!snap.playing && !practice);
   document.body.classList.toggle("has-playing-audio", !!snap.playing);
   if (practice && (!practice.phrases[practice.at].events.length || (practice.mode === "try" && practice.attempt.snapshot().complete))) {
