@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { createMediaSession, playbackStateOf, MEDIA_ACTIONS } from "../js/media-session.js";
+import { createMediaSession, playbackStateOf, positionOf, silentWavBytes, MEDIA_ACTIONS } from "../js/media-session.js";
 
 const BASE = "https://handpan.moshes.io/p/let-it-be.html";
 
@@ -138,6 +138,56 @@ assert.equal(playbackStateOf({ title: "A", playing: false }), "paused");
   assert.equal(typeof log.handlers.play, "function");
 }
 
+{
+  const wav = silentWavBytes(10, 8000);
+  const view = new DataView(wav.buffer);
+  const text = (at, n) => String.fromCharCode(...wav.slice(at, at + n));
+  assert.equal(text(0, 4), "RIFF");
+  assert.equal(text(8, 8), "WAVEfmt ");
+  assert.equal(text(36, 4), "data");
+  assert.equal(view.getUint32(24, true), 8000);
+  assert.equal(view.getUint32(40, true), 80000);
+  assert.equal(wav.length, 44 + 80000);
+  assert.ok(wav.slice(44).every((byte) => byte === 128), "carrier must be digital silence");
+}
+
+assert.equal(positionOf({ duration: 0, progress: 0.5 }), null);
+assert.deepEqual(positionOf({ duration: 20, progress: 0.25 }), { duration: 20, playbackRate: 1, position: 5 });
+assert.deepEqual(positionOf({ duration: 20, progress: 3 }), { duration: 20, playbackRate: 1, position: 20 });
+assert.deepEqual(positionOf({ duration: 20, progress: Number.NaN }), { duration: 20, playbackRate: 1, position: 0 });
+
+{
+  const { session, log } = fakeSession();
+  const positions = [];
+  session.setPositionState = (value) => positions.push(value ?? null);
+  const carrier = { calls: [], attach() { this.calls.push("attach"); }, play() { this.calls.push("play"); return Promise.reject(new Error("NotAllowedError")); }, pause() { this.calls.push("pause"); }, release() { this.calls.push("release"); } };
+  const media = createMediaSession({ navigator: { mediaSession: session }, MediaMetadata: FakeMetadata, base: BASE, artist: "Alamut", onPlay() {}, onPause() {}, carrier });
+  media.update({ title: "Let It Be", playing: false, duration: 20, progress: 0 });
+  assert.deepEqual(carrier.calls, ["pause"]);
+  for (let n = 0; n < 20; n += 1) media.update({ title: "Let It Be", playing: true, duration: 20, progress: n / 20 });
+  assert.deepEqual(carrier.calls, ["pause", "attach", "play"], "carrier follows state changes only");
+  media.update({ title: "Let It Be", playing: false, duration: 20, progress: 0.5 });
+  media.update({ title: null, playing: false, duration: 0, progress: 0 });
+  assert.deepEqual(carrier.calls, ["pause", "attach", "play", "pause", "pause", "release"]);
+  assert.deepEqual(positions, [
+    { duration: 20, playbackRate: 1, position: 0 },
+    { duration: 20, playbackRate: 1, position: 0 },
+    { duration: 20, playbackRate: 1, position: 10 },
+    null,
+  ]);
+  assert.deepEqual(log.state, ["paused", "playing", "paused", "none"]);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+{
+  const { session, log } = fakeSession();
+  const carrier = { attach() { throw new Error("no media"); }, play() {}, pause() { throw new Error("no media"); }, release() {} };
+  const media = createMediaSession({ navigator: { mediaSession: session }, MediaMetadata: FakeMetadata, base: BASE, artist: "Alamut", onPlay() {}, onPause() {}, carrier });
+  assert.doesNotThrow(() => media.update({ title: "Let It Be", playing: true, duration: 20, progress: 0 }));
+  assert.doesNotThrow(() => media.update({ title: "Let It Be", playing: false, duration: 20, progress: 0 }));
+  assert.deepEqual(log.state, ["playing", "paused"]);
+}
+
 const main = await readFile(new URL("../js/main.js", import.meta.url), "utf8");
 const paintAt = main.indexOf("function paint(snap) {");
 assert.ok(paintAt >= 0);
@@ -146,5 +196,9 @@ const wiring = main.slice(main.indexOf("const mediaSession = createMediaSession(
 assert.ok(wiring.includes('document.getElementById("play")?.click()'), "OS play must reuse the Play button path");
 assert.ok(wiring.includes("pausePractice()"), "OS controls must go through practice when it is active");
 assert.equal(/setActionHandler|seekto|nexttrack|previoustrack/.test(wiring), false);
+assert.ok(wiring.includes('"mediaSession" in navigator ? mediaCarrier() : null'), "the silent carrier is created only where Media Session exists");
+const carrierCode = main.slice(main.indexOf("function mediaCarrier()"), main.indexOf("const mediaSession = createMediaSession("));
+assert.ok(carrierCode.includes("element.loop = true") && carrierCode.includes("silentWavBytes()"), "carrier is a looping silent element");
+assert.equal(/connect|createMediaStreamDestination|srcObject/.test(carrierCode), false, "Web Audio output stays on its own path");
 
 console.log("media session ok");
