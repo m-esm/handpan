@@ -11,7 +11,10 @@ const REPO = "https://github.com/m-esm/handpan";
 const PAGES = join(ROOT, "p");
 const NAME = "Alamut";
 const INSTRUMENT = "Gear4music DISC 10-note D Kurd handpan";
-const FONTS = "https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Vazirmatn:wght@400;500;600;700&family=Markazi+Text:wght@500;600;700&display=swap";
+const appHtml = readFileSync(join(ROOT, "index.html"), "utf8");
+const FONTS = appHtml.match(/href="(https:\/\/fonts\.googleapis\.com\/css2\?[^\"]+)"/)?.[1];
+const THEME = appHtml.match(/<meta name="theme-color" content="([^"]+)">/)?.[1];
+if (!FONTS || !THEME) throw new Error("App font URL or theme color is missing");
 
 const KINDS = {
   Hands: "Short hand-alternation drills that teach where the notes sit and which hand reaches them.",
@@ -121,7 +124,7 @@ function head({ title, description, canonical, image, imageAlt, type, extra = ""
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#10232b">
+  <meta name="theme-color" content="${THEME}">
   <title>${esc(title)}</title>
   <meta name="description" content="${attr(description)}">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
@@ -399,14 +402,17 @@ function extraPages(files) {
 
 const files = outputs();
 const stale = [...files].filter(([path, text]) => current(path) !== text).map(([path]) => path);
+const manifest = JSON.parse(readFileSync(join(ROOT, "site.webmanifest"), "utf8"));
+const manifestStale = manifest.theme_color !== THEME || manifest.background_color !== THEME;
 const extra = extraPages(files);
 
 if (process.argv.includes("--check")) {
-  if (!stale.length && !extra.length) {
+  if (!stale.length && !extra.length && !manifestStale) {
     console.log(`SEO files are current (${files.size} files)`);
   } else {
     for (const path of stale) console.log(`stale: ${path.slice(ROOT.length + 1)}`);
     for (const path of extra) console.log(`orphan: ${path.slice(ROOT.length + 1)}`);
+    if (manifestStale) console.log("site.webmanifest colors must match index.html theme-color");
     console.log("run node scripts/seo.mjs");
     process.exit(1);
   }
