@@ -30,7 +30,7 @@ Start learning chooses a simple Hands drill when one is available, otherwise the
 
 Pause and Resume use the existing player's note-based resume: the current note plays again. Restart phrase returns to the bar's start. Next phrase is always a deliberate choice, and completion does not mark anything learned. Mirror preserves the active phrase. Learn's score is a reading surface; score clicks, drags and arrow keys cannot exit Learn or create whole-piece loops. Switching modes or leaving cancels pending practice playback. The legacy step guide is retired; existing `disc-kurd-step` and `disc-kurd-learned` data is preserved, and Play retains optional learned-part checkboxes.
 
-Piece URLs use `#/p/id/play` and `#/p/id/learn`; existing `#/p/id` links still open Play. Direct Learn links restore the saved phrase and tempo for that piece silently. Unknown routes return to the library. Check the pure practice logic and mocked playback with `node scripts/check-practice.mjs`; browser layout, interaction and real-instrument accuracy are separate checks.
+Piece URLs use `#/p/id/play` and `#/p/id/learn`; existing `#/p/id` links still open Play. Direct Learn links restore the saved phrase for that piece silently. Unknown routes return to the library. Check the pure practice logic and mocked playback with `node scripts/check-practice.mjs`; browser layout, interaction and real-instrument accuracy are separate checks.
 
 On a phone, Enable motion lets you gently tilt and rotate the 3D handpan with the device. Allow motion access when asked, hold the phone comfortably, and use Recenter to reset its neutral position. Tap Motion on to switch it off. Sensor access requires HTTPS or localhost and a browser with device orientation support.
 

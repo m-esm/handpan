@@ -1853,6 +1853,7 @@ function routeNow() {
 
 function paint(snap) {
   document.body.classList.toggle("is-playing", !!snap.playing && !practice);
+  document.body.classList.toggle("has-playing-audio", !!snap.playing);
   if (practice && (!practice.phrases[practice.at].events.length || (practice.mode === "try" && practice.attempt.snapshot().complete))) {
     snap = { ...snap, index: -1, notes: [], nextIndex: -1, nextNotes: [] };
   }

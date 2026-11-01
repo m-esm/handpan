@@ -1502,8 +1502,8 @@ body.is-exploring .world:active { cursor: grabbing; }
 body.has-3d::after { display: none; }
 body.has-3d .caption { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 @media (max-width: 1000px), (max-height: 520px) {
-  body.is-playing .top,
-  body.is-playing .learn-head { display: none; }
+  body.has-playing-audio .top,
+  body.has-playing-audio .learn-head { display: none; }
   body.has-3d.is-playing #learn {
     background: linear-gradient(to bottom, transparent calc(var(--pan-h) + 20px), var(--solid) calc(var(--pan-h) + 20px));
     backdrop-filter: none;
