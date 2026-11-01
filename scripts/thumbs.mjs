@@ -13,7 +13,7 @@ const QUALITY = 82;
 const PARALLEL = 4;
 
 const STYLE = [
-  "Style, the same for every image in a set of forty: flat vector illustration, large simple shapes, no outlines, no texture, no text, no letters, no numbers, no people, no hands, no border, no frame.",
+  "Style, the same for every image in the set: flat vector illustration, large simple shapes, no outlines, no texture, no text, no letters, no numbers, no people, no hands, no border, no frame.",
   "Palette only: a near-black warm brown #14110e background that fills the whole square to every edge, brass #e6b15a, pale brass #f4d7a4, cream #f0e2d2, copper #a86b3c, and one muted teal #3f7f7a accent.",
   "One clear subject in the centre, made of at most eight large shapes, that fills two thirds of the square. No small detail. It must read at 56 pixels.",
 ].join(" ");

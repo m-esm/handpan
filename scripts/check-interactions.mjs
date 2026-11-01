@@ -173,7 +173,7 @@ assert.match(explore, /aria-modal/, "Explore is a modal dialog");
 assert.match(css, /body\.is-exploring \.wrap/, "Explore hides the practice UI");
 assert.match(css, /overflow-x: hidden/, "Explore HUD must not overflow sideways");
 assert.doesNotMatch(css, /\.explore-stick:hover/, "touch pads must not rely on hover");
-for (const key of ["explore", "explore.eyebrow", "explore.title", "explore.controls", "explore.controlsTouch", "explore.return", "explore.move", "explore.look", "explore.rise", "explore.sink"]) {
+for (const key of ["explore", "explore.title", "explore.controls", "explore.controlsTouch", "explore.return", "explore.rise", "explore.sink"]) {
   assert.equal([...i18n.matchAll(new RegExp(`"${key}":`, "g"))].length, 2, `${key} needs English and Persian`);
 }
 const flightScope = {};
@@ -308,24 +308,18 @@ function createElement(tag, active) {
 
 function verifyExplore(source, coarse) {
   const english = {
-    "explore.eyebrow": "EN eyebrow",
     "explore.title": "EN title",
     "explore.controls": "EN keys",
     "explore.controlsTouch": "EN touch",
     "explore.return": "EN return",
-    "explore.move": "EN move",
-    "explore.look": "EN look",
     "explore.rise": "EN rise",
     "explore.sink": "EN sink",
   };
   const persian = {
-    "explore.eyebrow": "FA eyebrow",
     "explore.title": "FA title",
     "explore.controls": "FA keys",
     "explore.controlsTouch": "FA touch",
     "explore.return": "FA return",
-    "explore.move": "FA move",
-    "explore.look": "FA look",
     "explore.rise": "FA rise",
     "explore.sink": "FA sink",
   };
@@ -378,20 +372,18 @@ function verifyExplore(source, coarse) {
   assert.equal(title.textContent, "EN title", "changing language leaves the closed overlay unchanged");
   sandbox.api.open();
   assert.equal(title.textContent, "FA title", "opening Explore paints the current language");
-  assert.equal(hud.querySelector(".explore-eyebrow").textContent, "FA eyebrow");
   assert.equal(described.textContent, coarse ? "FA touch" : "FA keys");
   assert.equal(hud.querySelector(".explore-return").textContent, "FA return");
   assert.equal(hud.querySelector(".explore-rise").textContent, "FA rise");
   assert.equal(hud.querySelector(".explore-sink").textContent, "FA sink");
-  assert.equal(hud.querySelector('[data-stick="move"]').getAttribute("aria-label"), "FA move");
-  assert.equal(hud.querySelector('[data-stick="look"]').getAttribute("aria-label"), "FA look");
+  assert.equal(hud.querySelector('[data-stick="move"]').getAttribute("aria-hidden"), "true", "touch pads are decorative for assistive tech");
+  assert.equal(hud.querySelector('[data-stick="move"]').getAttribute("role"), null, "touch pads do not claim a slider role");
   table = english;
   assert.equal(title.textContent, "FA title", "labels stay until the next open");
   sandbox.api.close();
   sandbox.api.open();
   assert.equal(title.textContent, "EN title");
   assert.equal(hud.querySelector(".explore-return").textContent, "EN return");
-  assert.equal(hud.querySelector('[data-stick="look"]').getAttribute("aria-label"), "EN look");
   assert.equal(hud.getAttribute("tabindex"), "-1", "the dialog is programmatically focusable");
   assert.equal(document.activeElement, hud, "opening Explore focuses the dialog");
   if (coarse) return;

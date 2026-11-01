@@ -23,7 +23,7 @@ function card() {
   <rect width="1200" height="630" fill="url(#glow)"/>
   <g transform="translate(96 175) scale(4.375)">${mark}</g>
   <text x="420" y="268" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="128" letter-spacing="-5" fill="#f3eddf">Alamut</text>
-  <text x="424" y="334" font-family="Helvetica, Arial, sans-serif" font-weight="600" font-size="26" letter-spacing="4" fill="#d9b77a">A COURTYARD FOR SOUND</text>
+  <text x="424" y="334" font-family="Helvetica, Arial, sans-serif" font-weight="600" font-size="26" letter-spacing="4" fill="#d9b77a">HANDPAN PRACTICE IN THE BROWSER</text>
   <text x="424" y="410" font-family="Helvetica, Arial, sans-serif" font-size="38" fill="#c9d3d6">Play and learn a 10-note D Kurd handpan</text>
   <text x="424" y="462" font-family="Helvetica, Arial, sans-serif" font-size="38" fill="#c9d3d6">in the browser, with notes for every piece.</text>
   <text x="424" y="556" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#8fa3a9">handpan.moshes.io</text>

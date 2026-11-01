@@ -2,7 +2,7 @@
 
 > Alamut is a free browser app for playing and learning a Gear4music DISC 10-note D Kurd handpan. It has 10 patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.
 
-The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz; C4, 261.6 Hz; D4, 293.7 Hz; E4, 329.6 Hz; F4, 349.2 Hz; G4, 392.0 Hz; A4, 440.0 Hz; C5, 523.3 Hz. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten; the pages say which notes were substituted.
+The instrument has ten notes: D3 (ding), 146.8 Hz; A3, 220.0 Hz; B♭3, 233.1 Hz; C4, 261.6 Hz; D4, 293.7 Hz; E4, 329.6 Hz; F4, 349.2 Hz; G4, 392.0 Hz; A4, 440.0 Hz; C5, 523.3 Hz. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten. Where a note had to be substituted, the page for that song says which.
 
 ## Pages
 

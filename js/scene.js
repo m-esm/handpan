@@ -23,7 +23,9 @@ const ALONG = 0.3;
 const ACROSS = 0.25;
 const DING = 0.44;
 const UP = new THREE.Vector3(0, 1, 0);
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
+let still = motionQuery.matches;
+motionQuery.addEventListener("change", (event) => { still = event.matches; });
 const profiling = new URLSearchParams(location.search).has("perf");
 const coarse = matchMedia("(pointer: coarse)").matches;
 const DRUM_PIXEL_RATIO = Math.min(devicePixelRatio, coarse ? 1.5 : 2);
@@ -36,7 +38,7 @@ const LOOKS = {
   next: { color: CREAM, glow: 0, ring: 0.45, bright: false },
   place: { color: BRASS, glow: 0.22, ring: 1, bright: false },
   on: { color: BRASS, glow: 1, ring: 1, bright: true },
-  heard: { color: TEAL, glow: 1, ring: 1, bright: true },
+  heard: { color: BRASS, glow: 1, ring: 1, bright: true },
   miss: { color: RED, glow: 1, ring: 1, bright: true },
 };
 
@@ -1173,7 +1175,7 @@ function createDrum(host, onHit, onStrike, prepared) {
     magic += (magicGoal - magic) * 0.04;
     if (Math.abs(magicGoal - magic) > 0.002) pendingFrames = Math.max(pendingFrames, 2);
     for (const points of [ambientMotes, coolMotes]) {
-      points.material.uniforms.uTime.value = seconds;
+      points.material.uniforms.uTime.value = still ? 0 : seconds;
       points.material.uniforms.uGlow.value = (points === coolMotes ? 0.7 : 0.9) + energy * 0.8 + magic * 1.4;
       points.material.uniforms.uScale.value = (points === coolMotes ? 26 : 34) * (1 + magic * 0.5);
     }
@@ -1183,13 +1185,14 @@ function createDrum(host, onHit, onStrike, prepared) {
       if (seconds - burst.material.uniforms.uStart.value > 1.4) burst.visible = false;
     }
     const breath = still ? 0 : Math.sin(seconds * 0.5);
+    const spin = still ? 0 : seconds;
     aurora.material.opacity = 0.13 + breath * 0.04 + energy * 0.3 + magic * 0.3;
-    aurora.rotation.z = seconds * (0.03 + magic * 0.05);
+    aurora.rotation.z = spin * (0.03 + magic * 0.05);
     aurora.scale.setScalar(1 + breath * 0.03 + energy * 0.08 + magic * 0.18);
     runes.material.opacity = 0.2 + breath * 0.05 + energy * 0.55 + magic * 0.45;
-    runes.rotation.z = seconds * (0.02 + magic * 0.04);
+    runes.rotation.z = spin * (0.02 + magic * 0.04);
     innerRunes.material.opacity = 0.12 + energy * 0.4 + magic * 0.5;
-    innerRunes.rotation.z = -seconds * (0.045 + magic * 0.06);
+    innerRunes.rotation.z = -spin * (0.045 + magic * 0.06);
     for (const [id, item] of fields) {
       const look = LOOKS[item.state] || LOOKS.idle;
       const lit = id === focused;
@@ -1843,7 +1846,7 @@ function createWorld(prepared) {
     moonlight.intensity = moonBase * (1 + magic * 0.35);
     scene.fog.density = fogBase * (1 - magic * 0.45);
     renderer.toneMappingExposure = (landscape && !courtyardSelected ? cycle.exposure : 1.1) + magic * 0.28;
-    sky.uniforms.uTime.value = seconds;
+    sky.uniforms.uTime.value = still ? REST_SECONDS : seconds;
     sky.uniforms.uMagic.value = magic;
     scene.fog.color.copy(fogTone).lerp(charmTone, magic * 0.55);
     try {

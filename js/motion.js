@@ -109,12 +109,12 @@ export function initMotion({ button, recenter, status, onChange }) {
       Promise.resolve(permission).then(result => {
         if (token !== generation || !requested) return;
         if (result === 'granted') start(token);
-        else stop('Motion access was not allowed. You can try again.');
+        else stop(t("motion.denied"));
       }).catch(() => {
-        if (token === generation) stop('Could not enable motion. Check your browser’s sensor access.');
+        if (token === generation) stop(t("motion.failed"));
       });
     } catch {
-      if (token === generation) stop('Could not enable motion. Check your browser’s sensor access.');
+      if (token === generation) stop(t("motion.failed"));
     }
   }
   button.addEventListener('click', toggle);

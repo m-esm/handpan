@@ -28,14 +28,11 @@ function releaseCapture(node, pointerId) {
 }
 
 function applyExploreCopy(overlay, touch) {
-  overlay.querySelector(".explore-eyebrow").textContent = t("explore.eyebrow");
   overlay.querySelector("#explore-title").textContent = t("explore.title");
   overlay.querySelector("#explore-description").textContent = t(touch ? "explore.controlsTouch" : "explore.controls");
   overlay.querySelector(".explore-return").textContent = t("explore.return");
   overlay.querySelector(".explore-rise").textContent = t("explore.rise");
   overlay.querySelector(".explore-sink").textContent = t("explore.sink");
-  overlay.querySelector('[data-stick="move"]').setAttribute("aria-label", t("explore.move"));
-  overlay.querySelector('[data-stick="look"]').setAttribute("aria-label", t("explore.look"));
 }
 
 function trackFlightKey(event, keys) {
@@ -69,8 +66,6 @@ export function initExplore({ world, onOpen } = {}) {
   const heading = document.createElement("header");
   heading.className = "explore-heading";
   const headingText = document.createElement("div");
-  const eyebrow = document.createElement("p");
-  eyebrow.className = "explore-eyebrow";
   const title = document.createElement("h1");
   title.id = "explore-title";
   const description = document.createElement("p");
@@ -78,7 +73,7 @@ export function initExplore({ world, onOpen } = {}) {
   const exitButton = document.createElement("button");
   exitButton.type = "button";
   exitButton.className = "explore-return";
-  headingText.append(eyebrow, title, description);
+  headingText.append(title, description);
   heading.append(headingText, exitButton);
   const pads = document.createElement("div");
   pads.className = "explore-touch";
@@ -86,10 +81,7 @@ export function initExplore({ world, onOpen } = {}) {
   const movePad = document.createElement("div");
   movePad.className = "explore-stick";
   movePad.setAttribute("data-stick", "move");
-  movePad.setAttribute("role", "slider");
-  movePad.setAttribute("aria-valuemin", "-1");
-  movePad.setAttribute("aria-valuemax", "1");
-  movePad.setAttribute("aria-valuenow", "0");
+  movePad.setAttribute("aria-hidden", "true");
   const moveKnob = document.createElement("span");
   moveKnob.className = "explore-knob";
   movePad.append(moveKnob);
@@ -105,10 +97,7 @@ export function initExplore({ world, onOpen } = {}) {
   const lookPad = document.createElement("div");
   lookPad.className = "explore-stick";
   lookPad.setAttribute("data-stick", "look");
-  lookPad.setAttribute("role", "slider");
-  lookPad.setAttribute("aria-valuemin", "-1");
-  lookPad.setAttribute("aria-valuemax", "1");
-  lookPad.setAttribute("aria-valuenow", "0");
+  lookPad.setAttribute("aria-hidden", "true");
   const lookKnob = document.createElement("span");
   lookKnob.className = "explore-knob";
   lookPad.append(lookKnob);
@@ -271,9 +260,29 @@ export function initExplore({ world, onOpen } = {}) {
       releaseCapture(button, event.pointerId);
       lift = 0;
     }
+    function isActivation(event) {
+      return event.key === "Enter" || event.key === " " || event.code === "Space";
+    }
+    function keyStart(event) {
+      if (!isActivation(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.repeat) return;
+      lift = dir;
+      button.classList.add("is-held");
+    }
+    function keyEnd(event) {
+      if (!isActivation(event) || !button.classList.contains("is-held")) return;
+      event.preventDefault();
+      button.classList.remove("is-held");
+      lift = 0;
+    }
     listen(button, "pointerdown", start);
     listen(button, "pointerup", end);
     listen(button, "pointercancel", end);
+    listen(button, "keydown", keyStart);
+    listen(button, "keyup", keyEnd);
+    listen(button, "blur", () => keyEnd({ key: "Enter", preventDefault() {} }));
   }
 
   function open() {

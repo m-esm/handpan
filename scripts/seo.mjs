@@ -151,7 +151,8 @@ function head({ title, description, canonical, image, imageAlt, type, extra = ""
   <link rel="manifest" href="${up}site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="${FONTS}">
+  <link rel="stylesheet" href="${FONTS}" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="${FONTS}"></noscript>
   <link rel="stylesheet" href="${up}css/app.css">
   <link rel="stylesheet" href="${up}css/site.css">
 ${extra}</head>`;
@@ -161,11 +162,22 @@ function jsonLd(data) {
   return `  <script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>\n`;
 }
 
-function header(depth = 1) {
+function roleOf(kind) {
+  if (kind === "Songs" || kind === "Traditional") return "arrangement";
+  if (kind === "Pieces" || kind === "GPT-6 Astra") return "piece";
+  return "drill";
+}
+
+function kindNoun(kind, count = 1) {
+  const one = { Songs: "song", Traditional: "traditional song", Pieces: "piece", "GPT-6 Astra": "piece", Hands: "hands drill", Chords: "chords drill", Grooves: "groove" }[kind] || kind.toLowerCase();
+  return count === 1 ? one : `${one}s`;
+}
+
+function header(depth = 1, current = "") {
   const up = "../".repeat(depth);
   return `  <header class="site-top">
     <a class="brand" href="${up}" aria-label="${NAME} home"><img src="${up}img/alamut-mark.svg" width="34" height="34" alt=""><span>${NAME}</span></a>
-    <nav class="site-nav" aria-label="Site"><a href="${up}p/">All pieces</a><a href="${up}features.html">Features</a><a href="${up}index.html">Open the app</a></nav>
+    <nav class="site-nav" aria-label="Site"><a href="${up}p/"${current === "pieces" ? ' aria-current="page"' : ""}>All pieces</a><a href="${up}features.html">Features</a><a href="${up}index.html">Open the app</a></nav>
   </header>`;
 }
 
@@ -224,7 +236,7 @@ function piecePage(pattern, index) {
   };
   const data = { "@context": "https://schema.org", "@graph": [website(), resource, breadcrumb([{ name: NAME, url: `${SITE}/` }, { name: "All pieces", url: `${SITE}/p/` }, { name: pattern.title, url: canonical }])] };
   const facts = [
-    ["Kind", pattern.kind],
+    ["Kind", kindNoun(pattern.kind).replace(/^./, (c) => c.toUpperCase())],
     ["Tempo", `${pattern.bpm} BPM`],
     ["Time signature", signature(pattern)],
     ["Length", `${bars(pattern)} bars, about ${seconds(pattern)} seconds`],
@@ -237,7 +249,7 @@ function piecePage(pattern, index) {
 ${header()}
   <main class="site-page piece-page">
     <nav class="crumbs" aria-label="Breadcrumb"><a href="../">${NAME}</a> › <a href="./">All pieces</a> › <span>${esc(pattern.title)}</span></nav>
-    <p class="site-kicker">${esc(pattern.kind)} · handpan ${pattern.kind === "Songs" || pattern.kind === "Traditional" ? "arrangement" : pattern.kind === "Pieces" || pattern.kind === "GPT-6 Astra" ? "piece" : "drill"} for D Kurd</p>
+    <p class="site-kicker">Handpan ${roleOf(pattern.kind)} for D Kurd</p>
     <h1>${esc(pattern.title)}</h1>
     <p class="site-lead">${esc(pattern.blurb)}</p>
     <div class="piece-hero">
@@ -246,7 +258,7 @@ ${header()}
     </div>
     <p class="site-actions"><a class="site-primary" href="../index.html#/p/${pattern.id}">Play in ${NAME}</a><a class="site-secondary" href="../index.html#/p/${pattern.id}/learn">Learn bar by bar</a></p>
 
-    <h2>About this ${pattern.kind === "Songs" || pattern.kind === "Traditional" ? "arrangement" : "pattern"}</h2>
+    <h2>About this ${roleOf(pattern.kind)}</h2>
     <p class="prose">${esc(pattern.about)}</p>
 
     <h2>Notation</h2>
@@ -264,13 +276,13 @@ ${fa ? `    <section class="fa" lang="fa" dir="rtl">
       <p class="prose">${esc(fa.about)}</p>
     </section>
 ` : ""}
-    <h2>More ${esc(pattern.kind)}</h2>
+${previous || next ? `    <h2>More ${esc(pattern.kind)}</h2>
     <p class="site-note">${esc(KINDS[pattern.kind] || "")}</p>
     <nav class="siblings" aria-label="More of the same kind">
       ${previous ? `<a href="${previous.id}">← ${esc(previous.title)}</a>` : "<span></span>"}
       ${next ? `<a href="${next.id}">${esc(next.title)} →</a>` : "<span></span>"}
     </nav>
-  </main>
+` : ""}  </main>
 ${footer()}
 </body>
 </html>
@@ -282,7 +294,7 @@ function hubPage() {
   const kinds = kindOrder();
   const total = PATTERNS.length;
   const title = `Handpan pieces, songs and drills for D Kurd, with notes and tabs | ${NAME}`;
-  const description = clip(`${total} handpan patterns for a 10-note D Kurd: ${kinds.map((kind) => `${PATTERNS.filter((item) => item.kind === kind).length} ${kind.toLowerCase()}`).join(", ")}. Every one has number notation, tempo, time signature and a browser player.`);
+  const description = clip(`${total} handpan patterns for a 10-note D Kurd: ${kinds.map((kind) => `${PATTERNS.filter((item) => item.kind === kind).length} ${kindNoun(kind, PATTERNS.filter((item) => item.kind === kind).length)}`).join(", ")}. Every one has number notation, tempo, time signature and a browser player.`);
   const canonical = `${SITE}/p/`;
   const list = {
     "@type": "ItemList",
@@ -295,7 +307,7 @@ function hubPage() {
   const data = { "@context": "https://schema.org", "@graph": [website(), page, list, breadcrumb([{ name: NAME, url: `${SITE}/` }, { name: "All pieces", url: canonical }])] };
   const body = `
 <body class="site">
-${header()}
+${header(1, "pieces")}
   <main class="site-page">
     <nav class="crumbs" aria-label="Breadcrumb"><a href="../">${NAME}</a> › <span>All pieces</span></nav>
     <p class="site-kicker">The whole library</p>
@@ -307,9 +319,9 @@ ${kinds.map((kind) => {
     return `    <section>
       <h2 id="${kind.toLowerCase().replace(/[^a-z0-9]+/g, "-")}">${esc(kind)} <small>${items.length}</small></h2>
       <p class="site-note">${esc(KINDS[kind] || "")}</p>
-      <ul class="piece-grid">${items.map((item) => {
+      <ul class="piece-grid">${items.map((item, index) => {
         const image = thumb(item.id);
-        return `<li><a href="${item.id}">${image ? `<img src="../${image}" width="96" height="96" loading="lazy" alt="">` : ""}<strong>${esc(item.title)}</strong><span>${esc(item.blurb)}</span><small>${item.bpm} BPM · ${signature(item)} · ${bars(item)} bars</small></a></li>`;
+        return `<li><a href="${item.id}">${image ? `<img src="../${image}" width="96" height="96" loading="${index < 6 ? "eager" : "lazy"}" alt="">` : ""}<strong>${esc(item.title)}</strong><span>${esc(item.blurb)}</span><small>${item.bpm} BPM · ${signature(item)} · ${bars(item)} bars</small></a></li>`;
       }).join("")}</ul>
     </section>`;
   }).join("\n")}
@@ -332,7 +344,7 @@ function llmsSummary() {
     "",
     `> ${NAME} is a free browser app for playing and learning a ${INSTRUMENT}. It has ${PATTERNS.length} patterns with number notation, a 3D handpan that plays by tap, keyboard or phone motion, microphone note detection, and bar-by-bar practice. The interface is in English and Persian.`,
     "",
-    `The instrument has ten notes: ${NOTE_ORDER.map(noteLabel).join("; ")}. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten; the pages say which notes were substituted.`,
+    `The instrument has ten notes: ${NOTE_ORDER.map(noteLabel).join("; ")}. Number notation maps 0 to the ding and 1 to 9 to the tone fields from low A3 to high C5. Songs from other keys are transposed so that every note lands on these ten. Where a note had to be substituted, the page for that song says which.`,
     "",
     "## Pages",
     "",

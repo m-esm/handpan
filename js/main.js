@@ -296,7 +296,7 @@ function popText(result, snap) {
 function qualityColor(quality) {
   if (quality < 0.25) return "var(--bad)";
   if (quality < 0.5) return "var(--brass)";
-  if (quality < 0.75) return "var(--teal)";
+  if (quality < 0.75) return "var(--brass-2)";
   return "#fff3d6";
 }
 
@@ -1627,7 +1627,10 @@ function renderLearn(pattern) {
     panel.querySelector("#practice-next").after(notation);
     dock.append(panel);
   } else {
-    dock.append(settings, notation);
+    const key = document.createElement("p");
+    key.className = "key sheet-key";
+    key.textContent = [t("hand.leftLabel"), t("hand.rightLabel"), t("legend.soft"), t("legend.tak"), t("legend.bars")].join(" \u00b7 ");
+    dock.append(settings, key, notation);
     placeDeck();
     transportObserver.observe(settings);
   }
@@ -1719,7 +1722,6 @@ function sheetNode(pattern, sheet) {
   const node = document.createElement("div");
   node.className = "sheet";
   node.id = "sheet";
-  node.title = [t("hand.leftLabel"), t("hand.rightLabel"), t("legend.soft"), t("legend.tak"), t("legend.bars")].join(" \u00b7 ");
   node.style.setProperty("--cols", String(sheet.cols));
   sheet.sections.forEach((section, i) => {
     const part = document.createElement("section");
@@ -2243,7 +2245,7 @@ function saveMic(id) {
 }
 
 function micError(err) {
-  if (!navigator.mediaDevices || !window.isSecureContext) return "A microphone needs https or localhost.";
+  if (!navigator.mediaDevices || !window.isSecureContext) return t("mic.insecure");
   const name = err ? err.name : "";
   if (name === "NotAllowedError") return t("mic.blocked");
   if (name === "NotFoundError") return t("mic.missing");

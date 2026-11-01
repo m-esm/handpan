@@ -300,6 +300,14 @@ body.site:has(.site-hero) {
   line-height: 1.6;
 }
 
+.piece-page h2 {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mist);
+}
+
 .piece-page h3 {
   margin: 20px 0 6px;
   font-family: var(--sans);

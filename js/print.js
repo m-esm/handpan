@@ -69,7 +69,7 @@ function barNode(pattern, sheet, bar) {
       hit.dataset.note = id;
       const number = element("span", "print-number", digits(numberOf(id)));
       number.style.fontSize = `${10 + 5 * event.amps[id]}pt`;
-      hit.append(number, element("span", "print-hand", event.hands[id] === "left" ? "L" : "R"));
+      hit.append(number, element("span", "print-hand", event.hands[id] === "left" ? t("print.left") : t("print.right")));
       notes.append(hit);
     });
     slot.append(notes);
