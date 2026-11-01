@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { createMediaSession, playbackStateOf, positionOf, silentWavBytes, MEDIA_ACTIONS } from "../js/media-session.js";
+import { createMediaSession, playbackStateOf, positionOf, projectedPosition, silentWavBytes, MEDIA_ACTIONS } from "../js/media-session.js";
+import { createPlayer } from "../js/play.js";
 
 const BASE = "https://handpan.moshes.io/p/let-it-be.html";
 
@@ -161,11 +162,16 @@ assert.deepEqual(positionOf({ duration: 20, progress: Number.NaN }), { duration:
   const positions = [];
   session.setPositionState = (value) => positions.push(value ?? null);
   const carrier = { calls: [], attach() { this.calls.push("attach"); }, play() { this.calls.push("play"); return Promise.reject(new Error("NotAllowedError")); }, pause() { this.calls.push("pause"); }, release() { this.calls.push("release"); } };
-  const media = createMediaSession({ navigator: { mediaSession: session }, MediaMetadata: FakeMetadata, base: BASE, artist: "Alamut", onPlay() {}, onPause() {}, carrier });
+  let at = 0;
+  const media = createMediaSession({ navigator: { mediaSession: session }, MediaMetadata: FakeMetadata, base: BASE, artist: "Alamut", onPlay() {}, onPause() {}, carrier, now: () => at });
   media.update({ title: "Let It Be", playing: false, duration: 20, progress: 0 });
   assert.deepEqual(carrier.calls, ["pause"]);
-  for (let n = 0; n < 20; n += 1) media.update({ title: "Let It Be", playing: true, duration: 20, progress: n / 20 });
+  for (let n = 0; n < 20; n += 1) {
+    at = n * 0.5;
+    media.update({ title: "Let It Be", playing: true, duration: 20, progress: at / 20 });
+  }
   assert.deepEqual(carrier.calls, ["pause", "attach", "play"], "carrier follows state changes only");
+  at = 10;
   media.update({ title: "Let It Be", playing: false, duration: 20, progress: 0.5 });
   media.update({ title: null, playing: false, duration: 0, progress: 0 });
   assert.deepEqual(carrier.calls, ["pause", "attach", "play", "pause", "pause", "release"]);
@@ -186,6 +192,79 @@ assert.deepEqual(positionOf({ duration: 20, progress: Number.NaN }), { duration:
   assert.doesNotThrow(() => media.update({ title: "Let It Be", playing: true, duration: 20, progress: 0 }));
   assert.doesNotThrow(() => media.update({ title: "Let It Be", playing: false, duration: 20, progress: 0 }));
   assert.deepEqual(log.state, ["playing", "paused"]);
+}
+
+assert.equal(projectedPosition({ duration: 8, position: 6, rate: 1, at: 10 }, 13), 8);
+assert.equal(projectedPosition({ duration: 8, position: 6, rate: 0, at: 10 }, 13), 6);
+assert.equal(projectedPosition({ duration: 8, position: 2, rate: 1, at: 10 }, 9), 2);
+
+{
+  const saved = { requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
+  let clock = 100;
+  let frame = null;
+  let serial = 0;
+  globalThis.requestAnimationFrame = (fn) => {
+    frame = fn;
+    return ++serial;
+  };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.setTimeout = () => ++serial;
+  globalThis.clearTimeout = () => {};
+  try {
+    const { session } = fakeSession();
+    const positions = [];
+    session.setPositionState = (value) => positions.push(value ?? null);
+    const media = createMediaSession({ navigator: { mediaSession: session }, MediaMetadata: FakeMetadata, base: BASE, artist: "Alamut", onPlay() {}, onPause() {}, now: () => clock });
+    const sound = { ready: () => true, resume: async () => {}, now: () => clock, latency: () => 0, strikeChord: () => () => {} };
+    let piece = { id: "first", bpm: 60, loopBeats: 8, steps: [{ beat: 0, note: "D3" }, { beat: 6, note: "A3" }] };
+    const player = createPlayer(sound, (snap) => media.update({ title: piece.id, playing: snap.playing, duration: (piece.loopBeats * 60) / snap.bpm, progress: snap.progress }));
+    const near = (value, expected, label) => assert.ok(Math.abs(value - expected) < 0.1, `${label}: ${value} vs ${expected}`);
+
+    player.load(piece);
+    near(positions.at(-1).position, 0, "loaded");
+    player.seek(1, false, true);
+    assert.equal(player.snapshot().progress, 0.75);
+    near(positions.at(-1).position, 6, "paused seek moves the OS position");
+    assert.equal(positions.at(-1).duration, 8);
+
+    await player.resume();
+    near(positions.at(-1).position, 6, "resume anchors at the paused position");
+
+    const beforeSteady = positions.length;
+    for (let step = 1; step <= 10; step += 1) {
+      clock += 0.15;
+      frame?.();
+    }
+    assert.equal(positions.length, beforeSteady, "steady playback writes no position");
+
+    player.seek(0, true, true);
+    await Promise.resolve();
+    near(positions.at(-1).position, 0, "seek while playing re-anchors");
+
+    const wrapStart = clock;
+    clock = wrapStart + 8.06;
+    frame?.();
+    assert.ok(player.snapshot().progress < 0.02, "player wrapped");
+    assert.ok(positions.at(-1).position < 0.2, `loop wrap re-anchors at ${positions.at(-1).position}`);
+
+    player.pause();
+    const pausedAt = positions.at(-1);
+    piece = { ...piece, id: "second", loopBeats: 16 };
+    player.load(piece);
+    assert.equal(session.metadata.title, "second");
+    assert.equal(positions.at(-1).duration, 16, "piece change while paused updates the duration");
+    near(positions.at(-1).position, 0, "piece change while paused resets the position");
+    assert.notEqual(positions.at(-1), pausedAt);
+
+    player.setTempo(120);
+    assert.equal(positions.at(-1).duration, 8, "tempo change updates the duration");
+
+    const quiet = positions.length;
+    for (let step = 0; step < 5; step += 1) player.refresh();
+    assert.equal(positions.length, quiet, "repeated paused paints write no position");
+  } finally {
+    Object.assign(globalThis, saved);
+  }
 }
 
 const main = await readFile(new URL("../js/main.js", import.meta.url), "utf8");

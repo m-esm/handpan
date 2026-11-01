@@ -36,7 +36,15 @@ export function positionOf({ duration, progress }) {
   return { duration, playbackRate: 1, position: share * duration };
 }
 
-export function createMediaSession({ navigator, MediaMetadata, base, artist, onPlay, onPause, carrier = null }) {
+export const POSITION_TOLERANCE = 0.25;
+
+const secondsNow = () => globalThis.performance.now() / 1000;
+
+export function projectedPosition(anchor, at) {
+  return Math.min(anchor.duration, anchor.position + anchor.rate * Math.max(0, at - anchor.at));
+}
+
+export function createMediaSession({ navigator, MediaMetadata, base, artist, onPlay, onPause, carrier = null, now = secondsNow }) {
   const session = navigator?.mediaSession;
   const supported = !!session && typeof MediaMetadata === "function";
   const artwork = ICONS.map((icon) => ({ ...icon, src: new URL(icon.src, base).href }));
@@ -44,6 +52,7 @@ export function createMediaSession({ navigator, MediaMetadata, base, artist, onP
   let shownTitle = null;
   let shownState = supported ? session.playbackState : null;
   let bound = false;
+  let anchor;
 
   function attempt(write) {
     try {
@@ -74,8 +83,21 @@ export function createMediaSession({ navigator, MediaMetadata, base, artist, onP
 
   function place(state, duration, progress) {
     if (typeof session.setPositionState !== "function") return;
-    const position = state === "none" ? null : positionOf({ duration, progress });
-    attempt(() => (position ? session.setPositionState(position) : session.setPositionState()));
+    const wanted = state === "none" ? null : positionOf({ duration, progress });
+    if (!wanted) {
+      if (anchor !== undefined && anchor !== null) attempt(() => session.setPositionState());
+      anchor = null;
+      return;
+    }
+    const at = now();
+    const rate = state === "playing" ? 1 : 0;
+    const stale =
+      !anchor ||
+      anchor.duration !== wanted.duration ||
+      anchor.rate !== rate ||
+      Math.abs(projectedPosition(anchor, at) - wanted.position) > POSITION_TOLERANCE;
+    if (!stale) return;
+    if (attempt(() => session.setPositionState(wanted))) anchor = { ...wanted, rate, at };
   }
 
   function update({ title, playing, duration, progress }) {
@@ -95,8 +117,8 @@ export function createMediaSession({ navigator, MediaMetadata, base, artist, onP
         session.playbackState = state;
       });
       carry(state);
-      place(state, duration, progress);
     }
+    place(state, duration, progress);
   }
 
   return { supported, update };
