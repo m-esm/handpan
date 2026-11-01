@@ -1648,6 +1648,13 @@ function createWorld(prepared) {
   let energy = 0;
   let pendingFrames = 30;
   const drift = still ? 0 : 1;
+  let flying = false;
+  const flyPos = new THREE.Vector3();
+  const flyAim = new THREE.Vector3();
+  const flyLook = new THREE.Vector2();
+  const flyMove = new THREE.Vector3();
+  const flyTurn = new THREE.Vector2();
+  let flyAt = 0;
   function showCourtyard() {
     courtyard.visible = true;
     if (landscape?.group) landscape.group.visible = false;
@@ -1701,25 +1708,31 @@ function createWorld(prepared) {
     const seconds = time / 1000;
     ease.lerp(look, 0.035);
     if (!landscape || courtyardSelected) {
-      camera.position.set(
-        1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
-        4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
-        15,
-      );
-      camera.lookAt(1, 5.5, -20);
+      if (flying) applyFly(time);
+      else {
+        camera.position.set(
+          1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+          4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+          15,
+        );
+        camera.lookAt(1, 5.5, -20);
+      }
       paintSky(courtyardSky, moon.position);
       return;
     }
     try {
       writeCycle(still ? REST_SECONDS : seconds, cycle);
       landscape.apply(cycle);
-      const lift = Math.max(0, cycle.sunY) / 46;
-      camera.position.set(
-        20 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
-        13.2 + lift * 1.6 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
-        39,
-      );
-      camera.lookAt(-6, 15.2, -30);
+      if (flying) applyFly(time);
+      else {
+        const lift = Math.max(0, cycle.sunY) / 46;
+        camera.position.set(
+          20 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+          13.2 + lift * 1.6 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+          39,
+        );
+        camera.lookAt(-6, 15.2, -30);
+      }
       sunAim.set(cycle.sunX - camera.position.x, cycle.sunY - camera.position.y, cycle.sunZ - camera.position.z);
       paintSky(cycle, sunAim);
       fogTone.setHex(cycle.sky);
@@ -1741,14 +1754,41 @@ function createWorld(prepared) {
       moonHalo.position.copy(moon.position);
     } catch {
       dropLandscape();
-      camera.position.set(
-        1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
-        4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
-        15,
-      );
-      camera.lookAt(1, 5.5, -20);
+      if (flying) applyFly(time);
+      else {
+        camera.position.set(
+          1 + ease.x * 0.65 + Math.sin(seconds * 0.21) * 0.35 * drift,
+          4.2 - ease.y * 0.3 + Math.sin(seconds * 0.3) * 0.22 * drift,
+          15,
+        );
+        camera.lookAt(1, 5.5, -20);
+      }
       paintSky(courtyardSky, moon.position);
     }
+  }
+  function applyFly(time) {
+    const dt = flyAt ? Math.min(0.05, (time - flyAt) / 1000) : 0;
+    flyAt = time;
+    flyLook.x -= flyTurn.x;
+    flyLook.y = THREE.MathUtils.clamp(flyLook.y - flyTurn.y, -1.2, 1.2);
+    flyTurn.set(0, 0);
+    const yaw = flyLook.x;
+    const pitch = flyLook.y;
+    const cy = Math.cos(pitch);
+    const speed = 22;
+    flyPos.x += (Math.cos(yaw) * flyMove.x - Math.sin(yaw) * flyMove.z) * speed * dt;
+    flyPos.z += (-Math.sin(yaw) * flyMove.x - Math.cos(yaw) * flyMove.z) * speed * dt;
+    flyPos.y += flyMove.y * 14 * dt;
+    flyPos.x = THREE.MathUtils.clamp(flyPos.x, -90, 90);
+    flyPos.y = THREE.MathUtils.clamp(flyPos.y, 2.2, 72);
+    flyPos.z = THREE.MathUtils.clamp(flyPos.z, -100, 72);
+    camera.position.copy(flyPos);
+    flyAim.set(
+      flyPos.x - Math.sin(yaw) * cy,
+      flyPos.y + Math.sin(pitch),
+      flyPos.z - Math.cos(yaw) * cy,
+    );
+    camera.lookAt(flyAim);
   }
   async function ensureLandscape() {
     if (landscape) return landscape;
@@ -1863,9 +1903,32 @@ function createWorld(prepared) {
       compiled = true;
       resize();
     },
+    fly(on) {
+      flying = !!on;
+      flyMove.set(0, 0, 0);
+      flyTurn.set(0, 0);
+      flyAt = 0;
+      if (flying) {
+        flyPos.copy(camera.position);
+        camera.getWorldDirection(flyAim);
+        flyLook.x = Math.atan2(-flyAim.x, -flyAim.z);
+        flyLook.y = Math.asin(THREE.MathUtils.clamp(flyAim.y, -1, 1));
+      }
+      pendingFrames = 30;
+      if (compiled) draw(performance.now());
+    },
+    steer(move, lookDelta) {
+      if (!flying) return;
+      if (move) flyMove.set(move.x, move.y, move.z);
+      if (lookDelta) {
+        flyTurn.x += lookDelta.x;
+        flyTurn.y += lookDelta.y;
+      }
+    },
+    flying: () => flying,
     frame(time) {
       if (time - last < 40) return;
-      if (!pendingFrames && still) return;
+      if (!pendingFrames && still && !flying) return;
       if (pendingFrames) pendingFrames -= 1;
       last = time;
       draw(time);
@@ -1900,7 +1963,7 @@ export function createStage({ pan, onHit, textures }) {
     if (document.hidden) return;
     const start = profiling ? performance.now() : 0;
     if (drum.visible()) drum.frame(time);
-    if (!still) world.frame(time);
+    if (!still || world.flying()) world.frame(time);
     if (profiling) {
       if (lastFrame) timings.push(time - lastFrame);
       lastFrame = time;
@@ -1930,5 +1993,8 @@ export function createStage({ pan, onHit, textures }) {
       drum.magic(level);
     },
     celebrate: world.celebrate,
+    fly: world.fly,
+    steer: world.steer,
+    flying: world.flying,
   };
 }
