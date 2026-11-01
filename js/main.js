@@ -138,15 +138,79 @@ function mediaCarrier() {
       element.removeAttribute("src");
       element.load();
     },
+    unlock() {
+      if (element.getAttribute("src") === source) return;
+      element.src = source;
+      element.play().then(() => {
+        if (!player.playing && !practice?.pending) element.pause();
+      }, () => {});
+    },
   };
 }
+
+function unlockOnGesture(carrier) {
+  if (!carrier) return;
+  const unlock = () => {
+    carrier.unlock();
+    for (const type of ["click", "keydown"]) removeEventListener(type, unlock, true);
+  };
+  for (const type of ["click", "keydown"]) addEventListener(type, unlock, true);
+}
+
+function nearestEvent(pattern, beat) {
+  const events = eventsOf(pattern);
+  if (!events.length) return null;
+  return events.reduce((nearest, candidate) => Math.abs(candidate.beat - beat) < Math.abs(nearest.beat - beat) ? candidate : nearest, events[0]);
+}
+
+function seekSeconds(seconds) {
+  const pattern = player.pattern;
+  if (!pattern || learnMode()) return;
+  const event = nearestEvent(pattern, (seconds * player.bpm) / 60);
+  if (!event) return;
+  followPaused = false;
+  player.seek(event.index, player.playing, true);
+}
+
+function listedPatterns() {
+  const visible = libraryOrder(PATTERNS.filter(matches));
+  const sort = optionFor(SORT_ORDERS, sortOrder);
+  return sort.compare ? visible.sort(sort.compare) : visible;
+}
+
+function openNeighbour(dir) {
+  const current = patternFromHash();
+  if (!current || learnMode()) return;
+  const listed = listedPatterns();
+  const list = listed.length ? listed : libraryOrder(PATTERNS);
+  const at = list.findIndex((pattern) => pattern.id === current.id);
+  const target = list[at < 0 ? 0 : (at + dir + list.length) % list.length];
+  if (!target || target.id === current.id) return;
+  const keepPlaying = player.playing;
+  history.pushState(history.state, "", `#/p/${target.id}`);
+  route();
+  if (keepPlaying) player.play(target, 0, { keepTempo: true }).catch(audioError);
+}
+
+function stopPlayback() {
+  if (practice) {
+    if (player.playing || practice.pending) pausePractice();
+    return;
+  }
+  player.pause();
+  const first = player.pattern ? eventsOf(player.pattern)[0] : null;
+  if (first) player.seek(first.index, false, true);
+}
+
+const carrier = "mediaSession" in navigator ? mediaCarrier() : null;
+unlockOnGesture(carrier);
 
 const mediaSession = createMediaSession({
   navigator: globalThis.navigator,
   MediaMetadata: globalThis.MediaMetadata,
   base: document.baseURI,
   artist: "Alamut",
-  carrier: "mediaSession" in navigator ? mediaCarrier() : null,
+  carrier,
   onPlay: () => {
     if (player.playing || practice?.pending) return;
     if (practice) pausePractice();
@@ -157,6 +221,9 @@ const mediaSession = createMediaSession({
     if (practice) pausePractice();
     else player.pause();
   },
+  onStop: stopPlayback,
+  onSeek: seekSeconds,
+  onTrack: openNeighbour,
 });
 const listener = createListener(onHeard, onMicEnded);
 const game = createGame({
@@ -1893,6 +1960,7 @@ function paint(snap) {
     playing: !!snap.playing || !!practice?.pending,
     duration: shownPiece ? (shownPiece.loopBeats * 60) / snap.bpm : 0,
     progress: snap.progress,
+    seekable: !!shownPiece && !learnMode(),
   });
   document.body.classList.toggle("is-playing", !!snap.playing && !practice);
   document.body.classList.toggle("has-playing-audio", !!snap.playing);

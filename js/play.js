@@ -1,5 +1,12 @@
 import { eventsOf } from "./score.js";
 
+export const AHEAD = 0.22;
+export const HIDDEN_AHEAD = 4;
+
+function pageHidden() {
+  return globalThis.document?.hidden === true;
+}
+
 export function createPlayer(audio, emit) {
   const state = {
     pattern: null,
@@ -139,7 +146,8 @@ export function createPlayer(audio, emit) {
     if (!state.playing) return;
     const now = audio.now();
     const spb = 60 / state.bpm;
-    const ahead = now + 0.22;
+    const hidden = pageHidden();
+    const ahead = now + (hidden ? HIDDEN_AHEAD : AHEAD);
     const maxOrdinal = limit();
     while (state.cursor < maxOrdinal) {
       const event = state.events[state.cursor % state.events.length];
@@ -168,11 +176,14 @@ export function createPlayer(audio, emit) {
       emitNow();
       return;
     }
+    if (hidden) {
+      follow();
+      emitNow();
+    }
     state.timer = setTimeout(tick, 25);
   }
 
-  function frame() {
-    if (!state.playing) return;
+  function follow() {
     const t = heardNow();
     let current = null;
     for (const item of state.armed) {
@@ -184,9 +195,26 @@ export function createPlayer(audio, emit) {
     }
     if (current) state.index = current.index;
     state.armed = state.armed.filter((item) => item === current || item.time > t - 0.5);
+  }
+
+  function frame() {
+    if (!state.playing) return;
+    follow();
     emitNow();
     state.raf = requestAnimationFrame(frame);
   }
+
+  function rescheduleOnVisibility() {
+    if (!state.playing) return;
+    clearTimeout(state.timer);
+    tick();
+    if (!pageHidden()) {
+      cancelAnimationFrame(state.raf);
+      frame();
+    }
+  }
+
+  globalThis.document?.addEventListener?.("visibilitychange", rescheduleOnVisibility);
 
   async function play(pattern, fromBeat = 0, options = {}) {
     const token = ++state.token;

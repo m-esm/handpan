@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { createMediaSession, playbackStateOf, positionOf, projectedPosition, silentWavBytes, MEDIA_ACTIONS } from "../js/media-session.js";
-import { createPlayer } from "../js/play.js";
+import { createMediaSession, playbackStateOf, positionOf, projectedPosition, silentWavBytes, MEDIA_ACTIONS, SEEK_ACTIONS, SKIP_SECONDS } from "../js/media-session.js";
+import { createPlayer, HIDDEN_AHEAD } from "../js/play.js";
 
 const BASE = "https://handpan.moshes.io/p/let-it-be.html";
 
@@ -275,9 +275,100 @@ const wiring = main.slice(main.indexOf("const mediaSession = createMediaSession(
 assert.ok(wiring.includes('document.getElementById("play")?.click()'), "OS play must reuse the Play button path");
 assert.ok(wiring.includes("pausePractice()"), "OS controls must go through practice when it is active");
 assert.equal(/setActionHandler|seekto|nexttrack|previoustrack/.test(wiring), false);
-assert.ok(wiring.includes('"mediaSession" in navigator ? mediaCarrier() : null'), "the silent carrier is created only where Media Session exists");
+assert.ok(main.includes('const carrier = "mediaSession" in navigator ? mediaCarrier() : null;'), "the silent carrier is created only where Media Session exists");
+assert.ok(wiring.includes("onSeek: seekSeconds") && wiring.includes("onTrack: openNeighbour") && wiring.includes("onStop: stopPlayback"), "seek, track and stop actions reach the player");
+assert.ok(main.slice(paintAt, paintAt + 500).includes("seekable: !!shownPiece && !learnMode()"), "seek actions stay off in Learn");
 const carrierCode = main.slice(main.indexOf("function mediaCarrier()"), main.indexOf("const mediaSession = createMediaSession("));
 assert.ok(carrierCode.includes("element.loop = true") && carrierCode.includes("silentWavBytes()"), "carrier is a looping silent element");
 assert.equal(/connect|createMediaStreamDestination|srcObject/.test(carrierCode), false, "Web Audio output stays on its own path");
+
+{
+  const { session, log } = fakeSession();
+  const seeks = [];
+  const tracks = [];
+  let clock = 0;
+  session.setPositionState = () => {};
+  const media = createMediaSession({
+    navigator: { mediaSession: session },
+    MediaMetadata: FakeMetadata,
+    base: BASE,
+    artist: "Alamut",
+    onPlay() {},
+    onPause() {},
+    onSeek: (seconds) => seeks.push(seconds),
+    onTrack: (dir) => tracks.push(dir),
+    now: () => clock,
+  });
+  media.update({ title: "Let It Be", playing: false, duration: 60, progress: 0, seekable: false });
+  assert.deepEqual(Object.keys(log.handlers).sort(), [...MEDIA_ACTIONS].sort(), "no seek actions while not seekable");
+  media.update({ title: "Let It Be", playing: false, duration: 60, progress: 0.5, seekable: true });
+  for (const action of [...MEDIA_ACTIONS, ...SEEK_ACTIONS]) assert.equal(typeof log.handlers[action], "function", `${action} bound`);
+
+  log.handlers.seekto({ seekTime: 12.5 });
+  log.handlers.seekto({ seekTime: 500 });
+  log.handlers.seekto({});
+  log.handlers.seekforward({});
+  log.handlers.seekbackward({ seekOffset: 5 });
+  log.handlers.seekbackward({ seekOffset: 100 });
+  assert.deepEqual(seeks, [12.5, 60, 30 + SKIP_SECONDS, 25, 0]);
+
+  media.update({ title: "Let It Be", playing: true, duration: 60, progress: 0.5, seekable: true });
+  clock = 4;
+  log.handlers.seekforward({});
+  assert.equal(seeks.at(-1), 34 + SKIP_SECONDS, "skips from the projected position while playing");
+
+  log.handlers.previoustrack();
+  assert.equal(seeks.at(-1), 0, "previous restarts a piece that has run past a few seconds");
+  media.update({ title: "Let It Be", playing: true, duration: 60, progress: 0.01, seekable: true });
+  log.handlers.previoustrack();
+  log.handlers.nexttrack();
+  assert.deepEqual(tracks, [-1, 1]);
+
+  media.update({ title: "Let It Be", playing: false, duration: 60, progress: 0, seekable: false });
+  for (const action of SEEK_ACTIONS) assert.equal(log.handlers[action], null, `${action} released in Learn`);
+  assert.equal(typeof log.handlers.play, "function");
+  media.update({ title: null, playing: false, duration: 0, progress: 0 });
+  for (const action of [...MEDIA_ACTIONS, ...SEEK_ACTIONS]) assert.equal(log.handlers[action] ?? null, null);
+}
+
+{
+  const saved = { document: globalThis.document, requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
+  const listeners = {};
+  let hidden = false;
+  let frames = 0;
+  globalThis.document = { get hidden() { return hidden; }, addEventListener: (type, fn) => { listeners[type] = fn; } };
+  globalThis.requestAnimationFrame = () => ++frames;
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.setTimeout = () => 1;
+  globalThis.clearTimeout = () => {};
+  try {
+    let clock = 50;
+    const struck = [];
+    const sound = { ready: () => true, resume: async () => {}, now: () => clock, latency: () => 0, strikeChord: (notes, when) => { struck.push(when); return () => {}; } };
+    const steps = Array.from({ length: 32 }, (_, n) => ({ beat: n, note: "D3" }));
+    const piece = { id: "even", bpm: 60, loopBeats: 32, steps };
+    const snaps = [];
+    const player = createPlayer(sound, (snap) => snaps.push(snap));
+    player.load(piece);
+    await player.play(piece, 0);
+    const visibleAhead = Math.max(...struck) - clock;
+    assert.ok(visibleAhead < 0.5, `visible page schedules a short window (${visibleAhead})`);
+
+    hidden = true;
+    const before = snaps.length;
+    listeners.visibilitychange();
+    const hiddenAhead = Math.max(...struck) - clock;
+    assert.ok(hiddenAhead > HIDDEN_AHEAD - 1.1, `hidden page schedules ahead (${hiddenAhead})`);
+    assert.ok(snaps.length > before, "hidden ticks still report position");
+    assert.equal(new Set(struck).size, struck.length, "no note is struck twice");
+
+    player.pause();
+    hidden = false;
+    listeners.visibilitychange();
+    assert.equal(player.playing, false, "visibility does not restart a paused player");
+  } finally {
+    Object.assign(globalThis, saved);
+  }
+}
 
 console.log("media session ok");

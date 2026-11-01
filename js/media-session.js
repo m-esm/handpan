@@ -1,4 +1,7 @@
 export const MEDIA_ACTIONS = ["play", "pause", "stop"];
+export const SEEK_ACTIONS = ["seekto", "seekbackward", "seekforward", "previoustrack", "nexttrack"];
+export const SKIP_SECONDS = 10;
+export const RESTART_AFTER = 3;
 const ICONS = [
   { src: "img/icon-192.png", sizes: "192x192", type: "image/png" },
   { src: "img/icon-512.png", sizes: "512x512", type: "image/png" },
@@ -44,15 +47,52 @@ export function projectedPosition(anchor, at) {
   return Math.min(anchor.duration, anchor.position + anchor.rate * Math.max(0, at - anchor.at));
 }
 
-export function createMediaSession({ navigator, MediaMetadata, base, artist, onPlay, onPause, carrier = null, now = secondsNow }) {
+export function createMediaSession({
+  navigator,
+  MediaMetadata,
+  base,
+  artist,
+  onPlay,
+  onPause,
+  onStop = onPause,
+  onSeek = null,
+  onTrack = null,
+  carrier = null,
+  now = secondsNow,
+}) {
   const session = navigator?.mediaSession;
   const supported = !!session && typeof MediaMetadata === "function";
   const artwork = ICONS.map((icon) => ({ ...icon, src: new URL(icon.src, base).href }));
-  const actions = { play: onPlay, pause: onPause, stop: onPause };
   let shownTitle = null;
   let shownState = supported ? session.playbackState : null;
-  let bound = false;
+  let bound = new Set();
   let anchor;
+  let length = 0;
+  let lastPosition = 0;
+
+  function seekBy(offset) {
+    onSeek(Math.min(length, Math.max(0, currentPosition() + offset)));
+  }
+
+  function currentPosition() {
+    return anchor ? projectedPosition(anchor, now()) : lastPosition;
+  }
+
+  const actions = {
+    play: () => onPlay(),
+    pause: () => onPause(),
+    stop: () => onStop(),
+    seekto: (details) => {
+      if (Number.isFinite(details?.seekTime)) onSeek(Math.min(length, Math.max(0, details.seekTime)));
+    },
+    seekbackward: (details) => seekBy(-(details?.seekOffset || SKIP_SECONDS)),
+    seekforward: (details) => seekBy(details?.seekOffset || SKIP_SECONDS),
+    previoustrack: () => {
+      if (currentPosition() > RESTART_AFTER) onSeek(0);
+      else onTrack(-1);
+    },
+    nexttrack: () => onTrack(1),
+  };
 
   function attempt(write) {
     try {
@@ -63,10 +103,16 @@ export function createMediaSession({ navigator, MediaMetadata, base, artist, onP
     }
   }
 
-  function bind(on) {
-    if (bound === on) return;
-    bound = on;
-    for (const action of MEDIA_ACTIONS) attempt(() => session.setActionHandler(action, on ? actions[action] : null));
+  function wantedActions(titled, seekable) {
+    if (!titled) return [];
+    return seekable && onSeek && onTrack ? [...MEDIA_ACTIONS, ...SEEK_ACTIONS] : MEDIA_ACTIONS;
+  }
+
+  function bind(wanted) {
+    const next = new Set(wanted);
+    for (const action of bound) if (!next.has(action)) attempt(() => session.setActionHandler(action, null));
+    for (const action of next) if (!bound.has(action)) attempt(() => session.setActionHandler(action, actions[action]));
+    bound = next;
   }
 
   function carry(state) {
@@ -100,16 +146,18 @@ export function createMediaSession({ navigator, MediaMetadata, base, artist, onP
     if (attempt(() => session.setPositionState(wanted))) anchor = { ...wanted, rate, at };
   }
 
-  function update({ title, playing, duration, progress }) {
+  function update({ title, playing, duration, progress, seekable = false }) {
     if (!supported) return;
     const next = title || null;
+    length = duration > 0 ? duration : 0;
+    lastPosition = positionOf({ duration, progress })?.position ?? 0;
     if (next !== shownTitle) {
       shownTitle = next;
       attempt(() => {
         session.metadata = next ? new MediaMetadata({ title: next, artist, artwork }) : null;
       });
-      bind(!!next);
     }
+    bind(wantedActions(!!next, seekable));
     const state = playbackStateOf({ title: next, playing });
     if (state !== shownState) {
       shownState = state;
