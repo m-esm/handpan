@@ -32,6 +32,16 @@ assert.ok(
   "createWorld must not build the valley synchronously",
 );
 assert.match(scene, /ensureLandscape,/, "createWorld must export ensureLandscape");
+assert.match(scene, /if \(!still \|\| world\.flying\(\)\) world\.frame/, "flight must redraw when reduced motion skips the idle loop");
+assert.match(scene, /if \(!pendingFrames && still && !flying\) return/, "idle reduced-motion frames stay skipped until flight");
+assert.match(scene, /function applyFly\(time\)/, "flight camera lives in the existing world");
+assert.match(scene, /if \(flying\) applyFly\(time\)/, "pose must drive the fly camera");
+assert.match(scene, /fly: world\.fly/, "createStage must expose fly");
+assert.match(scene, /steer: world\.steer/, "createStage must expose steer");
+assert.match(scene, /flying: world\.flying/, "createStage must expose flying");
+assert.match(main, /initExplore/, "main must wire Explore");
+assert.match(main, /exploreEntry\.hidden = false/, "Explore appears after 3D is ready");
+assert.match(main, /is-exploring/, "playback keys must yield while exploring");
 
 const switchStart = scene.indexOf("  function showCourtyard() {");
 const switchEnd = scene.indexOf("  function pose(time) {", switchStart);
